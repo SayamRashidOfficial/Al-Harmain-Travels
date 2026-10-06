@@ -568,9 +568,6 @@ export default function CinematicDestinations({
                     {Math.round(((needleAngle % 360) + 360) % 360)}° {getCardinalDirection(needleAngle)} &bull; {SACRED_DESTINATIONS[selectedSacredIdx].name.toUpperCase()}
                   </span>
                 </div>
-                <span className="text-[10px] text-white/60 font-mono tracking-wider">
-                  {sensorHeading !== null ? '🧭 GYRO COMPASS LIVE &bull; ROTATE DEVICE' : 'TAP TO ALIGN &bull; DRAG TO STEER'}
-                </span>
               </div>
 
               {/* Outro Typography */}

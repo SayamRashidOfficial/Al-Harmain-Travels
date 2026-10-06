@@ -210,7 +210,7 @@ function VerifyEmailContent() {
             type="button"
             onClick={() => handleCheckVerification(true)}
             disabled={isChecking}
-            className="btn-brand w-full py-3.5 text-sm font-bold tracking-wide shadow-lg shadow-emerald-950/30 hover:shadow-emerald-900/40 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group/btn"
+            className="w-full py-3.5 px-6 rounded-xl bg-[#0c392c] hover:bg-[#07271e] text-white text-sm font-bold tracking-wide shadow-md active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group/btn"
           >
             {isChecking ? (
               <div className="flex items-center justify-center gap-2">
@@ -281,7 +281,7 @@ function VerifyEmailContent() {
         <button
           type="button"
           onClick={() => router.push(targetDashboard)}
-          className="btn-brand w-full py-3.5 text-sm font-bold tracking-wide shadow-lg shadow-emerald-950/30"
+          className="w-full py-3.5 px-6 rounded-xl bg-[#0c392c] hover:bg-[#07271e] text-white text-sm font-bold tracking-wide shadow-md active:scale-[0.98] transition-all duration-200 cursor-pointer"
         >
           <div className="flex items-center justify-center gap-2">
             <span>Proceed to Dashboard</span>

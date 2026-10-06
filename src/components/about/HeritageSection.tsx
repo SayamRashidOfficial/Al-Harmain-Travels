@@ -87,11 +87,11 @@ export default function HeritageSection() {
     <section
       id="about-story"
       ref={sectionRef}
-      className="relative pt-16 pb-8 sm:pt-20 sm:pb-10 lg:pt-24 lg:pb-12 overflow-hidden"
+      className="relative pt-10 pb-6 sm:pt-14 sm:pb-8 lg:pt-16 lg:pb-10 overflow-hidden"
       aria-label="Our Story and Heritage"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
 
           {/* ─────────────────────────────────────────────────────────
               LEFT COLUMN: STORY COPY (TEXT LEFT, 7 COLS)
@@ -100,7 +100,7 @@ export default function HeritageSection() {
               - Two short, clear, friendly paragraphs (max ~65 chars)
           ───────────────────────────────────────────────────────── */}
           <div
-            className="lg:col-span-7 space-y-5 transition-all duration-800 ease-out"
+            className="lg:col-span-7 space-y-4 sm:space-y-5 transition-all duration-800 ease-out"
             style={{
               opacity: isInView || prefersReducedMotion ? 1 : 0,
               transform:
@@ -123,13 +123,12 @@ export default function HeritageSection() {
             </h2>
 
             {/* Two Short Paragraphs */}
-            <div className="space-y-4 text-base sm:text-lg text-[#d1e0d7] font-normal leading-[1.65] max-w-[65ch]">
+            <div className="space-y-3 sm:space-y-3.5 text-sm sm:text-base md:text-lg text-[#d1e0d7] font-normal leading-[1.65] max-w-[65ch]">
               <p>
                 Founded with a sacred commitment to serve Dhuyuf Al-Rahman (Guests of The Most Merciful), Al-Haramain Travels provides calm, dependable chauffeured journeys between the holy sanctuaries and airport terminals.
               </p>
               <p>
-
-
+                Every itinerary is supported by real-time flight telemetry, courteous multilingual chauffeurs, and pre-cleared sanctuary courtyard access.
               </p>
             </div>
           </div>

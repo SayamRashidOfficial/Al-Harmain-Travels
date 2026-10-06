@@ -22,11 +22,11 @@ export default function ServicesPage() {
   const activeServices = services.filter((s) => s.is_active);
 
   return (
-    <div className="min-h-screen bg-page text-primary py-12 lg:py-20 relative overflow-hidden">
+    <div className="min-h-screen bg-page text-primary py-8 sm:py-12 lg:py-14 relative overflow-hidden">
       <CinematicTexture variant="light" />
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 space-y-16 relative z-10">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 space-y-8 sm:space-y-12 lg:space-y-14 relative z-10">
         {/* Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
+        <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-700/50 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
             <span>Al Harmain Signature Offerings</span>
@@ -40,7 +40,7 @@ export default function ServicesPage() {
         </div>
 
         {/* Dynamic Services Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7 lg:gap-8">
           {activeServices.length === 0 ? (
             <div className="col-span-3 text-center py-16 bg-card border border-base rounded-3xl">
               <p className="text-muted">No active services currently listed.</p>

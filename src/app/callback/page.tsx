@@ -246,7 +246,7 @@ function AuthCallbackContent() {
             <button
               type="button"
               onClick={() => router.replace(destUrl)}
-              className="btn-brand text-xs py-3 px-6 inline-flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/25"
+              className="bg-[#0c392c] hover:bg-[#07271e] text-white text-xs py-3 px-6 rounded-xl inline-flex items-center gap-2 cursor-pointer shadow-md font-semibold transition-all active:scale-95"
             >
               <span>Continue to Dashboard</span>
               <ArrowRight className="w-4 h-4" />
@@ -269,7 +269,7 @@ function AuthCallbackContent() {
           <div className="pt-3 flex flex-col sm:flex-row justify-center gap-2.5">
             <Link
               href="/verify-email"
-              className="btn-brand text-xs py-2.5 px-4 inline-flex items-center justify-center shadow-lg shadow-emerald-950/25"
+              className="bg-[#0c392c] hover:bg-[#07271e] text-white text-xs py-2.5 px-4 rounded-xl inline-flex items-center justify-center shadow-md font-semibold transition-all active:scale-95"
             >
               Resend Confirmation
             </Link>

@@ -32,19 +32,19 @@ const VEHICLE_CLASSES: VehicleClass[] = [
     id: 'executive_sedan',
     category: 'Executive Sedan',
     name: 'Toyota Camry / Lexus ES',
-    description: 'Up to 3 passengers with 2 large luggage bags. Ideal for solo or couple pilgrims seeking quiet comfort.',
+    description: 'Quiet, refined luxury for couples and solo pilgrims.',
     passengers: 'Up to 3 passengers',
     luggage: '2 large luggage bags',
     suitability: 'Ideal for solo or couple pilgrims',
     image: '/images/fleet_sedan.jpg',
     badge: 'Popular Choice',
-    amenities: ['Direct Northern Courtyard Clearance', 'Chilled Mineral Water', 'Live Flight Tracking'],
+    amenities: ['Haram Courtyard Clearance', 'Chilled Mineral Water', 'Live Flight Tracking'],
   },
   {
     id: 'premium_van',
-    category: 'PREMIUM FAMILY VAN',
+    category: 'Premium Family Van',
     name: 'Hyundai Staria',
-    description: 'Up to 7 passengers with ample luggage space. Spacious and comfortable for group pilgrims.',
+    description: 'Spacious modern cabin tailored for family comfort.',
     passengers: 'Up to 7 passengers',
     luggage: '5 large suitcases',
     suitability: 'Spacious and comfortable for group pilgrims',
@@ -56,25 +56,26 @@ const VEHICLE_CLASSES: VehicleClass[] = [
     id: 'vip_luxury',
     category: 'VIP Ultra Luxury',
     name: 'GMC Yukon XL Denali',
+    description: 'Sovereign flagship luxury with dedicated VIP protocol.',
     passengers: 'Up to 7 passengers',
     luggage: 'Expansive trunk',
     suitability: 'VIP & executive delegations',
     image: '/images/fleet_yukon.jpg',
     badge: 'Sovereign Flagship',
     isVip: true,
-    amenities: ['VIP Terminal Meet & Greet', 'Executive Leather Reclining', 'Dedicated Senior Chauffeur Protocol'],
+    amenities: ['VIP Terminal Meet & Greet', 'Executive Leather Reclining', 'Senior Chauffeur Protocol'],
   },
   {
     id: 'family_van',
-    category: 'Family Caravan Van',
+    category: 'Family Caravan',
     name: 'Toyota HiAce Royal Lounge',
-    // description: 'Up to 11 passengers with dedicated rear luggage compartment for large families & Umrah groups.',
+    description: 'High-roof royal comfort for group Umrah and tours.',
     passengers: 'Up to 11 passengers',
     luggage: 'Dedicated rear luggage compartment',
     suitability: 'Large families & Umrah groups',
     image: '/images/fleet_van.jpg',
     badge: 'Group Umrah',
-    amenities: ['High-Roof Reclining Seats', 'Rear Luggage Compartment', 'Multi-City Ziyarat Ready'],
+    amenities: ['High-Roof Reclining Seats', 'Dual Climate Control', 'Multi-City Ziyarat Ready'],
   },
 ];
 
@@ -135,7 +136,7 @@ function VehicleCard({
       onPointerMove={handlePointerMove}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
-      className="group/card relative w-[82vw] max-w-[340px] sm:w-[360px] md:w-[390px] h-[580px] sm:h-[610px] select-none transition-transform duration-300 ease-out flex flex-col"
+      className="group/card relative w-[82vw] max-w-[340px] sm:w-[360px] md:w-[380px] h-[500px] sm:h-[520px] md:h-[530px] select-none transition-transform duration-300 ease-out flex flex-col"
       style={{
         perspective: '1000px',
       }}
@@ -164,7 +165,7 @@ function VehicleCard({
         />
 
         {/* ── Top Image Container (Fixed uniform height across all cards) ── */}
-        <div className="relative h-52 sm:h-60 w-full overflow-hidden bg-[#03130d] shrink-0">
+        <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-[#03130d] shrink-0">
           <Image
             src={item.image}
             alt={item.name}
@@ -208,8 +209,8 @@ function VehicleCard({
         </div>
 
         {/* ── Content Body (Strict vertical alignment so all cards match) ── */}
-        <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4 relative z-20">
-          <div className="space-y-2">
+        <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3 relative z-20">
+          <div className="space-y-1.5">
             {/* Category Eyebrow */}
             <span
               className={`text-xs font-mono uppercase tracking-[0.18em] font-semibold block ${item.isVip ? 'text-[#f0d484]' : 'text-[#d4af37]'
@@ -219,18 +220,18 @@ function VehicleCard({
             </span>
 
             {/* Vehicle Model Title (Equalized height) */}
-            <h3 className="font-display text-2xl text-[#fdfbf7] font-normal tracking-tight group-hover/card:text-[#f0d484] transition-colors duration-300 min-h-[32px] sm:min-h-[58px] flex items-center">
+            <h3 className="font-display text-xl sm:text-2xl text-[#fdfbf7] font-normal tracking-tight group-hover/card:text-[#f0d484] transition-colors duration-300 min-h-[28px] sm:min-h-[36px] flex items-center">
               {item.name}
             </h3>
 
             {/* Description (Equalized height) */}
-            <p className="text-sm text-[#cbdad1] leading-relaxed font-normal min-h-[44px] sm:min-h-[48px]">
+            <p className="text-xs sm:text-sm text-[#cbdad1] leading-relaxed font-normal min-h-[36px] sm:min-h-[40px]">
               {item.description}
             </p>
           </div>
 
           {/* Amenities & Sovereign Protocol List */}
-          <div className="space-y-2 pt-3 border-t border-[#d4af37]/15">
+          <div className="space-y-1.5 pt-2.5 border-t border-[#d4af37]/15">
             <span className="text-[10px] font-mono tracking-widest uppercase text-[#8ea499] block">
               Standard Inclusions
             </span>
@@ -251,11 +252,7 @@ function VehicleCard({
               className="w-full bg-gradient-to-r from-[#d4af37] via-[#e5c567] to-[#d4af37] hover:from-[#c5a030] hover:to-[#dfc15a] text-[#06101e] py-3.5 px-5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-300 shadow-xl hover:shadow-[#d4af37]/20 inline-flex items-center justify-center gap-2.5 cursor-pointer group/btn active:scale-95"
             >
               <span>
-                {item.isVip
-                  ? 'Reserve VIP Denali'
-                  : item.id === 'premium_van'
-                    ? 'SELECT PREMIUM FAMILY VAN'
-                    : `Select ${item.category}`}
+                {item.isVip ? 'Reserve VIP Denali' : `Reserve ${item.category}`}
               </span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
             </Link>
@@ -273,7 +270,7 @@ export default function VehicleClassesSection() {
   return (
     <section
       id="vehicle-classes"
-      className="relative py-14 sm:py-20 overflow-hidden"
+      className="relative pt-4 pb-8 sm:pt-6 sm:pb-12 lg:pt-8 lg:pb-14 overflow-hidden"
       aria-label="Our Vehicle Classes Maintained to Sovereign Standards"
     >
       <style>{`
@@ -290,10 +287,10 @@ export default function VehicleClassesSection() {
         }
       `}</style>
 
-      <div className="space-y-10">
+      <div className="space-y-6 sm:space-y-8">
 
         {/* ── Section Header ── */}
-        <div className="border-b border-slate-200 dark:border-[#d4af37]/20 pb-8">
+        <div className="border-b border-slate-200 dark:border-[#d4af37]/20 pb-5 sm:pb-6">
           <div className="space-y-3 max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-700/50 text-emerald-800 dark:text-emerald-300 text-xs font-semibold shadow-xs">
               <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
@@ -307,10 +304,8 @@ export default function VehicleClassesSection() {
               <span className="text-amber-600 dark:text-[#D4AF37] font-serif italic">Sovereign Standards</span>
             </h2>
 
-            <p
-              className="text-sm sm:text-base text-black !text-black font-medium leading-relaxed max-w-[65ch]"
-              style={{ color: '#000000' }}
-            >
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 font-normal leading-relaxed max-w-[60ch]">
+              Executive comfort, licensed chauffeurs, and direct Haram permits.
             </p>
           </div>
         </div>
@@ -386,14 +381,14 @@ export default function VehicleClassesSection() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-[#d4af37]/15">
           <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-[#8ea499]">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-
+            <span>24/7 Dispatch Active</span>
           </div>
 
           {/* Quick Assurance Badges */}
           <div className="flex items-center gap-6 text-xs text-slate-600 dark:text-[#9eb6aa] font-medium">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-[#d4af37]" />
-              <span>100% Licensed &amp; Insured Chauffeurs</span>
+              <span>Licensed &amp; Insured Chauffeurs</span>
             </div>
             <div className="hidden md:flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-amber-600 dark:text-[#d4af37]" />

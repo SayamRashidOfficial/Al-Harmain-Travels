@@ -75,9 +75,8 @@ export default function CustomerMobileSidebar({ isOpen, onClose }: CustomerMobil
           1. BACKDROP (Semi-transparent overlay with smooth fade)
       ───────────────────────────────────────────────────────────── */}
       <div
-        className={`lg:hidden fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
-          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`lg:hidden fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
         onClick={(e) => {
           e.stopPropagation();
           onClose();
@@ -93,9 +92,8 @@ export default function CustomerMobileSidebar({ isOpen, onClose }: CustomerMobil
         aria-modal="true"
         aria-label="Customer navigation drawer"
         onClick={(e) => e.stopPropagation()}
-        className={`lg:hidden fixed top-0 bottom-0 left-0 z-[70] w-[min(340px,86vw)] max-w-sm h-full flex flex-col bg-white text-slate-900 border-r border-[#e8e4dc] shadow-2xl transition-transform duration-300 ease-out transform ${
-          isOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
-        }`}
+        className={`lg:hidden fixed top-0 bottom-0 left-0 z-[70] w-[min(340px,86vw)] max-w-sm h-full flex flex-col bg-white text-slate-900 border-r border-[#e8e4dc] shadow-2xl transition-transform duration-300 ease-out transform ${isOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
+          }`}
         style={{
           paddingTop: 'max(1rem, env(safe-area-inset-top))',
           paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
@@ -113,7 +111,7 @@ export default function CustomerMobileSidebar({ isOpen, onClose }: CustomerMobil
                 <span className="font-display text-base font-semibold tracking-heading text-slate-900">
                   Al Harmain
                 </span>
-                <span className="font-display text-base font-semibold tracking-heading text-amber-600">
+                <span className="font-display text-base font-semibold tracking-heading text-[#C9A227]">
                   Travel
                 </span>
               </div>

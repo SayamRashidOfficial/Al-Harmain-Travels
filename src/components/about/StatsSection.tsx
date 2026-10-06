@@ -69,7 +69,7 @@ export default function StatsSection() {
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-0 items-center justify-center text-center">
-          
+
           {/* ── Stat 1 (Left): 150,000+ Pilgrims ── */}
           <div className="flex flex-col items-center px-4 space-y-1.5 sm:space-y-2">
             <span className="font-display tabular-nums text-4xl sm:text-5xl lg:text-[3.25rem] font-normal text-[#f0d484] tracking-tight leading-none drop-shadow-[0_2px_12px_rgba(240,212,132,0.2)]">
@@ -78,9 +78,7 @@ export default function StatsSection() {
             <p className="text-sm sm:text-base text-[#d1e0d7] font-medium tracking-wide">
               Pilgrims Transported
             </p>
-            <p className="text-xs text-[#9cb4a8] max-w-[28ch]">
-              Honored to serve Dhuyuf Al-Rahman across holy sites
-            </p>
+
           </div>
 
           {/* ── Stat 2 (Middle): MOT Certified & Officially Licensed & Insured ── */}
@@ -107,9 +105,7 @@ export default function StatsSection() {
             <p className="text-sm sm:text-base text-[#d1e0d7] font-medium tracking-wide">
               Punctuality Score
             </p>
-            <p className="text-xs text-[#9cb4a8] max-w-[28ch]">
-              Live flight tracking with VIP terminal meet &amp; greet
-            </p>
+
           </div>
 
         </div>

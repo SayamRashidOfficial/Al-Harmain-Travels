@@ -355,8 +355,8 @@ export default function SignUpPage() {
         </div>
 
         {/* Role Notice */}
-        <div className="p-3.5 rounded-2xl bg-surface/70 border border-base/80 text-[11px] text-muted flex items-start gap-2.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+        <div className="p-3.5 rounded-2xl bg-[#faf8f4] border border-[#e2ddd5] text-[11px] text-slate-600 flex items-start gap-2.5">
+          <ShieldCheck className="w-4 h-4 text-[#0c392c] shrink-0 mt-0.5" />
           <span className="leading-relaxed">
             Public registration activates a <strong>Customer</strong> account for VIP transfer reservations. Fleet drivers and dispatch operators are onboarded directly through Administration.
           </span>
@@ -367,7 +367,7 @@ export default function SignUpPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="relative overflow-hidden w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-700 hover:from-emerald-500 hover:via-emerald-500 hover:to-teal-600 text-white text-sm font-bold tracking-wide shadow-lg shadow-emerald-950/40 hover:shadow-xl hover:shadow-emerald-600/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group/btn before:absolute before:inset-0 before:-translate-x-full hover:before:animate-shimmer-sweep before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent"
+            className="w-full py-3.5 px-6 rounded-xl bg-[#0c392c] hover:bg-[#07271e] text-white text-sm font-bold tracking-wide shadow-md active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <div className="flex items-center justify-center gap-2">
@@ -383,7 +383,7 @@ export default function SignUpPage() {
 
           <Link
             href="/sign-in"
-            className="relative overflow-hidden w-full py-3.5 px-6 rounded-xl border border-base/80 bg-elevated/40 hover:bg-elevated/90 hover:border-emerald-500/50 text-primary hover:text-emerald-500 dark:hover:text-emerald-400 text-sm font-bold tracking-wide shadow-sm hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 inline-flex items-center justify-center gap-2 group/sign before:absolute before:inset-0 before:-translate-x-full hover:before:animate-shimmer-sweep before:bg-gradient-to-r before:from-transparent before:via-emerald-400/15 before:to-transparent"
+            className="w-full py-3.5 px-6 rounded-xl border-2 border-[#0c392c] bg-white hover:bg-slate-50 text-[#0c392c] text-sm font-bold tracking-wide transition-all duration-200 inline-flex items-center justify-center gap-2 active:scale-[0.98]"
           >
             <span>Sign In to Existing Account</span>
           </Link>

@@ -46,11 +46,11 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-page text-primary py-12 lg:py-20 relative overflow-hidden">
+    <div className="min-h-screen bg-page text-primary py-8 sm:py-12 lg:py-14 relative overflow-hidden">
       <CinematicTexture variant="light" />
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 space-y-16 relative z-10">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 space-y-8 sm:space-y-10 lg:space-y-12 relative z-10">
         {/* Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
+        <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-700/50 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
             <span>24/7 Dispatch &amp; Support Desk</span>
@@ -63,10 +63,10 @@ export default function ContactPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 xl:gap-10 items-start">
           {/* Contact Details & Office Locations */}
-          <div className="lg:col-span-5 space-y-8">
-            <div className="p-8 rounded-3xl bg-card border border-base space-y-6">
+          <div className="lg:col-span-5 space-y-5 sm:space-y-6">
+            <div className="p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-card border border-base space-y-5">
               <h3 className="text-xl font-bold text-primary">Central Operations Hub</h3>
 
               <div className="space-y-4 text-sm">
@@ -119,7 +119,7 @@ export default function ContactPage() {
             </div>
 
             {/* Regional Branches */}
-            <div className="p-8 rounded-3xl bg-card border border-base space-y-6">
+            <div className="p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-card border border-base space-y-5">
               <h3 className="text-xl font-bold text-primary">Our Regional Stations</h3>
               
               <div className="space-y-4 text-sm">
@@ -164,9 +164,9 @@ export default function ContactPage() {
 
           {/* Interactive Form */}
           <div className="lg:col-span-7">
-            <div className="p-8 sm:p-10 rounded-3xl bg-card border border-base shadow-2xl">
-              <h3 className="type-section-title !text-2xl mb-2">Send an Inquiry</h3>
-              <p className="text-muted text-xs sm:text-sm mb-6">
+            <div className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-card border border-base shadow-xl">
+              <h3 className="type-section-title !text-2xl mb-1.5 sm:mb-2">Send an Inquiry</h3>
+              <p className="text-muted text-xs sm:text-sm mb-4 sm:mb-5">
                 Fill out the form below. Our customer care desk responds swiftly to all inquiries and quotation requests.
               </p>
 

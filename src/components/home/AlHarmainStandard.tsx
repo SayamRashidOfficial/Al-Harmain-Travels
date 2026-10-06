@@ -96,7 +96,7 @@ function FeatureCard({
               : 'none',
           transition: tilt.isHovered ? 'transform 0.12s ease-out' : 'transform 0.5s ease-out',
         }}
-        className="group relative h-full rounded-2xl bg-white/85 backdrop-blur-xl p-6 sm:p-7 border border-[#e8dfcb]/80 hover:border-[#d4af37]/60 shadow-[0_4px_24px_-4px_rgba(11,71,54,0.06),0_12px_36px_-8px_rgba(212,175,55,0.08)] hover:shadow-[0_16px_48px_-10px_rgba(11,71,54,0.12),0_24px_56px_-12px_rgba(212,175,55,0.2)] transition-shadow duration-500 overflow-hidden flex flex-col justify-between"
+        className="group relative h-full rounded-2xl bg-white/85 backdrop-blur-xl p-5 sm:p-6 border border-[#e8dfcb]/80 hover:border-[#d4af37]/60 shadow-[0_4px_24px_-4px_rgba(11,71,54,0.06),0_12px_36px_-8px_rgba(212,175,55,0.08)] hover:shadow-[0_16px_48px_-10px_rgba(11,71,54,0.12),0_24px_56px_-12px_rgba(212,175,55,0.2)] transition-shadow duration-500 overflow-hidden flex flex-col justify-between"
       >
         {/* Soft Inner Glow Layer */}
         <div className="absolute inset-0 rounded-2xl pointer-events-none shadow-[inset_0_1px_2px_rgba(212,175,55,0.2),inset_0_0_16px_rgba(255,255,255,0.9)]" />
@@ -227,7 +227,7 @@ export default function AlHarmainStandard() {
       ref={containerRef}
       id="al-harmain-standard"
       aria-label="The Al Harmain Standard"
-      className="relative overflow-hidden max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 mb-16 sm:mb-20 lg:mb-24 rounded-3xl"
+      className="relative overflow-hidden max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 mb-10 sm:mb-14 lg:mb-16 rounded-3xl"
     >
       {/* ── Cinematic Reusable Texture (Light Mode Preset) ── */}
       <CinematicTexture variant="light" />
@@ -245,9 +245,9 @@ export default function AlHarmainStandard() {
         style={{ animationDuration: '10s' }}
       />
 
-      <div className="relative z-10 py-10 sm:py-14">
+      <div className="relative z-10 py-6 sm:py-8 lg:py-10">
         {/* ── Section Header with Letter-Spacing Animation & Shimmer Sweep ── */}
-        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14 space-y-3 px-2">
+        <div className="text-center max-w-3xl mx-auto mb-6 sm:mb-8 lg:mb-9 space-y-2.5 px-2">
           {/* Eyebrow Label with Animated Letter-Spacing */}
           <div
             style={{
@@ -309,6 +309,7 @@ export default function AlHarmainStandard() {
             }}
             className="text-xs sm:text-sm md:text-base text-[#55635c] leading-relaxed font-sans font-normal max-w-xl mx-auto"
           >
+            Uncompromising hospitality, upfront pricing, and peace of mind on every sacred route.
           </p>
         </div>
 

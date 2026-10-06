@@ -630,7 +630,7 @@ export default function HomePage() {
       ───────────────────────────────────────────────────────────── */}
       <section
         ref={trustRibbonRef}
-        className="max-w-[1320px] mx-auto px-3 sm:px-6 pt-2 sm:pt-4 mb-10 sm:mb-16 overflow-hidden w-full max-w-full"
+        className="max-w-[1320px] mx-auto px-3 sm:px-6 pt-2 sm:pt-3 mb-6 sm:mb-8 lg:mb-10 overflow-hidden w-full max-w-full"
         aria-label="Service Trust Standards"
       >
         {/* Scoped Keyframes for Continuous Bidirectional Movement and Divider Gleam */}
@@ -766,7 +766,7 @@ export default function HomePage() {
       <section
         ref={fleetRef}
         id="the-fleet"
-        className="relative max-w-[1320px] mx-auto px-4 sm:px-6 py-6 sm:py-8 mb-14 sm:mb-18 lg:mb-24 overflow-hidden w-full max-w-full rounded-2xl"
+        className="relative max-w-[1320px] mx-auto px-4 sm:px-6 py-4 sm:py-6 lg:py-7 mb-8 sm:mb-12 lg:mb-14 overflow-hidden w-full max-w-full rounded-2xl"
       >
         {/* Subtle Geometric Texture Layer */}
         <CinematicTexture variant="light" />
@@ -806,7 +806,7 @@ export default function HomePage() {
               className={`text-xs sm:text-sm text-[#4a5851] leading-relaxed font-normal transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${isFleetVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
                 }`}
             >
-              From executive sedans to spacious vans, our modern fleet ensures comfort, safety and luxury at every mile.
+              Thoughtfully appointed fleet engineered for peaceful intercity journeys and VIP Haram arrivals.
             </p>
           </div>
 
@@ -933,14 +933,14 @@ export default function HomePage() {
       ───────────────────────────────────────────────────────────── */}
       <section
         ref={bannerRef}
-        className="max-w-[1320px] mx-auto px-4 sm:px-6 mb-12 sm:mb-18"
+        className="max-w-[1320px] mx-auto px-4 sm:px-6 mb-8 sm:mb-12 lg:mb-14"
       >
         <div
           style={{
             transitionDuration: '850ms',
             transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
           }}
-          className={`relative rounded-2xl overflow-hidden min-h-[340px] sm:min-h-[400px] flex flex-col justify-between p-5 xs:p-7 sm:p-10 lg:p-12 text-white shadow-xl transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 motion-reduce:scale-100 ${isBannerVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-10 scale-[0.985]'
+          className={`relative rounded-2xl overflow-hidden min-h-[280px] sm:min-h-[340px] lg:min-h-[360px] flex flex-col justify-between p-5 sm:p-8 lg:p-10 text-white shadow-xl transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 motion-reduce:scale-100 ${isBannerVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-10 scale-[0.985]'
             }`}
         >
           {/* Background Video with subtle vertical parallax depth, 0.75x slow motion, and seamless loop */}
@@ -1011,11 +1011,12 @@ export default function HomePage() {
               className={`text-xs sm:text-sm text-white/80 leading-relaxed font-normal pt-1 transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${isBannerVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                 }`}
             >
+              Authorized sanctuary clearances, flight-synchronized monitoring, and dedicated luggage protocol across the Kingdom.
             </p>
           </div>
 
           {/* Bottom Row: 5 Service Badges + Right Signature */}
-          <div className="relative z-10 pt-5 sm:pt-8 lg:pt-10 flex flex-col sm:flex-row sm:items-end justify-between gap-5 sm:gap-6 border-t border-white/10 mt-6">
+          <div className="relative z-10 pt-4 sm:pt-6 lg:pt-7 flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-5 border-t border-white/10 mt-4 sm:mt-5">
             {/* 5 Service badges with gentle staggered reveal */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-5 lg:gap-6 text-xs text-white/90 font-medium">
               {[

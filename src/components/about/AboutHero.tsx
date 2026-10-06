@@ -35,7 +35,7 @@ export default function AboutHero() {
   return (
     <section
       ref={heroRef}
-      className="relative min-h-[calc(100vh-64px)] lg:min-h-screen flex items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8 py-20"
+      className="relative min-h-[75vh] sm:min-h-[85vh] lg:min-h-screen flex items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20"
       aria-label="About Hero"
     >
       {/* ── 1. Slow-Zoom Background Image of the Haramain with Parallax ── */}
@@ -83,7 +83,7 @@ export default function AboutHero() {
       </div>
 
       {/* ── 2. Hero Content (Centered, Minimal, Calm) ── */}
-      <div className="relative z-10 max-w-4xl mx-auto text-center space-y-7 sm:space-y-8">
+      <div className="relative z-10 max-w-4xl mx-auto text-center space-y-5 sm:space-y-6 lg:space-y-7">
 
         {/* Eyebrow Badge */}
         <div
@@ -141,7 +141,7 @@ export default function AboutHero() {
 
         {/* Subline: Clean, friendly, max ~65 characters per line */}
         <p
-          className="font-sans text-base sm:text-lg text-[#d3e3da] max-w-2xl mx-auto leading-relaxed font-normal tracking-wide transition-all duration-800 ease-out"
+          className="font-sans text-sm sm:text-base md:text-lg text-[#d3e3da] max-w-2xl mx-auto leading-relaxed font-normal tracking-wide transition-all duration-800 ease-out"
           style={{
             opacity: mounted ? 1 : 0,
             transform: mounted || prefersReducedMotion ? 'translateY(0)' : 'translateY(20px)',
@@ -149,8 +149,7 @@ export default function AboutHero() {
             lineHeight: 1.65,
           }}
         >
-          , and Jeddah.
-
+          Serving the pilgrims of Makkah and Madinah with sovereign comfort, authorized Haram permits, and clockwork precision.
         </p>
 
         {/* Apple-style Refined Gold Action Button */}
@@ -177,7 +176,7 @@ export default function AboutHero() {
       <button
         type="button"
         onClick={scrollToStory}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#041710]/60 hover:bg-[#041710]/85 backdrop-blur-md border border-white/15 hover:border-[#d4af37]/45 text-[#d1e0d7] hover:text-[#fdfbf7] shadow-sm hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer group"
+        className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#041710]/60 hover:bg-[#041710]/85 backdrop-blur-md border border-white/15 hover:border-[#d4af37]/45 text-[#d1e0d7] hover:text-[#fdfbf7] shadow-sm hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer group"
         aria-label="Scroll to our story"
       >
         <span className="text-[11px] font-medium tracking-wider uppercase">

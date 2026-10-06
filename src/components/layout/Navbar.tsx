@@ -252,9 +252,8 @@ export default function Navbar() {
   return (
     <>
       <header
-        className={`fixed top-0 inset-x-0 z-50 lg:relative lg:top-auto bg-[#faf8f4]/80 backdrop-blur-md backdrop-saturate-150 border-b border-[#e8e4dc]/80 text-slate-900 transition-all duration-300 ${
-          scrolled ? 'shadow-sm bg-white/85' : 'shadow-xs'
-        }`}
+        className={`fixed top-0 inset-x-0 z-50 lg:relative lg:top-auto bg-[#faf8f4]/80 backdrop-blur-md backdrop-saturate-150 border-b border-[#e8e4dc]/80 text-slate-900 transition-all duration-300 ${scrolled ? 'shadow-sm bg-white/85' : 'shadow-xs'
+          }`}
       >
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
           {/* ─────────────────────────────────────────────────────────────
@@ -320,13 +319,12 @@ export default function Navbar() {
                     aria-expanded={isNotifOpen}
                   >
                     <Bell
-                      className={`bell-icon w-5 h-5 transition-transform duration-300 origin-top ${
-                        hasNewNotif
-                          ? 'animate-bell-ring text-amber-500'
-                          : unreadCount > 0
+                      className={`bell-icon w-5 h-5 transition-transform duration-300 origin-top ${hasNewNotif
+                        ? 'animate-bell-ring text-amber-500'
+                        : unreadCount > 0
                           ? 'animate-bell-alert text-amber-600'
                           : 'text-slate-700 group-hover:text-[#0b4736]'
-                      }`}
+                        }`}
                     />
                     {unreadCount > 0 && (
                       <span className="relative flex items-center justify-center">
@@ -414,12 +412,12 @@ export default function Navbar() {
                   {pathname === '/customer'
                     ? 'Book a Ride'
                     : pathname.startsWith('/customer/bookings')
-                    ? 'My Trips & History'
-                    : pathname.startsWith('/customer/track')
-                    ? 'Live Vehicle Radar'
-                    : pathname.startsWith('/customer/profile')
-                    ? 'VIP Profile & Settings'
-                    : 'Overview'}
+                      ? 'My Trips & History'
+                      : pathname.startsWith('/customer/track')
+                        ? 'Live Vehicle Radar'
+                        : pathname.startsWith('/customer/profile')
+                          ? 'VIP Profile & Settings'
+                          : 'Overview'}
                 </span>
               </div>
             ) : (
@@ -431,15 +429,13 @@ export default function Navbar() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`relative py-1.5 text-sm font-bold tracking-tight transition-colors duration-200 group focus:outline-none ${
-                        isActive ? 'text-black' : 'text-black/75 hover:text-black'
-                      }`}
+                      className={`relative py-1.5 text-sm font-bold tracking-tight transition-colors duration-200 group focus:outline-none ${isActive ? 'text-black' : 'text-black/75 hover:text-black'
+                        }`}
                     >
                       <span>{item.label}</span>
                       <span
-                        className={`absolute -bottom-0.5 left-0 right-0 h-[2.5px] bg-black rounded-full transition-transform duration-300 origin-left ease-out ${
-                          isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100 group-active:scale-x-100'
-                        }`}
+                        className={`absolute -bottom-0.5 left-0 right-0 h-[2.5px] bg-black rounded-full transition-transform duration-300 origin-left ease-out ${isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100 group-active:scale-x-100'
+                          }`}
                       />
                     </Link>
                   );
@@ -481,13 +477,12 @@ export default function Navbar() {
                   aria-expanded={isNotifOpen}
                 >
                   <Bell
-                    className={`bell-icon w-4 h-4 transition-transform duration-300 origin-top ${
-                      hasNewNotif
-                        ? 'animate-bell-ring text-amber-500'
-                        : unreadCount > 0
+                    className={`bell-icon w-4 h-4 transition-transform duration-300 origin-top ${hasNewNotif
+                      ? 'animate-bell-ring text-amber-500'
+                      : unreadCount > 0
                         ? 'animate-bell-alert text-amber-600'
                         : 'text-slate-600 group-hover:text-slate-900'
-                    }`}
+                      }`}
                   />
                   {unreadCount > 0 && (
                     <span className="relative flex items-center justify-center">
@@ -656,9 +651,8 @@ export default function Navbar() {
         <>
           {/* Backdrop overlay with smooth fade */}
           <div
-            className={`lg:hidden fixed inset-0 z-[60] bg-slate-950/65 backdrop-blur-xs transition-opacity duration-300 ease-in-out ${
-              isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-            }`}
+            className={`lg:hidden fixed inset-0 z-[60] bg-slate-950/65 backdrop-blur-xs transition-opacity duration-300 ease-in-out ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+              }`}
             onClick={() => setIsMobileMenuOpen(false)}
             aria-hidden="true"
           />
@@ -668,9 +662,8 @@ export default function Navbar() {
             role="dialog"
             aria-modal="true"
             aria-label="Navigation drawer"
-            className={`lg:hidden fixed top-0 bottom-0 left-0 z-[70] w-[min(320px,84vw)] max-w-sm h-full flex flex-col bg-[#faf8f4] text-slate-900 border-r border-[#e8e4dc] shadow-2xl transition-transform duration-300 ease-out transform ${
-              isMobileMenuOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
-            }`}
+            className={`lg:hidden fixed top-0 bottom-0 left-0 z-[70] w-[min(320px,84vw)] max-w-sm h-full flex flex-col bg-[#faf8f4] text-slate-900 border-r border-[#e8e4dc] shadow-2xl transition-transform duration-300 ease-out transform ${isMobileMenuOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
+              }`}
             style={{
               paddingTop: 'max(1rem, env(safe-area-inset-top))',
               paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
@@ -687,7 +680,7 @@ export default function Navbar() {
                     <span className="font-display text-base font-semibold tracking-heading text-slate-900">
                       Al Harmain
                     </span>
-                    <span className="font-display text-base font-semibold tracking-heading text-amber-600">
+                    <span className="font-display text-base font-semibold tracking-heading text-[#C9A227]">
                       Travel
                     </span>
                   </div>
@@ -735,7 +728,7 @@ export default function Navbar() {
               {/* Navigation Links */}
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 px-1">
-                  {isAuthenticated ? 'Portal Navigation' : 'Explore Al Harmain'}
+                  {isAuthenticated ? 'Portal Navigation' : ''}
                 </p>
                 <nav className="space-y-1" aria-label="Mobile Drawer Navigation">
                   {(isAuthenticated && !isMarketingPath ? currentRoleNav : publicLinks).map((item) => {
@@ -747,20 +740,18 @@ export default function Navbar() {
                         key={item.href}
                         href={item.href}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className={`relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold tracking-tight transition-colors group ${
-                          isActive
-                            ? 'bg-emerald-50/80 text-black'
-                            : 'text-black/75 hover:text-black hover:bg-white'
-                        }`}
+                        className={`relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold tracking-tight transition-colors group ${isActive
+                          ? 'bg-emerald-50/80 text-black'
+                          : 'text-black/75 hover:text-black hover:bg-white'
+                          }`}
                       >
                         <span className="flex items-center gap-3">
                           <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-700' : 'text-slate-400 group-hover:text-emerald-700'} transition-colors`} />
                           <span className="relative py-0.5">
                             {item.label}
                             <span
-                              className={`absolute bottom-0 left-0 right-0 h-[2px] bg-black rounded-full transition-transform duration-300 origin-left ease-out ${
-                                isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100 group-active:scale-x-100'
-                              }`}
+                              className={`absolute bottom-0 left-0 right-0 h-[2px] bg-black rounded-full transition-transform duration-300 origin-left ease-out ${isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100 group-active:scale-x-100'
+                                }`}
                             />
                           </span>
                         </span>
@@ -838,8 +829,7 @@ export default function Navbar() {
                   </Link>
                 )}
                 <p className="text-[10px] text-center text-slate-400 pt-1">
-                  Al Harmain Travels · Premium Tourism
-                </p>
+                  Al Harmain Travels         </p>
               </div>
             </div>
           </aside>
@@ -946,11 +936,10 @@ function NotificationDropdownContent({
               key={n.id}
               type="button"
               onClick={() => markNotificationAsRead(n.id)}
-              className={`w-full text-left px-4 py-3 text-xs transition-colors ${
-                n.read
-                  ? 'bg-white text-slate-500'
-                  : 'bg-emerald-50/70 text-slate-800'
-              } hover:bg-slate-50`}
+              className={`w-full text-left px-4 py-3 text-xs transition-colors ${n.read
+                ? 'bg-white text-slate-500'
+                : 'bg-emerald-50/70 text-slate-800'
+                } hover:bg-slate-50`}
             >
               <div className="flex items-center justify-between mb-0.5 gap-2">
                 <span className="font-semibold text-emerald-800">

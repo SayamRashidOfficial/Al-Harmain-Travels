@@ -33,14 +33,14 @@ export default function MissionVisionSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative pt-8 pb-16 sm:pt-10 sm:pb-20 lg:pt-12 lg:pb-24 overflow-hidden"
+      className="relative pt-6 pb-8 sm:pt-8 sm:pb-10 lg:pt-10 lg:pb-12 overflow-hidden"
       aria-label="Mission and Vision"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Clean Section Header */}
         <div
-          className="text-center max-w-xl mx-auto mb-12 sm:mb-16 space-y-2 transition-all duration-800 ease-out"
+          className="text-center max-w-xl mx-auto mb-6 sm:mb-8 lg:mb-10 space-y-2 transition-all duration-800 ease-out"
           style={{
             opacity: isInView || prefersReducedMotion ? 1 : 0,
             transform:
@@ -50,20 +50,17 @@ export default function MissionVisionSection() {
             transitionDuration: '0.8s',
           }}
         >
-          <span className="text-xs font-mono uppercase tracking-[0.2em] font-semibold text-[#d4af37] block">
-            Guiding Principles
-          </span>
           <h2 className="font-display text-3xl sm:text-4xl text-[#fdfbf7] font-normal tracking-tight">
             Our Purpose &amp; Horizon
           </h2>
         </div>
 
         {/* Two Clean Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-10">
 
           {/* ── Column 1: Mission ── */}
           <div
-            className="p-8 sm:p-10 rounded-2xl bg-[#06241a]/45 border border-[#d4af37]/20 backdrop-blur-xs space-y-4 hover:border-[#d4af37]/40 transition-all duration-300"
+            className="p-6 sm:p-8 rounded-2xl bg-[#06241a]/45 border border-[#d4af37]/20 backdrop-blur-xs space-y-3.5 sm:space-y-4 hover:border-[#d4af37]/40 transition-all duration-300"
             style={{
               opacity: isInView || prefersReducedMotion ? 1 : 0,
               transform:
@@ -89,7 +86,7 @@ export default function MissionVisionSection() {
 
           {/* ── Column 2: Vision ── */}
           <div
-            className="p-8 sm:p-10 rounded-2xl bg-[#06241a]/45 border border-[#d4af37]/20 backdrop-blur-xs space-y-4 hover:border-[#d4af37]/40 transition-all duration-300"
+            className="p-6 sm:p-8 rounded-2xl bg-[#06241a]/45 border border-[#d4af37]/20 backdrop-blur-xs space-y-3.5 sm:space-y-4 hover:border-[#d4af37]/40 transition-all duration-300"
             style={{
               opacity: isInView || prefersReducedMotion ? 1 : 0,
               transform:
@@ -111,11 +108,10 @@ export default function MissionVisionSection() {
             <p className="font-sans text-base sm:text-[17px] text-[#d1e0d7] leading-[1.65] font-normal max-w-[60ch]">
               To be the Kingdom’s most trusted transport partner for pilgrims, delivering punctual, transparent, and caring service.
             </p>
-
           </div>
 
         </div>
       </div>
-    </section >
+    </section>
   );
 }

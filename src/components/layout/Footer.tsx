@@ -71,18 +71,18 @@ export default function Footer() {
   return (
     <footer
       ref={footerRef}
-      className="relative mt-auto bg-[#072118] text-[#e8e4d8] font-sans rounded-none overflow-hidden border-t border-[#d4a24c]/30 shadow-2xl pb-24 sm:pb-0"
+      className="relative mt-auto bg-[#072118] text-[#e8e4d8] font-sans rounded-none overflow-hidden border-t border-[#d4a24c]/30 shadow-2xl pb-20 sm:pb-0"
       aria-label="Al Harmain Travels Footer"
     >
       {/* ── Living Cinematic Animated Texture (Canvas 2D, mouse-reactive particles & arabesque) ── */}
       <CinematicTexture variant="footer" parentRef={footerRef} />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 pb-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 lg:pt-14 pb-5 sm:pb-6">
         {/* ─────────────────────────────────────────────────────────────
             MAIN 4-COLUMN RESPONSIVE GRID
             (Desktop: 4 columns with wider brand column, Tablet: 2 cols, Mobile: 1 col)
         ───────────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 pb-12 sm:pb-14">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-7 lg:gap-8 pb-7 sm:pb-9">
           {/* ── 1. BRAND COLUMN (Wider on desktop: 4 of 12 cols) ── */}
           <div className="md:col-span-1 lg:col-span-4 space-y-5">
             {/* Logo: Gold triangular/mountain icon next to AL HARMAIN TRAVELS with navbar animated line */}
@@ -112,8 +112,6 @@ export default function Footer() {
             </Link>
 
 
-
-            {/* Row of social icons as simple white outline icons in bordered squares */}
             <div className="pt-1 flex items-center gap-2.5" aria-label="Social media links">
               {/* X / Twitter */}
               <a
@@ -189,8 +187,8 @@ export default function Footer() {
                       <span>{link.label}</span>
                       <span
                         className={`absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#d4a24c] rounded-full transition-transform duration-300 origin-left ease-out ${active
-                            ? 'scale-x-100'
-                            : 'scale-x-0 group-hover:scale-x-100 group-active:scale-x-100'
+                          ? 'scale-x-100'
+                          : 'scale-x-0 group-hover:scale-x-100 group-active:scale-x-100'
                           }`}
                       />
                     </Link>
@@ -290,7 +288,7 @@ export default function Footer() {
             - Centered text: "Makkah • Madinah • Jeddah"
             - Copyright + "Privacy Policy | Terms & Conditions"
         ───────────────────────────────────────────────────────────── */}
-        <div className="pt-6 pb-2 border-t border-[#d4a24c]/20 space-y-5">
+        <div className="pt-4 sm:pt-5 pb-2 border-t border-[#d4a24c]/20 space-y-3.5 sm:space-y-4">
           {/* Centered BACK TO TOP button */}
           <div className="flex justify-center">
             <button

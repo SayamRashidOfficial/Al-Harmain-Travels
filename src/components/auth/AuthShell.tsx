@@ -24,27 +24,17 @@ export default function AuthShell({
   showTrustBadges = true,
 }: AuthShellProps) {
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-page text-primary flex items-center justify-center py-10 px-4 sm:px-6 relative overflow-hidden selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-[calc(100vh-64px)] bg-[#faf8f4] text-slate-900 flex items-center justify-center py-6 sm:py-8 lg:py-10 px-4 sm:px-6 relative overflow-hidden selection:bg-[#0c392c] selection:text-white">
       {/* ─────────────────────────────────────────────────
-          BACKGROUND TEXTURES & DYNAMIC AMBIENT AURA
+          BACKGROUND LATTICE
       ───────────────────────────────────────────────── */}
-      {/* Subtle Islamic Geometric Lattice Background Overlay */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.035] dark:opacity-[0.045] mix-blend-luminosity bg-repeat"
+        className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-luminosity bg-repeat"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg stroke='%2310b981' stroke-width='1'%3E%3Cpath d='M30 0l30 30-30 30L0 30z'/%3E%3Cpath d='M30 10l20 20-20 20-20-20z'/%3E%3Cpath d='M30 20l10 10-10 10-10-10z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg stroke='%230c392c' stroke-width='1'%3E%3Cpath d='M30 0l30 30-30 30L0 30z'/%3E%3Cpath d='M30 10l20 20-20 20-20-20z'/%3E%3Cpath d='M30 20l10 10-10 10-10-10z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           backgroundSize: '60px 60px',
         }}
       />
-
-      {/* Emerald Ambient Floating Aura (Top Left / Center) */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/3 w-[580px] h-[580px] bg-gradient-to-br from-emerald-600/18 via-emerald-800/12 to-teal-950/0 rounded-full blur-3xl pointer-events-none animate-float-slow" />
-
-      {/* Warm Royal Gold Ambient Pulsing Aura (Bottom Right) */}
-      <div className="absolute bottom-10 right-1/4 w-[440px] h-[440px] bg-gradient-to-tr from-amber-500/12 via-amber-600/8 to-transparent rounded-full blur-3xl pointer-events-none animate-glow-pulse" />
-
-      {/* Subtle Radial Vignette */}
-      <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-page/75 pointer-events-none" />
 
       {/* ─────────────────────────────────────────────────
           SHELL CONTAINER
@@ -58,18 +48,18 @@ export default function AuthShell({
               href="/"
               className="inline-flex items-center gap-3 group transition-transform active:scale-[0.98] focus-visible:outline-none"
             >
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-950 flex items-center justify-center text-amber-300 font-bold text-xl border border-emerald-500/30 shadow-lg shadow-emerald-950/30 group-hover:border-amber-400/50 group-hover:scale-105 transition-all duration-300">
+              <div className="w-12 h-12 rounded-2xl bg-[#0c392c] flex items-center justify-center text-white font-bold text-xl border border-[#0c392c]/30 shadow-md transition-all duration-300">
                 <span className="font-serif tracking-tight drop-shadow">الح</span>
               </div>
               <div className="text-left">
-                <div className="font-display text-2xl font-bold text-primary leading-none tracking-tight group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">
-                  Al Harmain <span className="text-amber-500">Travel</span>
+                <div className="font-display text-2xl font-bold text-slate-900 leading-none tracking-tight transition-colors">
+                  Al Harmain Travel
                 </div>
-                <div className="text-[10px] text-emerald-600 dark:text-emerald-400/90 tracking-label uppercase font-semibold mt-1 flex items-center gap-1.5">
+                <div className="text-[10px] text-[#0c392c] tracking-label uppercase font-semibold mt-1 flex items-center gap-1.5">
                   <span>Makkah</span>
-                  <span className="text-amber-500/60">&bull;</span>
+                  <span className="text-[#0c392c]/50">&bull;</span>
                   <span>Madinah</span>
-                  <span className="text-amber-500/60">&bull;</span>
+                  <span className="text-[#0c392c]/50">&bull;</span>
                   <span>Jeddah</span>
                 </div>
               </div>
@@ -79,14 +69,14 @@ export default function AuthShell({
           {/* Page Heading & Contextual Subtitle */}
           <div className="space-y-1">
             {typeof title === 'string' ? (
-              <h1 className="type-page-title text-2xl sm:text-3xl font-display font-semibold text-primary">
+              <h1 className="type-page-title text-2xl sm:text-3xl font-display font-semibold text-slate-900">
                 {title}
               </h1>
             ) : (
               title
             )}
             {typeof subtitle === 'string' ? (
-              <p className="type-muted text-xs sm:text-sm max-w-sm mx-auto leading-relaxed">
+              <p className="type-muted text-xs sm:text-sm max-w-sm mx-auto leading-relaxed text-slate-500">
                 {subtitle}
               </p>
             ) : (
@@ -98,23 +88,18 @@ export default function AuthShell({
         {/* ─────────────────────────────────────────────────
             CARD CONTAINER
         ───────────────────────────────────────────────── */}
-        <div className="relative group">
-          {/* Animated Card Border Highlight Shimmer */}
-          <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-emerald-500/40 via-amber-500/20 to-emerald-500/30 opacity-75 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none blur-[0.5px]" />
+        <div className="relative">
+          <div className="relative surface-card overflow-hidden bg-white border border-[#e2ddd5] shadow-lg rounded-3xl transition-all duration-300">
+            {/* Top solid accent bar in unified brand color */}
+            <div className="h-1 w-full bg-[#0c392c]" />
 
-          <div className="relative surface-card overflow-hidden backdrop-blur-xl bg-card/95 border border-base/80 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.45)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] transition-all duration-300">
-            {/* Top shimmering animated gradient edge */}
-            <div className="relative h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-amber-400 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer-sweep pointer-events-none" />
-            </div>
-
-            <div className="p-6 sm:p-8 space-y-5">
+            <div className="p-5 sm:p-7 space-y-4 sm:space-y-5">
               {children}
             </div>
 
             {/* Optional Card Bottom Bar */}
             {footer && (
-              <div className="border-t border-base/70 px-6 sm:px-8 py-4 bg-surface/50 text-center text-xs text-muted">
+              <div className="border-t border-[#e2ddd5] px-6 sm:px-8 py-4 bg-[#faf8f4] text-center text-xs text-slate-500">
                 {footer}
               </div>
             )}
@@ -125,18 +110,18 @@ export default function AuthShell({
             TRUST REASSURANCE ROW
         ───────────────────────────────────────────────── */}
         {showTrustBadges && (
-          <div className="grid grid-cols-3 gap-2 pt-1 text-[11px] text-muted">
-            <div className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-surface/50 border border-base/60 text-center">
-              <Lock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-              <span className="font-medium truncate">Encrypted Auth</span>
+          <div className="grid grid-cols-3 gap-2 pt-1 text-[11px]">
+            <div className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-white border border-[#e2ddd5] text-center shadow-xs">
+              <Lock className="w-3.5 h-3.5 text-[#0c392c] shrink-0" />
+              <span className="font-semibold truncate text-[#0c392c]">Encrypted Auth</span>
             </div>
-            <div className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-surface/50 border border-base/60 text-center">
-              <Award className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span className="font-medium truncate">GTA Licensed</span>
+            <div className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-white border border-[#e2ddd5] text-center shadow-xs">
+              <Award className="w-3.5 h-3.5 text-[#0c392c] shrink-0" />
+              <span className="font-semibold truncate text-[#0c392c]">GTA Licensed</span>
             </div>
-            <div className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-surface/50 border border-base/60 text-center">
-              <Headphones className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-              <span className="font-medium truncate">24/7 Dispatch</span>
+            <div className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-white border border-[#e2ddd5] text-center shadow-xs">
+              <Headphones className="w-3.5 h-3.5 text-[#0c392c] shrink-0" />
+              <span className="font-semibold truncate text-[#0c392c]">24/7 Dispatch</span>
             </div>
           </div>
         )}

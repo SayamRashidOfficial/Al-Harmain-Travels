@@ -34,12 +34,12 @@ export default function AboutCtaSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative py-20 sm:py-24 lg:py-28 overflow-hidden"
+      className="relative py-10 sm:py-14 lg:py-16 overflow-hidden"
       aria-label="Book Your Spiritual Journey"
     >
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6">
         <div
-          className="relative rounded-3xl overflow-hidden p-8 sm:p-12 lg:p-16 text-center space-y-7 border border-[#d4af37]/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xs transition-all duration-800 ease-out"
+          className="relative rounded-3xl overflow-hidden p-6 sm:p-8 lg:p-9 text-center space-y-5 sm:space-y-6 border border-[#d4af37]/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xs transition-all duration-800 ease-out"
           style={{
             background:
               'linear-gradient(145deg, rgba(7, 33, 24, 0.9) 0%, rgba(13, 56, 43, 0.85) 60%, rgba(4, 23, 16, 0.95) 100%)',
@@ -60,11 +60,7 @@ export default function AboutCtaSection() {
             }}
           />
 
-          <div className="relative z-10 space-y-4 max-w-2xl mx-auto">
-            <span className="text-xs font-mono uppercase tracking-[0.2em] font-semibold text-[#f0d484] block">
-              Executive Chauffeur Dispatch
-            </span>
-
+          <div className="relative z-10 space-y-3.5 sm:space-y-4 max-w-2xl mx-auto">
             <h2 className="font-display text-3xl sm:text-4xl lg:text-[2.75rem] text-[#fdfbf7] font-normal tracking-tight leading-[1.18]">
               Let Us Accompany Your Spiritual Itinerary
             </h2>
