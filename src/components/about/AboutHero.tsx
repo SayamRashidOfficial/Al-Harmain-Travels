@@ -149,7 +149,7 @@ export default function AboutHero() {
             lineHeight: 1.65,
           }}
         >
-          Premium religious tourism and executive transportation across the Holy cities of Makkah, Madinah, and Jeddah.
+          , and Jeddah.
 
         </p>
 

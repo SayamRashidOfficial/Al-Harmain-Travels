@@ -809,6 +809,45 @@ textarea {
   }
 }
 
+@keyframes bell-ring {
+  0% { transform: rotate(0deg); }
+  12% { transform: rotate(18deg); }
+  24% { transform: rotate(-16deg); }
+  36% { transform: rotate(12deg); }
+  48% { transform: rotate(-10deg); }
+  60% { transform: rotate(6deg); }
+  72% { transform: rotate(-4deg); }
+  84% { transform: rotate(2deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes bell-alert {
+  0%, 70%, 100% { transform: rotate(0deg) scale(1); }
+  74% { transform: rotate(16deg) scale(1.15); }
+  78% { transform: rotate(-14deg) scale(1.15); }
+  82% { transform: rotate(12deg) scale(1.1); }
+  86% { transform: rotate(-8deg) scale(1.05); }
+  90% { transform: rotate(4deg) scale(1.02); }
+  94% { transform: rotate(0deg) scale(1); }
+}
+
+.animate-bell-ring {
+  animation: bell-ring 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transform-origin: top center;
+}
+
+.animate-bell-alert {
+  animation: bell-alert 3.5s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* Cursor movement / hover on notification button */
+.bell-btn:hover .bell-icon,
+.bell-btn:focus-visible .bell-icon {
+  animation: bell-ring 0.85s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transform-origin: top center;
+}
+
 @keyframes shimmer-sweep {
   0% {
     transform: translateX(-150%);

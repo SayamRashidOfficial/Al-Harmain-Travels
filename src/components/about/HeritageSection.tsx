@@ -128,7 +128,8 @@ export default function HeritageSection() {
                 Founded with a sacred commitment to serve Dhuyuf Al-Rahman (Guests of The Most Merciful), Al-Haramain Travels provides calm, dependable chauffeured journeys between the holy sanctuaries and airport terminals.
               </p>
               <p>
-                Every transfer is conducted by courteous, licensed chauffeurs with authorized Haram courtyard access, ensuring you arrive on schedule and in complete comfort for your worship.
+
+
               </p>
             </div>
           </div>

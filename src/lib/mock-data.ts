@@ -6,7 +6,7 @@ export const INITIAL_SETTINGS: SystemSettings = {
   company_tagline: 'VIP Umrah & City Taxi Services',
   support_phone: '+966 54 888 1234',
   support_whatsapp: '+966 54 888 1234',
-  support_email: 'bookings@alharmaintravels.com',
+  support_email: 'alharmaintravels@gmail.com',
   address: 'Ibrahim Al Khalil Street, Central Area, Makkah, Saudi Arabia',
   currency: 'SAR',
   tax_percentage: 15.0,

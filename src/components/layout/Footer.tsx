@@ -1,25 +1,14 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Phone,
-  Mail,
-  MapPin,
-  ShieldCheck,
-  MessageCircle,
-  ArrowRight,
-  ArrowUp,
-  Compass,
-} from 'lucide-react';
+import { ArrowUp, Phone, Mail, MapPin, ShieldCheck, Award, Clock, Globe } from 'lucide-react';
 import CinematicTexture from '@/components/cinematic/CinematicTexture';
 
 export default function Footer() {
   const pathname = usePathname();
   const footerRef = useRef<HTMLElement>(null);
-  const [isInView, setIsInView] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   // Completely remove footer from all dashboard portals (customer, driver, dispatcher, admin)
   const isDashboard =
@@ -51,361 +40,309 @@ export default function Footer() {
     }
   };
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // Detect user preference for reduced motion
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(mediaQuery.matches);
-    const motionListener = (e: MediaQueryListEvent) => {
-      setPrefersReducedMotion(e.matches);
-      if (e.matches) setIsInView(true);
-    };
-    mediaQuery.addEventListener?.('change', motionListener);
-
-    if (mediaQuery.matches) {
-      setIsInView(true);
-      return () => {
-        mediaQuery.removeEventListener?.('change', motionListener);
-      };
-    }
-
-    const node = footerRef.current;
-    if (!node || !('IntersectionObserver' in window)) {
-      setIsInView(true);
-      return () => {
-        mediaQuery.removeEventListener?.('change', motionListener);
-      };
-    }
-
-    // Immediately reveal if footer is already visible or near viewport on mount
-    const rect = node.getBoundingClientRect();
-    if (rect.top <= window.innerHeight + 150) {
-      setIsInView(true);
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      {
-        threshold: 0.02,
-        rootMargin: '100px 0px 0px 0px',
-      }
-    );
-
-    observer.observe(node);
-
-    // Guaranteed fallback: ensure footer content is shown even if observer fails or doesn't trigger
-    const fallbackTimer = setTimeout(() => {
-      setIsInView(true);
-    }, 600);
-
-    return () => {
-      mediaQuery.removeEventListener?.('change', motionListener);
-      observer.disconnect();
-      clearTimeout(fallbackTimer);
-    };
-  }, [pathname]);
-
-  // Helper for smooth downward-to-upward staggered reveal
-  const getRevealStyle = (delayMs: number) => {
-    if (prefersReducedMotion) return {};
-    return {
-      opacity: isInView ? 1 : 0,
-      transform: isInView ? 'translateY(0)' : 'translateY(36px)',
-      transition: `opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms, transform 0.85s cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms`,
-      willChange: 'opacity, transform',
-    };
+  const isCurrent = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname.startsWith(href);
   };
+
+  const exploreLinks = [
+    { label: 'Home', href: '/' },
+    { label: 'About Us', href: '/about' },
+    { label: 'Services', href: '/services' },
+    { label: 'Contact Us', href: '/contact' },
+    { label: 'Customer Portal', href: '/customer' },
+  ];
+
+  const serviceLinks = [
+    { label: 'Airport Transfers', href: '/services' },
+    { label: 'Umrah & Hajj Transport', href: '/services' },
+    { label: 'Private Chauffeur', href: '/services' },
+    { label: 'Intercity Transfers', href: '/services' },
+    { label: 'Family Transportation', href: '/services' },
+  ];
+
+  const standardItems = [
+    { label: 'Licensed Chauffeurs', icon: ShieldCheck },
+    { label: 'Fixed Transparent Rates', icon: Award },
+    { label: 'Flight Delay Protection', icon: Clock },
+    { label: 'Multilingual Concierge', icon: Globe },
+  ];
 
   return (
     <footer
       ref={footerRef}
-      className="relative overflow-hidden bg-[#072118] border-t border-emerald-900/60 text-emerald-100/80 font-sans pb-24 sm:pb-0"
+      className="relative mt-auto bg-[#072118] text-[#e8e4d8] font-sans rounded-none overflow-hidden border-t border-[#d4a24c]/30 shadow-2xl pb-24 sm:pb-0"
       aria-label="Al Harmain Travels Footer"
     >
-      {/* ── Reusable Cinematic Texture Layer (Default Footer Preset: Deep Green + Gold) ── */}
-      <CinematicTexture variant="footer" />
+      {/* ── Living Cinematic Animated Texture (Canvas 2D, mouse-reactive particles & arabesque) ── */}
+      <CinematicTexture variant="footer" parentRef={footerRef} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 pb-8">
         {/* ─────────────────────────────────────────────────────────────
-            1. TOP: FORMAL CALL-TO-ACTION ROW (DOWNWARD TO UPWARD REVEAL)
+            MAIN 4-COLUMN RESPONSIVE GRID
+            (Desktop: 4 columns with wider brand column, Tablet: 2 cols, Mobile: 1 col)
         ───────────────────────────────────────────────────────────── */}
-        <div
-          className="py-10 sm:py-12 border-b border-emerald-800/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
-          style={getRevealStyle(100)}
-        >
-          <div className="space-y-1.5 max-w-xl">
-            <h3 className="text-xl sm:text-2xl font-semibold text-white tracking-tight font-sans">
-              Ready for a dignified journey?
-            </h3>
-            <p className="font-sans text-sm sm:text-base text-emerald-100/90 leading-relaxed font-normal">
-              To become the Middle East’s most trusted sacred transport network through excellence, innovation, and exceptional service.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto shrink-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 pb-12 sm:pb-14">
+          {/* ── 1. BRAND COLUMN (Wider on desktop: 4 of 12 cols) ── */}
+          <div className="md:col-span-1 lg:col-span-4 space-y-5">
+            {/* Logo: Gold triangular/mountain icon next to AL HARMAIN TRAVELS with navbar animated line */}
             <Link
-              href="/customer"
-              className="bg-gradient-to-r from-[#d4af37] via-[#e5c567] to-[#d4af37] hover:from-[#c5a030] hover:to-[#dfc15a] text-[#06101e] px-8 py-3.5 sm:px-9 sm:py-4 rounded-full text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 shadow-xl hover:shadow-[#d4af37]/20 inline-flex items-center gap-2.5 cursor-pointer group active:scale-95"
-              aria-label="Book Your Ride"
+              href="/"
+              className="inline-flex items-center gap-3 group focus:outline-none"
+              aria-label="Al Harmain Travels Home"
             >
-              <Compass className="w-4 h-4 text-[#06101e]" />
-              <span>Book Your Ride</span>
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-
-            <a
-              href="https://wa.me/966548881234"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-xs sm:text-sm font-bold tracking-wider uppercase text-white/90 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/50 hover:border-[#d4af37]/60 transition-all duration-300 cursor-pointer active:scale-95 shadow-md"
-            >
-              <MessageCircle className="w-4 h-4 text-[#d4af37]" />
-              <span>WhatsApp 24/7</span>
-            </a>
-          </div>
-        </div>
-
-        {/* ─────────────────────────────────────────────────────────────
-            2. MAIN FOOTER CONTENT (4 STAGGERED RISING COLUMNS)
-        ───────────────────────────────────────────────────────────── */}
-        <div className="py-12 sm:py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
-
-          {/* ── COL 1: BRAND & MOT LICENSE (4 COLS) ── */}
-          <div className="sm:col-span-2 lg:col-span-4 space-y-4" style={getRevealStyle(180)}>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-emerald-800/70 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] font-semibold text-sm shadow-sm">
-                الح
+              <div className="w-9 h-9 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105">
+                <svg
+                  viewBox="0 0 32 32"
+                  className="w-8 h-8 text-[#d4a24c] fill-none stroke-current"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <polygon points="16,3 3,27 29,27" fill="rgba(212,162,76,0.18)" stroke="#d4a24c" strokeWidth="2.2" />
+                  <polygon points="16,10 8,27 24,27" fill="rgba(212,162,76,0.36)" stroke="#d4a24c" strokeWidth="1.8" />
+                  <line x1="16" y1="3" x2="16" y2="27" stroke="#d4a24c" strokeWidth="1.2" strokeDasharray="2 2" />
+                </svg>
               </div>
-              <div className="flex flex-col">
-                <span className="text-lg font-semibold tracking-tight text-white font-sans">
-                  Al Harmain Travels
-                </span>
-                <span className="text-[10px] tracking-wider uppercase text-[#d4af37] font-medium font-sans">
-                  VIP Chauffeur &bull; Makkah &bull; Madinah
-                </span>
-              </div>
-            </div>
-
-            {/* Clean Formal MOT License Info */}
-            <div className="flex items-center gap-2 text-xs text-emerald-200/80 pt-1">
-              <ShieldCheck className="w-4 h-4 text-[#d4af37] shrink-0" />
-              <span>KSA Ministry of Transport Licensed Operator #4029</span>
-            </div>
-          </div>
-
-          {/* ── COL 2: QUICK LINKS (2 COLS) ── */}
-          <div className="lg:col-span-2 space-y-3.5" style={getRevealStyle(260)}>
-            <h4 className="text-xs font-semibold tracking-wider text-[#d4af37] uppercase font-sans">
-              Quick Links
-            </h4>
-            <ul className="space-y-2.5 text-sm">
-              {[
-                { label: 'Book a journey', href: '/customer' },
-                { label: 'Services & fleet', href: '/services' },
-                { label: 'Track my ride', href: '/customer/track' },
-                { label: 'About us', href: '/about' },
-                { label: 'Contact support', href: '/contact' },
-              ].map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-emerald-100/75 hover:text-white hover:translate-x-1 inline-flex items-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* ── COL 3: POPULAR ROUTES (3 COLS) ── */}
-          <div className="lg:col-span-3 space-y-3.5" style={getRevealStyle(340)}>
-            <h4 className="text-xs font-semibold tracking-wider text-[#d4af37] uppercase font-sans">
-              Popular Routes
-            </h4>
-            <ul className="space-y-2.5 text-sm">
-              {[
-                { title: 'Jeddah Airport ⇄ Makkah', desc: '55m &bull; VIP Terminal Meet' },
-                { title: 'Makkah ⇄ Madinah', desc: 'Intercity Highway Express' },
-                { title: 'Madinah Airport ⇄ Hotels', desc: '25m &bull; Direct Haram Gates' },
-                { title: 'Ziyarat Holy Sites Tours', desc: 'Ghar Hira, Quba & Uhud' },
-              ].map((r) => (
-                <li key={r.title}>
-                  <Link
-                    href="/customer"
-                    className="group block transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
-                  >
-                    <span className="text-emerald-100/85 group-hover:text-white group-hover:translate-x-0.5 inline-flex items-center gap-1.5 transition-all duration-200 font-medium text-sm">
-                      <span>{r.title}</span>
-                    </span>
-                    <span
-                      dangerouslySetInnerHTML={{ __html: r.desc }}
-                      className="block text-[11px] text-emerald-200/50 group-hover:text-emerald-200/70 transition-colors font-sans"
-                    />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* ── COL 4: CONTACT & DISPATCH (3 COLS) ── */}
-          <div className="lg:col-span-3 space-y-3.5" style={getRevealStyle(420)}>
-            <div className="flex items-center gap-2">
-              <h4 className="text-xs font-semibold tracking-wider text-[#d4af37] uppercase font-sans">
-                Need Help?
-              </h4>
-              <span className="flex items-center gap-1 text-[10px] text-emerald-300 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                24/7
+              <span className="relative py-1 font-bold text-white uppercase tracking-[0.18em] text-base sm:text-lg leading-tight font-sans group-hover:text-[#d4a24c] transition-colors">
+                <span>AL HARMAIN TRAVELS</span>
+                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#d4a24c] rounded-full transition-transform duration-300 origin-left ease-out scale-x-0 group-hover:scale-x-100 group-active:scale-x-100" />
               </span>
-            </div>
-
-            <ul className="space-y-3 text-sm">
-              <li>
-                <a
-                  href="tel:+966548881234"
-                  className="flex items-center gap-2.5 text-emerald-100/80 hover:text-white transition-colors group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
-                >
-                  <Phone className="w-4 h-4 text-[#d4af37] shrink-0" />
-                  <span>+966 54 888 1234</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://wa.me/966548881234"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 text-emerald-100/80 hover:text-emerald-300 transition-colors group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
-                >
-                  <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>WhatsApp Dispatch Desk</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href="mailto:bookings@alharmaintravels.com"
-                  className="flex items-center gap-2.5 text-emerald-100/80 hover:text-white transition-colors group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
-                >
-                  <Mail className="w-4 h-4 text-[#d4af37] shrink-0" />
-                  <span className="truncate">bookings@alharmaintravels.com</span>
-                </a>
-              </li>
-              <li className="flex items-start gap-2.5 text-emerald-100/80">
-                <MapPin className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
-                <span>Ibrahim Al Khalil St, Makkah</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        {/* ─────────────────────────────────────────────────────────────
-            3. BOTTOM BAR (CLEAN, FORMAL DIVIDER & COPYRIGHT)
-        ───────────────────────────────────────────────────────────── */}
-        <div
-          className="py-6 border-t border-emerald-800/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-emerald-200/60 font-sans"
-          style={getRevealStyle(500)}
-        >
-          <p className="text-center sm:text-left">
-            &copy; {new Date().getFullYear()} Al Harmain Travels. All rights reserved.
-          </p>
-
-          <div className="flex items-center gap-6">
-            <Link
-              href="/sign-in"
-              className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
-            >
-              Staff sign in
             </Link>
-            <Link
-              href="/contact"
-              className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
-            >
-              Support
-            </Link>
-            {/* Social Media Icons */}
-            <div className="flex items-center gap-4">
-              <a
-                href="https://www.linkedin.com/company/alharmaintravels"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="LinkedIn"
-                className="transform transition-transform hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(0,119,181,0.8)]"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 fill-[#0A66C2]"
-                >
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.024-3.039-1.852-3.039-1.853 0-2.136 1.445-2.136 2.939v5.669h-3.554V9h3.413v1.561h.047c.476-.9 1.637-1.852 3.371-1.852 3.603 0 4.267 2.37 4.267 5.452v6.291zM5.337 7.433c-1.144 0-2.069-.926-2.069-2.069 0-1.144.925-2.069 2.069-2.069 1.144 0 2.069.925 2.069 2.069 0 1.143-.925 2.069-2.069 2.069zm1.777 13.019H3.56V9h3.554v11.452zM22.225 0H1.771C.792 0 0 .771 0 1.723v20.554C0 23.229.792 24 1.771 24h20.451C23.208 24 24 23.229 24 22.277V1.723C24 .771 23.208 0 22.225 0z" />
-                </svg>
-              </a>
-              <a
-                href="https://www.tiktok.com/@alharmaintravels"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="TikTok"
-                className="transform transition-transform hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(255,0,0,0.8)]"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 fill-[#FF0050]"
-                >
-                  <path d="M9.5 3c0 2.97-.22 5.83-.74 8.55-1.06-.5-2.27-.8-3.66-.8C2.47 10.75 0 13.22 0 16.25s2.47 5.5 5.5 5.5 5.5-2.47 5.5-5.5c0-.94-.23-1.83-.63-2.6 2.02.39 4.28.61 6.63.61v-3c-3.14 0-5.83-1.68-7.1-4.16C12.07 10.86 12 9.93 12 9c0-3.31 2.69-6 6-6V0c-4.97 0-9 4.03-9 9z" />
-                </svg>
-              </a>
-              <a
-                href="https://www.facebook.com/alharmaintravels"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook"
-                className="transform transition-transform hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(59,89,152,0.8)]"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 fill-[#3B5998]"
-                >
-                  <path d="M22.676 0H1.324C.593 0 0 .593 0 1.324v21.352C0 23.407.593 24 1.324 24h11.495v-9.294H9.69V11.01h3.129V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.464.099 2.796.144v3.24l-1.918.001c-1.504 0-1.795.716-1.795 1.765v2.313h3.587l-.467 3.696h-3.12V24h6.116C23.407 24 24 23.407 24 22.676V1.324C24 .593 23.407 0 22.676 0z" />
-                </svg>
-              </a>
+
+
+
+            {/* Row of social icons as simple white outline icons in bordered squares */}
+            <div className="pt-1 flex items-center gap-2.5" aria-label="Social media links">
+              {/* X / Twitter */}
               <a
                 href="https://x.com/alharmaintravels"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="X (Twitter)"
-                className="transform transition-transform hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]"
+                className="w-9 h-9 rounded-md border border-white/20 hover:border-[#d4a24c] flex items-center justify-center text-white/80 hover:text-[#d4a24c] hover:bg-[#d4a24c]/10 active:scale-95 transition-all duration-200"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 fill-[#000000]"
-                >
-                  <path d="M23.954 4.569c-.885.389-1.83.654-2.825.775 1.014-.607 1.794-1.566 2.163-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-2.722 0-4.928 2.206-4.928 4.928 0 .386.043.762.127 1.124-4.094-.205-7.725-2.168-10.152-5.152-.424.727-.666 1.571-.666 2.475 0 1.708.87 3.216 2.188 4.099-.807-.026-1.566-.247-2.228-.616v.062c0 2.385 1.697 4.374 3.946 4.824-.413.112-.849.171-1.296.171-.317 0-.626-.031-.928-.088.626 1.956 2.444 3.379 4.6 3.418-1.68 1.317-3.808 2.103-6.115 2.103-.398 0-.79-.023-1.176-.069 2.179 1.397 4.768 2.212 7.557 2.212 9.054 0 14.003-7.496 14.003-13.986 0-.21-.005-.423-.014-.634.962-.694 1.8-1.562 2.46-2.549z" />
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </a>
+
+              {/* LinkedIn */}
+              <a
+                href="https://www.linkedin.com/company/alharmaintravels"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="LinkedIn"
+                className="w-9 h-9 rounded-md border border-white/20 hover:border-[#d4a24c] flex items-center justify-center text-white/80 hover:text-[#d4a24c] hover:bg-[#d4a24c]/10 active:scale-95 transition-all duration-200"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+                </svg>
+              </a>
+
+              {/* Instagram */}
+              <a
+                href="https://www.instagram.com/alharmaintravels"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="w-9 h-9 rounded-md border border-white/20 hover:border-[#d4a24c] flex items-center justify-center text-white/80 hover:text-[#d4a24c] hover:bg-[#d4a24c]/10 active:scale-95 transition-all duration-200"
+              >
+                <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                  <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                </svg>
+              </a>
+
+              {/* Facebook */}
+              <a
+                href="https://www.facebook.com/alharmaintravels"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="w-9 h-9 rounded-md border border-white/20 hover:border-[#d4a24c] flex items-center justify-center text-white/80 hover:text-[#d4a24c] hover:bg-[#d4a24c]/10 active:scale-95 transition-all duration-200"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95C18.05 21.45 22 17.19 22 12z" />
                 </svg>
               </a>
             </div>
+          </div>
 
-            {/* Clean, Simple Back to Top Button */}
+          {/* ── 2. "EXPLORE" COLUMN (lg:col-span-2) ── */}
+          <div className="md:col-span-1 lg:col-span-2 space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-[0.16em] text-[#d4a24c] font-sans">
+              EXPLORE
+            </h4>
+            <ul className="space-y-3 text-sm">
+              {exploreLinks.map((link) => {
+                const active = isCurrent(link.href);
+                return (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className={`relative inline-block py-1 text-sm font-bold tracking-tight transition-colors duration-200 group focus:outline-none ${active ? 'text-white' : 'text-[#e8e4d8]/85 hover:text-white'
+                        }`}
+                    >
+                      <span>{link.label}</span>
+                      <span
+                        className={`absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#d4a24c] rounded-full transition-transform duration-300 origin-left ease-out ${active
+                            ? 'scale-x-100'
+                            : 'scale-x-0 group-hover:scale-x-100 group-active:scale-x-100'
+                          }`}
+                      />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {/* ── 3. "OUR SERVICES" COLUMN (lg:col-span-3) ── */}
+          <div className="md:col-span-1 lg:col-span-3 space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-[0.16em] text-[#d4a24c] font-sans">
+              OUR SERVICES
+            </h4>
+            <ul className="space-y-3 text-sm">
+              {serviceLinks.map((service) => (
+                <li key={service.label}>
+                  <Link
+                    href={service.href}
+                    className="relative inline-block py-1 text-sm font-bold tracking-tight text-[#e8e4d8]/85 hover:text-white transition-colors duration-200 group focus:outline-none"
+                  >
+                    <span>{service.label}</span>
+                    <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#d4a24c] rounded-full transition-transform duration-300 origin-left ease-out scale-x-0 group-hover:scale-x-100 group-active:scale-x-100" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* ── 4. "CONTACT" + "AL HARMAIN STANDARD" COLUMN (lg:col-span-3, stacked) ── */}
+          <div className="md:col-span-1 lg:col-span-3 space-y-7">
+            {/* CONTACT Section */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-[0.16em] text-[#d4a24c] font-sans">
+                CONTACT
+              </h4>
+              <ul className="space-y-2.5 text-sm text-[#e8e4d8]">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                  <span className="font-medium text-emerald-200">24/7 Customer Support</span>
+                </li>
+                <li>
+                  <a
+                    href="tel:+966548881234"
+                    className="relative inline-flex items-center gap-2 text-[#e8e4d8]/85 hover:text-white transition-colors duration-200 group py-1 focus:outline-none"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-[#d4a24c] shrink-0" />
+                    <span className="relative">
+                      <span>Phone: +966 54 888 1234</span>
+                      <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d4a24c] rounded-full transition-transform duration-300 origin-left ease-out scale-x-0 group-hover:scale-x-100 group-active:scale-x-100" />
+                    </span>
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="mailto:alharmaintravels@gmail.com"
+                    className="relative inline-flex items-center gap-2 text-[#e8e4d8]/85 hover:text-white transition-colors duration-200 group py-1 truncate max-w-full focus:outline-none"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-[#d4a24c] shrink-0" />
+                    <span className="relative truncate">
+                      <span>Email: alharmaintravels@gmail.com</span>
+                      <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d4a24c] rounded-full transition-transform duration-300 origin-left ease-out scale-x-0 group-hover:scale-x-100 group-active:scale-x-100" />
+                    </span>
+                  </a>
+                </li>
+                <li className="inline-flex items-center gap-2 text-[#e8e4d8]/90">
+                  <MapPin className="w-3.5 h-3.5 text-[#d4a24c] shrink-0" />
+                  <span>Saudi Arabia</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* AL HARMAIN STANDARD Section */}
+            <div className="space-y-3 pt-1 border-t border-white/10">
+              <h4 className="text-xs font-bold uppercase tracking-[0.16em] text-[#d4a24c] font-sans pt-2">
+                AL HARMAIN STANDARD
+              </h4>
+              <ul className="space-y-2 text-sm text-[#e8e4d8]">
+                {standardItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.label} className="flex items-center gap-2 text-xs text-[#e8e4d8]/90">
+                      <Icon className="w-3.5 h-3.5 text-[#d4a24c] shrink-0" />
+                      <span>{item.label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            BOTTOM BAR
+            - Centered "BACK TO TOP" action button with navbar underline animation
+            - Separated by a thin divider line
+            - Centered text: "Makkah • Madinah • Jeddah"
+            - Copyright + "Privacy Policy | Terms & Conditions"
+        ───────────────────────────────────────────────────────────── */}
+        <div className="pt-6 pb-2 border-t border-[#d4a24c]/20 space-y-5">
+          {/* Centered BACK TO TOP button */}
+          <div className="flex justify-center">
             <button
               type="button"
               onClick={scrollToTop}
-              className="inline-flex items-center gap-1.5 text-emerald-200/70 hover:text-[#d4af37] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
+              className="relative inline-flex items-center gap-2 px-5 py-2.5 rounded-md border border-[#d4a24c] text-[#d4a24c] hover:bg-[#d4a24c] hover:text-[#072118] text-xs font-bold tracking-[0.18em] uppercase transition-all duration-200 cursor-pointer group shadow-sm focus:outline-none focus:ring-1 focus:ring-[#d4a24c] active:scale-95"
               aria-label="Back to top"
             >
-              <span>Back to top</span>
-              <ArrowUp className="w-3.5 h-3.5" />
+              <ArrowUp className="w-3.5 h-3.5 transition-transform group-hover:-translate-y-0.5" />
+              <span className="relative">
+                <span>BACK TO TOP</span>
+                <span className="absolute -bottom-1 left-0 right-0 h-[2px] bg-current rounded-full transition-transform duration-300 origin-left ease-out scale-x-0 group-hover:scale-x-100 group-active:scale-x-100" />
+              </span>
             </button>
+          </div>
+
+          {/* Centered holy destinations line */}
+          <div className="text-center">
+            <p className="text-xs font-semibold tracking-[0.25em] text-[#d4a24c] uppercase font-sans">
+              Makkah &bull; Madinah &bull; Jeddah
+            </p>
+          </div>
+
+          {/* Bottom split-row: Copyright & Policy links */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#e8e4d8]/70 pt-1 font-sans">
+            <p className="text-center sm:text-left">
+              &copy; 2026 Al Harmain Travels. All Rights Reserved.
+            </p>
+
+            <div className="flex items-center gap-3">
+              <Link
+                href="/contact"
+                className="relative py-1 text-[#e8e4d8]/70 hover:text-white transition-colors duration-200 group focus:outline-none"
+              >
+                <span>Privacy Policy</span>
+                <span className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-[#d4a24c] rounded-full transition-transform duration-300 origin-left ease-out scale-x-0 group-hover:scale-x-100 group-active:scale-x-100" />
+              </Link>
+              <span className="text-white/20">|</span>
+              <Link
+                href="/contact"
+                className="relative py-1 text-[#e8e4d8]/70 hover:text-white transition-colors duration-200 group focus:outline-none"
+              >
+                <span>Terms &amp; Conditions</span>
+                <span className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-[#d4a24c] rounded-full transition-transform duration-300 origin-left ease-out scale-x-0 group-hover:scale-x-100 group-active:scale-x-100" />
+              </Link>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ── Solid gold/amber strip along the very bottom edge as a decorative border ── */}
+      <div className="h-1.5 w-full bg-[#d4a24c]" aria-hidden="true" />
     </footer>
   );
 }

@@ -37,7 +37,7 @@ export default function MissionVisionSection() {
       aria-label="Mission and Vision"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Clean Section Header */}
         <div
           className="text-center max-w-xl mx-auto mb-12 sm:mb-16 space-y-2 transition-all duration-800 ease-out"
@@ -60,7 +60,7 @@ export default function MissionVisionSection() {
 
         {/* Two Clean Columns */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10">
-          
+
           {/* ── Column 1: Mission ── */}
           <div
             className="p-8 sm:p-10 rounded-2xl bg-[#06241a]/45 border border-[#d4af37]/20 backdrop-blur-xs space-y-4 hover:border-[#d4af37]/40 transition-all duration-300"
@@ -83,7 +83,7 @@ export default function MissionVisionSection() {
             </h3>
 
             <p className="font-sans text-base sm:text-[17px] text-[#d1e0d7] leading-[1.65] font-normal max-w-[60ch]">
-              To provide pilgrims and international visitors with calm, prestigious, and reliable transportation, guided by authentic Islamic hospitality, dignity, and care.
+              To provide safe, reliable, and comfortable transportation with genuine Islamic hospitality and care.
             </p>
           </div>
 
@@ -109,12 +109,13 @@ export default function MissionVisionSection() {
             </h3>
 
             <p className="font-sans text-base sm:text-[17px] text-[#d1e0d7] leading-[1.65] font-normal max-w-[60ch]">
-              To become the Kingdom&apos;s most trusted sacred transport network through punctuality, transparency, and exceptional guest support throughout your Umrah and Hajj itinerary.
+              To be the Kingdom’s most trusted transport partner for pilgrims, delivering punctual, transparent, and caring service.
             </p>
+
           </div>
 
         </div>
       </div>
-    </section>
+    </section >
   );
 }

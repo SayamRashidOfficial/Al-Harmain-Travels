@@ -1,5 +1,6 @@
 'use client';
 
+// Contact page with blurry fixed mobile navbar
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import {

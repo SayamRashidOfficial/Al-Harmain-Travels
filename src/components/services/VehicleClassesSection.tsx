@@ -56,9 +56,8 @@ const VEHICLE_CLASSES: VehicleClass[] = [
     id: 'vip_luxury',
     category: 'VIP Ultra Luxury',
     name: 'GMC Yukon XL Denali',
-    description: 'Up to 7 passengers in executive leather comfort with expansive trunk volume for VIP delegations.',
     passengers: 'Up to 7 passengers',
-    luggage: 'Expansive trunk volume',
+    luggage: 'Expansive trunk',
     suitability: 'VIP & executive delegations',
     image: '/images/fleet_yukon.jpg',
     badge: 'Sovereign Flagship',
@@ -69,7 +68,7 @@ const VEHICLE_CLASSES: VehicleClass[] = [
     id: 'family_van',
     category: 'Family Caravan Van',
     name: 'Toyota HiAce Royal Lounge',
-    description: 'Up to 11 passengers with dedicated rear luggage compartment for large families & Umrah groups.',
+    // description: 'Up to 11 passengers with dedicated rear luggage compartment for large families & Umrah groups.',
     passengers: 'Up to 11 passengers',
     luggage: 'Dedicated rear luggage compartment',
     suitability: 'Large families & Umrah groups',
@@ -143,8 +142,8 @@ function VehicleCard({
     >
       <div
         className={`relative h-full w-full rounded-3xl overflow-hidden border transition-all duration-300 flex flex-col justify-between ${item.isVip
-            ? 'bg-gradient-to-b from-[#09291e] via-[#051c14] to-[#03150e] border-[#d4af37]/50 shadow-[0_16px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(212,175,55,0.18)]'
-            : 'bg-gradient-to-b from-[#07241a] via-[#041a13] to-[#02120d] border-[#d4af37]/25 hover:border-[#d4af37]/60 shadow-[0_14px_35px_rgba(0,0,0,0.45)]'
+          ? 'bg-gradient-to-b from-[#09291e] via-[#051c14] to-[#03150e] border-[#d4af37]/50 shadow-[0_16px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(212,175,55,0.18)]'
+          : 'bg-gradient-to-b from-[#07241a] via-[#041a13] to-[#02120d] border-[#d4af37]/25 hover:border-[#d4af37]/60 shadow-[0_14px_35px_rgba(0,0,0,0.45)]'
           }`}
         style={{
           transform: isHovered
@@ -182,8 +181,8 @@ function VehicleCard({
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md border ${item.isVip
-                  ? 'bg-[#d4af37]/20 text-[#f7e8ba] border-[#d4af37]/60 shadow-[0_0_12px_rgba(212,175,55,0.4)]'
-                  : 'bg-black/50 text-[#e4ede7] border-white/20'
+                ? 'bg-[#d4af37]/20 text-[#f7e8ba] border-[#d4af37]/60 shadow-[0_0_12px_rgba(212,175,55,0.4)]'
+                : 'bg-black/50 text-[#e4ede7] border-white/20'
                 }`}
             >
               {item.isVip && <Crown className="w-3.5 h-3.5 text-[#f0d484]" />}
@@ -303,16 +302,15 @@ export default function VehicleClassesSection() {
               </span>
             </div>
 
-            <h2 className="font-display text-3xl sm:text-4xl lg:text-[2.75rem] text-slate-900 dark:text-[#fdfbf7] font-normal tracking-tight leading-[1.18]">
+            <h2 className="font-display text-3xl sm:text-4xl lg:text-[2.75rem] text-slate-900 dark:text-black font-normal tracking-tight leading-[1.18]">
               Maintained to{' '}
-              <span className="text-amber-600 dark:text-[#f0d484] font-serif italic">Sovereign Standards</span>
+              <span className="text-amber-600 dark:text-[#D4AF37] font-serif italic">Sovereign Standards</span>
             </h2>
 
             <p
               className="text-sm sm:text-base text-black !text-black font-medium leading-relaxed max-w-[65ch]"
               style={{ color: '#000000' }}
             >
-              Each category is meticulously prepared with climate-adjusted cabin comfort, licensed English &amp; Arabic speaking chauffeurs, and authorized Haram courtyard clearances.
             </p>
           </div>
         </div>
