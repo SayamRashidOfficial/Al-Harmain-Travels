@@ -148,8 +148,8 @@ export default function Navbar() {
 
   const publicLinks = [
     { label: 'Home', href: '/', icon: Compass },
-    { label: 'About', href: '/about', icon: Info },
     { label: 'Services', href: '/services', icon: Briefcase },
+    { label: 'About', href: '/about', icon: Info },
     { label: 'Contact', href: '/contact', icon: PhoneCall },
   ];
 

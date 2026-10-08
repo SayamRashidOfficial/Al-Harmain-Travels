@@ -8,10 +8,6 @@ import {
   Compass,
   CheckCircle2,
   ArrowRight,
-  Sparkles,
-  ShieldCheck,
-  Users,
-  Luggage,
 } from 'lucide-react';
 import CinematicTexture from '@/components/cinematic/CinematicTexture';
 import VehicleClassesSection from '@/components/services/VehicleClassesSection';
@@ -27,10 +23,6 @@ export default function ServicesPage() {
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 space-y-8 sm:space-y-12 lg:space-y-14 relative z-10">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-700/50 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-            <span>Al Harmain Signature Offerings</span>
-          </div>
           <h1 className="type-page-hero">
             Our chauffeur &amp; <span className="text-amber-500 dark:text-amber-400">travel services</span>
           </h1>

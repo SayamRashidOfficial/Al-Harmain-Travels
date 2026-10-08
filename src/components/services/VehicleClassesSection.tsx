@@ -292,19 +292,26 @@ export default function VehicleClassesSection() {
         {/* ── Section Header ── */}
         <div className="border-b border-slate-200 dark:border-[#d4af37]/20 pb-5 sm:pb-6">
           <div className="space-y-3 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-700/50 text-emerald-800 dark:text-emerald-300 text-xs font-semibold shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-              <span className="font-mono uppercase tracking-[0.16em]">
+            {/* Premium Fleet Insignia Tag */}
+            <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-[#d4af37]/35 bg-gradient-to-r from-amber-500/[0.08] via-[#d4af37]/[0.03] to-transparent dark:from-[#d4af37]/15 dark:via-[#07241a]/60 dark:to-transparent backdrop-blur-md shadow-xs">
+              <span className="flex items-center justify-center w-5 h-5 rounded-md bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#967727] dark:text-[#f4db95]">
+                <Crown className="w-3 h-3 text-[#d4af37]" />
+              </span>
+              <span className="text-[11px] sm:text-xs font-semibold tracking-[0.22em] uppercase text-[#7d5f19] dark:text-[#f5e0a3]">
                 Our Vehicle Classes
+              </span>
+              <span className="h-3 w-px bg-[#d4af37]/30" />
+              <span className="text-[10px] font-medium tracking-[0.16em] uppercase text-slate-500 dark:text-[#9bb4a7]">
+                Executive Fleet
               </span>
             </div>
 
-            <h2 className="font-display text-3xl sm:text-4xl lg:text-[2.75rem] text-slate-900 dark:text-black font-normal tracking-tight leading-[1.18]">
+            <h2 className="font-display text-3xl sm:text-4xl lg:text-[2.75rem] text-slate-900 dark:text-[#fdfbf7] font-normal tracking-tight leading-[1.18]">
               Maintained to{' '}
               <span className="text-amber-600 dark:text-[#D4AF37] font-serif italic">Sovereign Standards</span>
             </h2>
 
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 font-normal leading-relaxed max-w-[60ch]">
+            <p className="text-sm sm:text-base text-slate-600 dark:text-[#cbdad2] font-normal leading-relaxed max-w-[60ch]">
               Executive comfort, licensed chauffeurs, and direct Haram permits.
             </p>
           </div>

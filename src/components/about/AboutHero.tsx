@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, ChevronDown, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 
 export default function AboutHero() {
   const [mounted, setMounted] = useState(false);
@@ -84,21 +84,6 @@ export default function AboutHero() {
 
       {/* ── 2. Hero Content (Centered, Minimal, Calm) ── */}
       <div className="relative z-10 max-w-4xl mx-auto text-center space-y-5 sm:space-y-6 lg:space-y-7">
-
-        {/* Eyebrow Badge */}
-        <div
-          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#d4af37]/30 bg-[#07251c]/70 backdrop-blur-md shadow-xs transition-all duration-700"
-          style={{
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? 'translateY(0)' : 'translateY(16px)',
-            transitionDelay: '100ms',
-          }}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
-          <span className="text-[11px] sm:text-xs font-mono uppercase tracking-[0.2em] font-semibold text-[#f7e8ba]">
-            Serving The Guests of The Most Merciful
-          </span>
-        </div>
 
         {/* Headline: "A Legacy of Sacred Hospitality & Precision" with Line-by-Line Reveal */}
         <div className="space-y-1">
