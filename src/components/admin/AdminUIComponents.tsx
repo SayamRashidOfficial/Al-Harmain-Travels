@@ -153,40 +153,40 @@ export function AdminStatusBadge({
   const toneClasses: Record<ActivityTone, { container: string; dot: string }> = {
     green: {
       container:
-        'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/15',
-      dot: 'bg-emerald-500',
+        'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/80',
+      dot: 'bg-emerald-600',
     },
     red: {
       container:
-        'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30 hover:bg-rose-500/15',
-      dot: 'bg-rose-500',
+        'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100/80',
+      dot: 'bg-rose-600',
     },
     amber: {
       container:
-        'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/15',
-      dot: 'bg-amber-500',
+        'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100/80',
+      dot: 'bg-amber-600',
     },
     blue: {
       container:
-        'bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30 hover:bg-sky-500/15',
-      dot: 'bg-sky-500',
+        'bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100/80',
+      dot: 'bg-sky-600',
     },
     purple: {
       container:
-        'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30 hover:bg-purple-500/15',
-      dot: 'bg-purple-500',
+        'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100/80',
+      dot: 'bg-purple-600',
     },
     neutral: {
       container:
-        'bg-surface text-secondary border-base hover:bg-elevated',
-      dot: 'bg-muted',
+        'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200/80',
+      dot: 'bg-slate-500',
     },
   };
 
   const sizeClasses =
     size === 'sm'
       ? 'px-2 py-0.5 text-[10px] gap-1'
-      : 'px-2 py-0.5 text-[11px] gap-1.5 font-semibold';
+      : 'px-2.5 py-0.5 text-[11px] gap-1.5 font-semibold';
 
   return (
     <span
@@ -228,15 +228,15 @@ export function AdminActionButton({
   ...props
 }: AdminActionButtonProps) {
   const variantStyles: Record<ActionButtonVariant, string> = {
-    view: 'text-sky-600 dark:text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 border-sky-500/25 hover:border-sky-500/40 focus-visible:ring-sky-500',
-    edit: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/25 hover:border-amber-500/40 focus-visible:ring-amber-500',
+    view: 'text-sky-700 bg-sky-50 hover:bg-sky-100 border-sky-200 hover:border-sky-300 focus-visible:ring-sky-500',
+    edit: 'text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-200 hover:border-amber-300 focus-visible:ring-amber-500',
     delete:
-      'text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/25 hover:border-rose-500/40 focus-visible:ring-rose-500',
-    more: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/25 hover:border-purple-500/40 focus-visible:ring-purple-500',
+      'text-rose-700 bg-rose-50 hover:bg-rose-100 border-rose-200 hover:border-rose-300 focus-visible:ring-rose-500',
+    more: 'text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-200 hover:border-purple-300 focus-visible:ring-purple-500',
     primary:
-      'text-white bg-emerald-600 hover:bg-emerald-500 border-emerald-500 shadow-xs focus-visible:ring-emerald-500',
+      'text-white bg-emerald-600 hover:bg-emerald-500 border-emerald-600 shadow-xs focus-visible:ring-emerald-500',
     secondary:
-      'text-secondary hover:text-primary bg-surface hover:bg-elevated border-base focus-visible:ring-amber-500',
+      'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border-slate-200 focus-visible:ring-amber-500',
   };
 
   const defaultIcons: Record<ActionButtonVariant, React.ReactNode> = {
@@ -302,20 +302,20 @@ export function AdminPageHeader({
     <div className="bg-card border border-base p-4 sm:p-5 rounded-2xl shadow-xs hover:shadow-sm transition-shadow flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative overflow-hidden">
       <div className="space-y-1 max-w-3xl z-10">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="type-eyebrow text-amber-600 dark:text-amber-400 font-bold">
+          <span className="type-eyebrow text-amber-700 font-bold">
             {eyebrow}
           </span>
           {badge && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-              <Shield className="w-2.5 h-2.5 text-emerald-500" />
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+              <Shield className="w-2.5 h-2.5 text-emerald-600" />
               {badge}
             </span>
           )}
         </div>
-        <h1 className="text-xl sm:text-2xl font-bold text-primary tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
           {title}
         </h1>
-        <p className="text-xs sm:text-sm text-secondary leading-normal">
+        <p className="text-xs sm:text-sm text-slate-600 leading-normal">
           {description}
         </p>
       </div>
@@ -355,40 +355,40 @@ export function AdminStatCard({
   className = '',
 }: AdminStatCardProps) {
   const iconTones: Record<ActivityTone, string> = {
-    green: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
-    red: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25',
-    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
-    blue: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25',
-    purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/25',
-    neutral: 'bg-surface text-secondary border-base',
+    green: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    red: 'bg-rose-50 text-rose-700 border-rose-200',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200',
+    blue: 'bg-sky-50 text-sky-700 border-sky-200',
+    purple: 'bg-purple-50 text-purple-700 border-purple-200',
+    neutral: 'bg-slate-100 text-slate-700 border-slate-200',
   };
 
   return (
     <div
       onClick={onClick}
-      className={`p-3.5 sm:p-4 rounded-xl bg-card border border-base shadow-2xs hover:border-strong hover:shadow-xs transition-all flex flex-col justify-between group ${
+      className={`p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all flex flex-col justify-between group ${
         onClick ? 'cursor-pointer hover:-translate-y-0.5' : ''
       } ${className}`}
     >
       <div className="flex items-center justify-between gap-2.5">
-        <span className="text-xs font-semibold text-muted group-hover:text-primary transition-colors">
+        <span className="text-xs font-semibold text-slate-500 group-hover:text-slate-900 transition-colors">
           {title}
         </span>
         <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 transition-transform group-hover:scale-105 ${iconTones[tone]}`}
+          className={`w-9 h-9 rounded-xl flex items-center justify-center border shrink-0 transition-transform group-hover:scale-105 shadow-2xs ${iconTones[tone]}`}
         >
           {icon}
         </div>
       </div>
 
       <div className="mt-2.5">
-        <div className="text-xl sm:text-2xl font-bold text-primary font-sans tracking-tight">
+        <div className="text-xl sm:text-2xl font-bold text-slate-900 font-sans tracking-tight">
           {value}
         </div>
         {(subtitle || trend) && (
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
             {trend && (
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+              <span className="font-semibold text-emerald-700 flex items-center gap-0.5">
                 <TrendingUp className="w-3 h-3" />
                 {trend}
               </span>

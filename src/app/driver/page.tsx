@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { DriverStatus, AdditionalChargeType, Booking } from '@/types';
@@ -12,14 +11,12 @@ import {
   Phone,
   PlusCircle,
   Clock,
-  Compass,
   MapPin,
   Bell,
   ShieldCheck,
   Calendar,
   Lock,
   ArrowRight,
-  AlertCircle,
   Layers,
   ExternalLink,
   Trophy,
@@ -27,29 +24,17 @@ import {
   Wallet,
   CalendarCheck,
   Sparkles,
-  Radio,
-  Crosshair,
+  Coins,
+  Banknote,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   categorizeDriverAssignments,
   getWorkflowStep,
+  isCashBooking,
+  isCashPaid,
 } from '@/lib/assignment-utils';
-import { isValidCoordinate } from '@/lib/maps/location-service';
-
-
-
-const ChauffeurTerritoryRadar = dynamic(
-  () => import('@/components/driver/ChauffeurTerritoryRadar'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[540px] w-full rounded-3xl bg-white border border-slate-200 animate-pulse flex items-center justify-center text-slate-400 text-xs shadow-xl">
-        Loading Chauffeur Positioning & Territory Radar...
-      </div>
-    ),
-  }
-);
 
 type AssignmentTab = 'today' | 'tomorrow' | 'upcoming' | 'completed';
 
@@ -60,10 +45,10 @@ export default function DriverCockpitPage() {
     drivers,
     bookings,
     updateDriverStatus,
-    updateDriverLocation,
     driverAcceptBooking,
     driverRejectBooking,
     driverUpdateRideStatus,
+    confirmCashReceived,
     addAdditionalCharge,
     settings,
     isDataLoading,
@@ -115,82 +100,27 @@ export default function DriverCockpitPage() {
   const [chargeAmount, setChargeAmount] = useState<number>(25);
   const [chargeDesc, setChargeDesc] = useState<string>('Airport Express Toll');
 
-  // Browser Geolocation watching
-  const [gpsActive, setGpsActive] = useState<boolean>(true);
-  const [gpsLoading, setGpsLoading] = useState<boolean>(true);
-  const [gpsError, setGpsError] = useState<string | null>(null);
-  const [viewCenter, setViewCenter] = useState<[number, number] | null>(null);
-  const [heading, setHeading] = useState<number>(currentDriver?.location?.heading || 0);
-  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(() => {
-    if (
-      currentDriver?.location?.latitude &&
-      currentDriver?.location?.longitude &&
-      isValidCoordinate(currentDriver.location.latitude, currentDriver.location.longitude)
-    ) {
-      return { lat: currentDriver.location.latitude, lng: currentDriver.location.longitude };
+  // Cash confirmation modal state
+  const [cashModalBooking, setCashModalBooking] = useState<Booking | null>(null);
+  const [isConfirmingCash, setIsConfirmingCash] = useState(false);
+
+  const handleOpenConfirmCashModal = (booking: Booking) => {
+    setCashModalBooking(booking);
+  };
+
+  const handleExecuteConfirmCash = async () => {
+    if (!cashModalBooking || !currentDriver?.id) return;
+    setIsConfirmingCash(true);
+    try {
+      const res = await confirmCashReceived(cashModalBooking.id, currentDriver.id);
+      if (res.success) {
+        setCashModalBooking(null);
+      }
+    } finally {
+      setIsConfirmingCash(false);
     }
-    return null;
-  });
-  const isTracking = gpsActive && driverPos !== null;
-  const [showFleetRadar, setShowFleetRadar] = useState<boolean>(false);
+  };
 
-  // Continuously stream driver GPS position with high accuracy and fresh readings (maximumAge: 0)
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
-      setGpsError('Browser Geolocation is not supported on this device.');
-      setGpsLoading(false);
-      return;
-    }
-
-    if (!gpsActive) return;
-
-    setGpsLoading(true);
-
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude, heading: gpsHeading, speed } = pos.coords;
-        if (!isValidCoordinate(latitude, longitude)) return;
-
-        setDriverPos({ lat: latitude, lng: longitude });
-        setGpsLoading(false);
-        setGpsError(null);
-
-        if (gpsHeading !== null && !isNaN(gpsHeading)) {
-          setHeading(gpsHeading);
-        }
-
-        if (currentDriver?.id) {
-          updateDriverLocation(
-            currentDriver.id,
-            latitude,
-            longitude,
-            gpsHeading || 0,
-            speed || 0
-          );
-        }
-      },
-      (err) => {
-        console.warn('Driver GPS watcher error:', err.message);
-        setGpsLoading(false);
-        if (err.code === 1) { // PERMISSION_DENIED
-          setGpsActive(false);
-          setGpsError('Location permission was denied. Please enable GPS permissions in your browser settings.');
-          toast.error('Location permission was denied. Please enable GPS permissions in your browser.');
-        } else if (err.code === 2) { // POSITION_UNAVAILABLE
-          setGpsError('GPS signal is currently unavailable. Please verify device location services are enabled.');
-        } else if (err.code === 3) { // TIMEOUT
-          setGpsError('GPS location request timed out. Retrying satellite lock...');
-        } else {
-          setGpsError(err.message || 'GPS hardware error');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-
-    return () => {
-      navigator.geolocation.clearWatch(watchId);
-    };
-  }, [gpsActive, currentDriver?.id, updateDriverLocation]);
 
   if (isDataLoading) {
     return (
@@ -221,53 +151,22 @@ export default function DriverCockpitPage() {
     );
   }
 
-  const refreshGps = () => {
-    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
-      toast.error('Browser Geolocation is not supported on this device.');
-      return;
-    }
-    setGpsLoading(true);
-    setGpsActive(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude, heading: gpsHeading, speed } = pos.coords;
-        if (isValidCoordinate(latitude, longitude)) {
-          setDriverPos({ lat: latitude, lng: longitude });
-          setViewCenter(null);
-          setGpsLoading(false);
-          setGpsError(null);
-          if (gpsHeading !== null && !isNaN(gpsHeading)) {
-            setHeading(gpsHeading);
-          }
-          if (currentDriver?.id) {
-            updateDriverLocation(currentDriver.id, latitude, longitude, gpsHeading || 0, speed || 0);
-          }
-          toast.success('Live GPS coordinates updated successfully.');
-        }
-      },
-      (err) => {
-        setGpsLoading(false);
-        setGpsError(err.message);
-        toast.error(`Unable to retrieve GPS: ${err.message}. Please allow location access.`);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  };
-
-  const toggleGps = refreshGps;
-
   const handleStartDriving = async (bookingId: string) => {
     await driverUpdateRideStatus(bookingId, 'driver_arriving');
-    refreshGps();
   };
 
   const handleCompleteTrip = async (bookingId: string) => {
-    await driverUpdateRideStatus(bookingId, 'trip_completed');
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (booking && isCashBooking(booking) && !isCashPaid(booking)) {
+      toast.error('Cannot complete ride: Full cash payment must be confirmed received first.');
+      return;
+    }
+    await driverUpdateRideStatus(bookingId, 'completed');
   };
 
   const handleStatusChange = (status: DriverStatus) => {
     updateDriverStatus(currentDriver.id, status);
-    toast.success(`Chauffeur status set to: ${status.toUpperCase().replace('_', ' ')}`);
+    toast.success(`Chauffeur status set to: ${status.toUpperCase().replace('_', ' ')}.`);
   };
 
   const handleAcceptRide = async (bookingId: string) => {
@@ -381,22 +280,8 @@ export default function DriverCockpitPage() {
             </div>
           </div>
 
-          {/* Quick Chauffeur Controls: GPS share, & Duty status */}
+          {/* Quick Chauffeur Controls: Duty status */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* GPS Refresh / Status Button */}
-            <button
-              onClick={refreshGps}
-              title="Click to refresh fresh GPS hardware reading"
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 shadow-sm ${
-                driverPos
-                  ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-300 ring-2 ring-emerald-500/30'
-                  : 'bg-surface border-base text-secondary hover:text-primary hover:border-emerald-500/40'
-              }`}
-            >
-              <Compass className={`w-4 h-4 ${gpsLoading ? 'animate-spin text-emerald-500' : driverPos ? 'text-emerald-500' : 'text-muted'}`} />
-              <span>{driverPos ? 'Live GPS Online' : gpsLoading ? 'Acquiring GPS…' : 'Refresh GPS'}</span>
-            </button>
-
             {/* Duty status segment buttons */}
             <div className="flex items-center bg-surface p-1 rounded-xl border border-base shadow-inner">
               {(['available', 'on_break', 'offline'] as DriverStatus[]).map((st) => (
@@ -514,7 +399,27 @@ export default function DriverCockpitPage() {
                 Ref #{activeAssignment.booking_reference} &bull; {activeAssignment.passenger_name}
               </h2>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 flex-wrap justify-end">
+              {/* Payment Method Badge */}
+              {isCashBooking(activeAssignment) ? (
+                isCashPaid(activeAssignment) ? (
+                  <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1.5 shadow-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Cash Received &bull; Paid</span>
+                  </span>
+                ) : (
+                  <span className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1.5 shadow-sm">
+                    <Coins className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                    <span>Cash on Pickup &bull; Collect Fare</span>
+                  </span>
+                )
+              ) : (
+                <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1.5 shadow-sm">
+                  <ShieldCheck className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Prepaid (Bank Transfer)</span>
+                </span>
+              )}
+
               <span className="px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/50 uppercase tracking-wider">
                 {getWorkflowStep(activeAssignment.status).label}
               </span>
@@ -625,17 +530,85 @@ export default function DriverCockpitPage() {
               >
                 <PlusCircle className="w-4 h-4" /> Add Toll / Parking Fee
               </button>
-
-              <button
-                type="button"
-                onClick={() => setShowFleetRadar((prev) => !prev)}
-                className="py-2.5 px-4 rounded-xl bg-surface hover:bg-elevated text-primary text-xs font-bold flex items-center gap-2 border border-base shadow-sm transition-all"
-              >
-                <Compass className="w-4 h-4 text-emerald-500" />
-                <span>{showFleetRadar ? 'Hide Fleet Radar' : 'Fleet Territory Radar'}</span>
-              </button>
             </div>
           </div>
+
+          {/* Cash on Pickup Management Box */}
+          {isCashBooking(activeAssignment) && (
+            <div
+              className={`rounded-2xl p-4 sm:p-5 border transition-all ${
+                isCashPaid(activeAssignment)
+                  ? 'bg-emerald-950/20 border-emerald-500/40'
+                  : 'bg-amber-500/10 border-2 border-amber-500/50 shadow-lg shadow-amber-950/20'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 shadow-md ${
+                      isCashPaid(activeAssignment)
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    }`}
+                  >
+                    {isCashPaid(activeAssignment) ? (
+                      <CheckCircle2 className="w-5 h-5" />
+                    ) : (
+                      <Banknote className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-extrabold text-primary text-sm sm:text-base">
+                        {isCashPaid(activeAssignment)
+                          ? 'Cash Received & Settled'
+                          : 'Cash on Pickup — Chauffeur Collection Required'}
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                          isCashPaid(activeAssignment)
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-amber-500/25 text-amber-300 border border-amber-500/50'
+                        }`}
+                      >
+                        {isCashPaid(activeAssignment) ? 'Paid / Confirmed' : 'Pending Cash Collection'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-secondary leading-relaxed">
+                      {isCashPaid(activeAssignment) ? (
+                        <span>
+                          Fare of{' '}
+                          <strong className="text-primary font-mono font-bold">
+                            {formatCurrency(activeAssignment.final_fare || activeAssignment.estimated_fare, settings.currency)}
+                          </strong>{' '}
+                          confirmed collected by you in cash. Safely recorded in central settlement ledger.
+                        </span>
+                      ) : (
+                        <span>
+                          Collect{' '}
+                          <strong className="text-amber-400 font-mono font-bold text-sm">
+                            {formatCurrency(activeAssignment.final_fare || activeAssignment.estimated_fare, settings.currency)}
+                          </strong>{' '}
+                          directly from the passenger upon pickup or dropoff. Once full payment is received, click Confirm Cash Received below.
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {!isCashPaid(activeAssignment) && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenConfirmCashModal(activeAssignment)}
+                    className="w-full sm:w-auto px-6 py-3 rounded-xl font-black text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-950/30 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95 whitespace-nowrap"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Confirm Cash Received
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Sequential Step-by-Step Status Controls */}
           <div className="border-t border-base pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -653,7 +626,7 @@ export default function DriverCockpitPage() {
                   onClick={() => handleStartDriving(activeAssignment.id)}
                   className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-6 py-3 rounded-xl shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2 transform active:scale-95"
                 >
-                  <Navigation className="w-4 h-4" /> Start Heading to Pickup (Broadcast Live GPS) &rarr;
+                  <Navigation className="w-4 h-4" /> Start Heading to Pickup &rarr;
                 </button>
               )}
 
@@ -677,36 +650,44 @@ export default function DriverCockpitPage() {
                 </button>
               )}
 
-              {/* Step 5: Started -> Completed */}
+              {/* Step 5: Started -> Cash Confirmation Required or Complete Ride */}
               {(activeAssignment.status === 'started' ||
                 activeAssignment.status === 'trip_started' ||
                 activeAssignment.status === 'ride_started') && (
-                  <button
-                    onClick={() => handleCompleteTrip(activeAssignment.id)}
-                    className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold px-6 py-3 rounded-xl shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2 transform active:scale-95"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Complete Trip Successfully (End GPS)
-                  </button>
-                )}
+                <>
+                  {isCashBooking(activeAssignment) && !isCashPaid(activeAssignment) ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenConfirmCashModal(activeAssignment)}
+                        className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-6 py-3 rounded-xl shadow-lg shadow-amber-950/30 transition-all flex items-center justify-center gap-2 transform active:scale-95 cursor-pointer whitespace-nowrap"
+                      >
+                        <Banknote className="w-4 h-4" /> Confirm Cash Received
+                      </button>
+                      <button
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        title="You must confirm full cash payment has been received before completing this ride."
+                        className="w-full sm:w-auto bg-surface text-muted text-xs font-bold px-6 py-3 rounded-xl border border-base flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
+                      >
+                        <Lock className="w-3.5 h-3.5 text-amber-500" /> Complete Ride
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      id="complete-ride-btn"
+                      onClick={() => handleCompleteTrip(activeAssignment.id)}
+                      className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold px-6 py-3 rounded-xl shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2 transform active:scale-95 cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Complete Ride
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          3.5 CHAUFFEUR RADAR & LIVE TELEMETRY COCKPIT MAP
-      ───────────────────────────────────────────────────────────── */}
-      {(!activeAssignment || showFleetRadar) && (
-        <ChauffeurTerritoryRadar
-          currentDriver={currentDriver}
-          driverPos={driverPos}
-          heading={heading}
-          gpsActive={gpsActive}
-          gpsError={gpsError}
-          refreshGps={refreshGps}
-          drivers={drivers}
-          bookings={bookings}
-        />
       )}
 
       {/* ─────────────────────────────────────────────────────────────
@@ -885,6 +866,23 @@ export default function DriverCockpitPage() {
                             Trip: {stepInfo.label}
                           </span>
 
+                          {/* Payment Method Badge */}
+                          {isCashBooking(assignment) ? (
+                            isCashPaid(assignment) ? (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Cash Paid
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1 shadow-sm">
+                                <Coins className="w-3 h-3 text-amber-500" /> Cash on Pickup
+                              </span>
+                            )
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3 text-sky-500" /> Prepaid
+                            </span>
+                          )}
+
                           <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-base ml-1">
                             {formatCurrency(
                               assignment.final_fare || assignment.estimated_fare,
@@ -1027,15 +1025,54 @@ export default function DriverCockpitPage() {
                                 </button>
                               )}
 
-                              {/* Step 5: Started -> Complete Trip */}
+                              {/* Step 5: Started -> Cash Confirmation Required or Complete Ride */}
                               {(assignment.status === 'trip_started' ||
                                 assignment.status === 'started' ||
                                 assignment.status === 'ride_started') && (
+                                <>
+                                  {isCashBooking(assignment) && !isCashPaid(assignment) ? (
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenConfirmCashModal(assignment)}
+                                        className="py-2.5 px-4 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
+                                      >
+                                        <Coins className="w-4 h-4" /> Confirm Cash Received
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled
+                                        aria-disabled="true"
+                                        title="You must confirm full cash payment has been received before completing this ride."
+                                        className="py-2.5 px-4 rounded-xl text-xs font-bold bg-surface text-muted border border-base flex items-center gap-1.5 cursor-not-allowed opacity-50"
+                                      >
+                                        <Lock className="w-3.5 h-3.5 text-amber-500" /> Complete Ride
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      id={`complete-ride-btn-${assignment.id}`}
+                                      onClick={() => handleCompleteTrip(assignment.id)}
+                                      className="py-2.5 px-5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                    >
+                                      <CheckCircle2 className="w-4 h-4" /> Complete Ride
+                                    </button>
+                                  )}
+                                </>
+                              )}
+
+                              {/* Cash on Pickup Confirmation for earlier steps (arrived, en route) */}
+                              {isCashBooking(assignment) &&
+                                !isCashPaid(assignment) &&
+                                assignment.status !== 'trip_started' &&
+                                assignment.status !== 'started' &&
+                                assignment.status !== 'ride_started' && (
                                   <button
-                                    onClick={() => handleCompleteTrip(assignment.id)}
-                                    className="py-2.5 px-5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md transition-all flex items-center gap-1.5"
+                                    type="button"
+                                    onClick={() => handleOpenConfirmCashModal(assignment)}
+                                    className="py-2.5 px-4 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
                                   >
-                                    <CheckCircle2 className="w-4 h-4" /> Complete Trip Successfully
+                                    <Coins className="w-4 h-4" /> Confirm Cash Received
                                   </button>
                                 )}
                             </div>
@@ -1091,7 +1128,24 @@ export default function DriverCockpitPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Payment Method Badge */}
+                        {isCashBooking(assignment) ? (
+                          isCashPaid(assignment) ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Cash Paid
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-amber-500" /> Cash on Pickup
+                            </span>
+                          )
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3 text-sky-500" /> Prepaid
+                          </span>
+                        )}
+
                         <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
                           Scheduled
                         </span>
@@ -1170,7 +1224,24 @@ export default function DriverCockpitPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Payment Method Badge */}
+                        {isCashBooking(assignment) ? (
+                          isCashPaid(assignment) ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Cash Paid
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-amber-500" /> Cash on Pickup
+                            </span>
+                          )
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3 text-sky-500" /> Prepaid
+                          </span>
+                        )}
+
                         <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
                           Upcoming Reservation
                         </span>
@@ -1228,7 +1299,7 @@ export default function DriverCockpitPage() {
                   >
                     {/* Top Row: Ref, Passenger, Status & Fare */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-base/60 pb-3">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex flex-wrap items-center gap-2.5">
                         <span className="font-mono font-bold text-amber-500 dark:text-amber-400 text-sm">
                           {ride.booking_reference}
                         </span>
@@ -1238,10 +1309,35 @@ export default function DriverCockpitPage() {
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" /> Completed
                         </span>
+
+                        {isCashBooking(ride) ? (
+                          isCashPaid(ride) ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-emerald-500" /> Cash Collected
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-amber-500" /> Cash Pending
+                            </span>
+                          )
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3 text-sky-500" /> Prepaid
+                          </span>
+                        )}
                       </div>
 
-                      {/* Prominent Price */}
-                      <div className="text-left sm:text-right">
+                      {/* Prominent Price & Action */}
+                      <div className="flex items-center gap-3 self-start sm:self-auto">
+                        {isCashBooking(ride) && !isCashPaid(ride) && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenConfirmCashModal(ride)}
+                            className="px-3 py-1 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm flex items-center gap-1.5 transition-all"
+                          >
+                            <Coins className="w-3.5 h-3.5" /> Confirm Cash
+                          </button>
+                        )}
                         <span className="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-base sm:text-lg block">
                           {formatCurrency(ride.final_fare || ride.estimated_fare, settings.currency)}
                         </span>
@@ -1378,6 +1474,76 @@ export default function DriverCockpitPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          7. CASH ON PICKUP CONFIRMATION MODAL
+      ───────────────────────────────────────────────────────────── */}
+      {cashModalBooking && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-amber-500/30 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 border border-amber-500/30">
+                <Coins className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-primary">Confirm Cash Collection</h3>
+                <p className="text-xs text-secondary">
+                  Trip #{cashModalBooking.booking_reference} &bull; {cashModalBooking.passenger_name}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-surface border border-base space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted">
+                <span>Total Cash Due to Collect:</span>
+                <span className="font-mono font-extrabold text-amber-500 text-base">
+                  {formatCurrency(cashModalBooking.final_fare || cashModalBooking.estimated_fare, settings.currency)}
+                </span>
+              </div>
+              <div className="text-[11px] text-secondary">
+                Payment Method: <strong className="text-primary font-semibold">Cash on Pickup</strong>
+              </div>
+              <div className="text-[11px] text-secondary">
+                Status: <span className="font-semibold text-amber-600 dark:text-amber-400">Pending Collection</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300">
+              <p className="font-semibold mb-0.5">Physical Cash Handover Verification:</p>
+              Please verify that you have physically received the full cash amount in hand from the passenger before confirming. This will save payment status as paid/confirmed in Supabase and unlock the Complete Ride button.
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isConfirmingCash}
+                onClick={() => setCashModalBooking(null)}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-muted hover:text-primary transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isConfirmingCash}
+                onClick={handleExecuteConfirmCash}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 flex items-center gap-2 transition-all disabled:opacity-50"
+              >
+                {isConfirmingCash ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Recording in Supabase...
+                  </>
+                ) : (
+                  <>
+                    <Banknote className="w-4 h-4" />
+                    Confirm Cash Received
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -24,11 +24,11 @@ import {
 import { toast } from 'sonner';
 import { checkDriverOverlap } from '@/lib/assignment-utils';
 
-const LiveMap = dynamic(() => import('@/components/map/LiveMap'), {
+const FleetRadar = dynamic(() => import('@/components/dispatcher/FleetRadar'), {
   ssr: false,
   loading: () => (
-    <div className="h-[480px] w-full rounded-3xl bg-surface animate-pulse flex items-center justify-center text-muted text-sm">
-      Initializing Central Dispatch Radar &amp; Telemetry...
+    <div className="h-[520px] w-full rounded-3xl bg-surface animate-pulse flex items-center justify-center text-muted text-sm border border-base">
+      Initializing Central Real-Time Fleet Radar Telemetry...
     </div>
   ),
 });
@@ -48,6 +48,7 @@ export default function DispatcherRadarPage() {
   const [manualAssignModalBooking, setManualAssignModalBooking] = useState<Booking | null>(null);
   const [isReassignMode, setIsReassignMode] = useState<boolean>(false);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
+  const [radarSelectedDriverId, setRadarSelectedDriverId] = useState<string | null>(null);
 
   // Bookings awaiting payment verification
   const pendingVerificationBookings = bookings.filter((b) => b.status === 'pending_verification');
@@ -70,9 +71,15 @@ export default function DispatcherRadarPage() {
       b.status === 'ride_started'
   );
 
-  // Available drivers & on-duty fleet drivers
-  const availableDrivers = drivers.filter((d) => d.status === 'available');
-  const activeFleetDrivers = drivers.filter((d) => d.status !== 'offline');
+  // Available drivers & on-duty fleet drivers (excluding inactive/deactivated drivers)
+  const isDriverAccountActive = (d: Driver) => {
+    const s = d.profile?.status;
+    return s !== 'deactivated' && s !== 'suspended';
+  };
+  const availableDrivers = drivers.filter((d) => d.status === 'available' && isDriverAccountActive(d));
+  const activeFleetDrivers = drivers.filter(
+    (d) => d.status !== 'offline' && d.status !== 'unavailable' && isDriverAccountActive(d)
+  );
 
   const handleManualAssign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,25 +104,6 @@ export default function DispatcherRadarPage() {
       toast.error('No suitable available driver found for auto-matching.');
     }
   };
-
-  // Map markers: all drivers + active ride pickups
-  const mapMarkers = [
-    ...drivers.map((d) => ({
-      lat: d.location?.latitude || 21.685,
-      lng: d.location?.longitude || 39.157,
-      label: `Chauffeur: ${d.profile?.full_name || d.full_name || 'Captain'}`,
-      type: 'driver' as const,
-      subText: `${d.status.toUpperCase()} • ${d.vehicle?.make || d.assigned_vehicle?.make || 'Fleet'} (${d.vehicle?.plate_number || d.assigned_vehicle?.plate_number || 'VIP'})`,
-      heading: d.location?.heading,
-    })),
-    ...activeRides.map((r) => ({
-      lat: r.pickup_latitude,
-      lng: r.pickup_longitude,
-      label: `Active Trip #${r.booking_reference}`,
-      type: 'pickup' as const,
-      subText: r.pickup_address,
-    })),
-  ];
 
   if (isDataLoading) {
     return (
@@ -182,23 +170,23 @@ export default function DispatcherRadarPage() {
         </div>
       )}
 
-      {/* Main Radar Map View */}
-      <div className="bg-card border border-base p-4 rounded-3xl shadow-2xl space-y-3">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="type-eyebrow text-muted flex items-center gap-2">
-            <Compass className="w-4 h-4 text-emerald-500" /> Live GPS Fleet Radar ({drivers.length} Units Tracked)
-          </h3>
-          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Supabase Realtime Synchronized</span>
-        </div>
-
-        <LiveMap
-          center={[21.4225, 39.8262]}
-          zoom={11}
-          markers={mapMarkers}
-          showRoute={false}
-          className="h-[420px] w-full rounded-2xl"
-        />
-      </div>
+      {/* Central Real-Time Fleet Radar */}
+      <FleetRadar
+        drivers={drivers}
+        bookings={bookings}
+        selectedDriverId={radarSelectedDriverId}
+        onSelectDriver={(id) => setRadarSelectedDriverId(id)}
+        onAssignBooking={(driverId) => {
+          if (readyForAssignmentBookings.length > 0) {
+            setManualAssignModalBooking(readyForAssignmentBookings[0]);
+            setIsReassignMode(false);
+            setSelectedDriverId(driverId);
+          } else {
+            toast.info('No unassigned confirmed bookings available for assignment at this moment.');
+          }
+        }}
+        className="h-[520px] w-full"
+      />
 
       {/* Two Columns: Ready for Driver Assignment & Active Missions */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

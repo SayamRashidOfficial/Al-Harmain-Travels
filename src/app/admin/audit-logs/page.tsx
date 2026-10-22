@@ -229,8 +229,8 @@ export default function AdminAuditLogsPage() {
                       <span
                         className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold uppercase font-mono border inline-flex items-center gap-1 ${
                           log.level === 'warning'
-                            ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/25'
-                            : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25'
+                            ? 'bg-rose-500/10 text-rose-700 border-rose-500/25'
+                            : 'bg-emerald-500/10 text-emerald-700 border-emerald-500/25'
                         }`}
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${log.level === 'warning' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
@@ -240,7 +240,7 @@ export default function AdminAuditLogsPage() {
                     <td className="py-3.5 px-4 whitespace-nowrap font-bold text-primary">
                       {log.entity}
                     </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap text-amber-600 dark:text-amber-400 font-semibold">
+                    <td className="py-3.5 px-4 whitespace-nowrap text-amber-600 font-semibold">
                       {log.user}
                     </td>
                     <td className="py-3.5 px-4 max-w-md text-secondary leading-relaxed">

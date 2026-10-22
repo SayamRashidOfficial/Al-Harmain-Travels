@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   LayoutDashboard,
   Users,
@@ -12,13 +13,12 @@ import {
   DollarSign,
   FileText,
   Sliders,
-  ChevronLeft,
-  ChevronRight,
   Globe,
   LogOut,
   Shield,
   ShieldCheck,
   ExternalLink,
+  Star,
 } from 'lucide-react';
 import { BrandEmblem } from '@/components/ui/BrandLogo';
 
@@ -58,6 +58,12 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         label: 'Users & Access',
         subtitle: 'Staff, Drivers & Pilgrims',
         icon: Users,
+      },
+      {
+        href: '/admin/reviews',
+        label: 'Reviews & Ratings',
+        subtitle: 'Chauffeur & Ride Quality',
+        icon: Star,
       },
       {
         href: '/admin/services',
@@ -109,122 +115,222 @@ interface AdminDashboardShellProps {
 
 export default function AdminDashboardShell({ children }: AdminDashboardShellProps) {
   const pathname = usePathname();
-  const { currentUser, signOut, bookings, usersList } = useApp();
+  const { currentUser, signOut, bookings, drivers } = useApp();
+  const { dir, isRTL, t } = useLanguage();
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [hasMounted, setHasMounted] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Restore collapsed state preference on mount
+  // When route changes, blur active element and reset hover state
   useEffect(() => {
-    setHasMounted(true);
-    const stored = localStorage.getItem('alharmain-admin-sidebar-collapsed');
-    if (stored === 'true') {
-      setIsCollapsed(true);
+    setIsHovered(false);
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
     }
-  }, []);
+  }, [pathname]);
 
-  const handleToggleCollapse = () => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem('alharmain-admin-sidebar-collapsed', String(next));
-      return next;
-    });
-  };
+  // Global mouse move guard: if cursor moves outside the desktop sidebar bounds, collapse immediately
+  useEffect(() => {
+    if (!isHovered) return;
 
-  // Dynamic badges for nav items
-  const pendingBookingsCount = useMemo(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const sidebar = document.getElementById('admin-desktop-sidebar');
+      if (sidebar) {
+        const rect = sidebar.getBoundingClientRect();
+        const isOutside = isRTL
+          ? e.clientX < rect.left - 8 || e.clientY < rect.top || e.clientY > rect.bottom
+          : e.clientX > rect.right + 8 || e.clientY < rect.top || e.clientY > rect.bottom;
+
+        if (isOutside) {
+          setIsHovered(false);
+        }
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [isHovered, isRTL]);
+
+  // Pending bookings count for Overview badge
+  const pendingCount = useMemo(() => {
     return bookings.filter((b) => b.status === 'pending').length;
   }, [bookings]);
 
+  // Mobile Bottom Navigation Bar Links (5 primary modules)
+  const mobileNavLinks = [
+    {
+      href: '/admin',
+      label: isRTL ? 'الرئيسية' : 'Overview',
+      icon: LayoutDashboard,
+      exact: true,
+      badge: pendingCount > 0 ? pendingCount : null,
+    },
+    {
+      href: '/admin/users',
+      label: isRTL ? 'المستخدمين' : 'Users',
+      icon: Users,
+      exact: false,
+      badge: null,
+    },
+    {
+      href: '/admin/rates',
+      label: isRTL ? 'الأسعار' : 'Tariff',
+      icon: Receipt,
+      exact: false,
+      badge: null,
+    },
+    {
+      href: '/admin/reports',
+      label: isRTL ? 'التقارير' : 'Reports',
+      icon: DollarSign,
+      exact: false,
+      badge: null,
+    },
+    {
+      href: '/admin/settings',
+      label: isRTL ? 'الإعدادات' : 'Settings',
+      icon: Sliders,
+      exact: false,
+      badge: null,
+    },
+  ];
+
+  const slideHiddenClass = isRTL ? 'translate-x-3' : '-translate-x-3';
+
+  const getSectionTitle = (title: string) => {
+    switch (title) {
+      case 'Core HQ': return isRTL ? 'المقر الرئيسي' : 'Core HQ';
+      case 'Operations': return isRTL ? 'العمليات' : 'Operations';
+      case 'Tariff & Finance': return isRTL ? 'التعريفات والمالية' : 'Tariff & Finance';
+      case 'Governance': return isRTL ? 'الحوكمة والأمان' : 'Governance';
+      default: return title;
+    }
+  };
+
+  const getItemLabel = (item: AdminNavItem) => {
+    switch (item.href) {
+      case '/admin': return t('nav.overview', item.label);
+      case '/admin/users': return t('nav.users', item.label);
+      case '/admin/reviews': return t('nav.reviews', item.label);
+      case '/admin/services': return t('nav.services', item.label);
+      case '/admin/rates': return t('nav.rates', item.label);
+      case '/admin/reports': return t('nav.reports', item.label);
+      case '/admin/audit-logs': return t('nav.auditLogs', item.label);
+      case '/admin/settings': return t('nav.settings', item.label);
+      default: return item.label;
+    }
+  };
+
+  const getItemSubtitle = (item: AdminNavItem) => {
+    switch (item.href) {
+      case '/admin': return t('nav.overviewSub', item.subtitle);
+      case '/admin/users': return t('nav.usersSub', item.subtitle);
+      case '/admin/reviews': return t('nav.reviewsSub', item.subtitle);
+      case '/admin/services': return t('nav.servicesSub', item.subtitle);
+      case '/admin/rates': return t('nav.ratesSub', item.subtitle);
+      case '/admin/reports': return t('nav.reportsSub', item.subtitle);
+      case '/admin/audit-logs': return t('nav.auditLogsSub', item.subtitle);
+      case '/admin/settings': return t('nav.settingsSub', item.subtitle);
+      default: return item.subtitle;
+    }
+  };
+
   return (
-    <div className="relative min-h-[calc(100vh-64px)] sm:min-h-[calc(100vh-80px)] w-full bg-page text-primary antialiased">
+    <div
+      dir={dir}
+      className="admin-portal customer-portal relative min-h-[calc(100vh-5rem)] w-full bg-page text-primary antialiased overflow-x-hidden"
+    >
       {/* ─────────────────────────────────────────────────────────────
-          1. FIXED DESKTOP SIDEBAR (lg+ screen size)
+          1. DESKTOP SIDEBAR (lg+ screen size)
+          Compact icon-only by default (w-16), expands smoothly on hover (w-64).
+          When mouse leaves into main area, smoothly collapses back to w-16.
       ───────────────────────────────────────────────────────────── */}
       <aside
-        className={`hidden lg:flex flex-col shrink-0 fixed top-16 sm:top-20 left-0 bottom-0 z-30 h-[calc(100vh-64px)] sm:h-[calc(100vh-80px)] border-r border-base bg-card/95 backdrop-blur-xl transition-all duration-300 overflow-hidden select-none shadow-sm ${
-          isCollapsed ? 'w-20' : 'w-72'
+        id="admin-desktop-sidebar"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        aria-label="Executive Admin Sidebar Navigation"
+        aria-expanded={isHovered}
+        className={`hidden lg:flex flex-col shrink-0 fixed top-16 sm:top-20 bottom-0 z-40 ${
+          isRTL ? 'right-0 border-l' : 'left-0 border-r'
+        } border-slate-200 bg-white transition-all duration-300 ease-in-out select-none overflow-hidden group/sidebar ${
+          isHovered
+            ? 'w-64 shadow-xl shadow-slate-200/90 border-emerald-500/40'
+            : 'w-16 hover:w-64 hover:shadow-xl hover:shadow-slate-200/90 hover:border-emerald-500/40'
         }`}
-        aria-label="Executive Admin Navigation"
       >
-        {/* Top Header / Admin Identity Banner */}
-        <div className="p-4 border-b border-base flex items-center justify-between gap-3 shrink-0">
-          <div className={`flex items-center gap-3 min-w-0 ${isCollapsed ? 'justify-center w-full' : ''}`}>
-            <div className="relative shrink-0">
+        {/* Top Header / Profile Banner */}
+        <div className="p-2 border-b border-slate-200 bg-white flex items-center gap-1.5 shrink-0 h-16">
+          <div className="w-12 h-10 flex items-center justify-center shrink-0 relative">
+            <div className="relative">
               {currentUser.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={currentUser.avatar_url}
                   alt={currentUser.full_name}
-                  className="w-11 h-11 rounded-2xl object-cover border-2 border-amber-500/70 shadow-sm"
+                  className="w-8 h-8 rounded-xl object-cover border-2 border-amber-500/50 shadow-xs"
                 />
               ) : (
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 text-slate-950 font-extrabold flex items-center justify-center border border-amber-400/60 shadow-sm text-sm">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 text-slate-950 font-bold flex items-center justify-center border border-amber-400/40 shadow-xs text-xs">
                   {currentUser.full_name?.charAt(0)?.toUpperCase() || 'A'}
                 </div>
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-card shadow-xs" />
+              <span
+                className={`absolute -bottom-0.5 ${
+                  isRTL ? '-left-0.5' : '-right-0.5'
+                } w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white`}
+              />
             </div>
-
-            {!isCollapsed && (
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-bold text-primary truncate block">
-                    {currentUser.full_name?.split(' ')[0] || 'Administrator'}
-                  </span>
-                  <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
-                </div>
-                <div className="mt-0.5 flex items-center gap-1">
-                  <span className="inline-flex items-center gap-1 text-[10.5px] font-extrabold uppercase tracking-wide text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30">
-                    <Shield className="w-3 h-3 text-amber-500" />
-                    Single Authority
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
 
-          {!isCollapsed && (
-            <button
-              onClick={handleToggleCollapse}
-              className="p-2 rounded-xl text-muted hover:text-primary hover:bg-elevated border border-transparent hover:border-base transition-colors cursor-pointer shrink-0"
-              title="Collapse sidebar"
-              aria-label="Collapse sidebar"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          )}
+          <div
+            className={`flex-1 min-w-0 ${
+              isRTL ? 'pr-1.5 pl-2 text-right' : 'pl-1.5 pr-2 text-left'
+            } overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+              isHovered
+                ? 'opacity-100 max-w-[170px] translate-x-0 pointer-events-auto'
+                : `opacity-0 max-w-0 pointer-events-none ${slideHiddenClass} group-hover/sidebar:opacity-100 group-hover/sidebar:max-w-[170px] group-hover/sidebar:translate-x-0 group-hover/sidebar:pointer-events-auto`
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-primary truncate block">
+                {currentUser.full_name?.split(' ')[0] || (isRTL ? 'المشرف العام' : 'Admin HQ')}
+              </span>
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            </div>
+            <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-amber-700 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 mt-0.5">
+              <Shield className="w-2.5 h-2.5 text-amber-500" />
+              {isRTL ? 'إدارة عليا' : 'Single Authority'}
+            </span>
+          </div>
         </div>
 
-        {/* Collapsed expand trigger */}
-        {isCollapsed && (
-          <div className="pt-2 px-3 flex justify-center shrink-0">
-            <button
-              onClick={handleToggleCollapse}
-              className="p-2.5 rounded-xl text-muted hover:text-primary hover:bg-elevated border border-base transition-colors cursor-pointer"
-              title="Expand sidebar"
-              aria-label="Expand sidebar"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Scrollable Navigation Sections */}
+        {/* Navigation Sections */}
         <nav
-          className="flex-1 overflow-y-auto px-3.5 py-4 space-y-5 overscroll-contain"
-          aria-label="Admin Navigation Links"
+          className="p-2 space-y-1 flex-1 overflow-y-auto overflow-x-hidden scrollbar-none bg-white"
+          aria-label="Executive Admin Navigation Links"
         >
           {ADMIN_NAV_SECTIONS.map((section, sIdx) => (
-            <div key={section.title} className="space-y-1.5">
-              {!isCollapsed ? (
-                <div className="px-3 pt-1 pb-1">
-                  <p className="text-[11px] font-extrabold uppercase tracking-wider text-muted font-sans">
-                    {section.title}
-                  </p>
+            <div key={section.title} className="space-y-1">
+              {/* Section Divider / Label */}
+              {sIdx > 0 && (
+                <div className="py-0.5">
+                  <div
+                    className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+                      isHovered
+                        ? 'opacity-100 max-h-6 px-2.5 pb-0.5 pointer-events-auto'
+                        : `opacity-0 max-h-0 pointer-events-none ${slideHiddenClass} group-hover/sidebar:opacity-100 group-hover/sidebar:max-h-6 group-hover/sidebar:px-2.5 group-hover/sidebar:pb-0.5 group-hover/sidebar:pointer-events-auto`
+                    }`}
+                  >
+                    <p className="text-[9px] font-extrabold uppercase tracking-wider text-muted font-sans">
+                      {getSectionTitle(section.title)}
+                    </p>
+                  </div>
+                  <div
+                    className={`border-t border-base/60 my-1 mx-2 transition-opacity duration-300 ${
+                      isHovered ? 'hidden' : 'block group-hover/sidebar:hidden'
+                    }`}
+                  />
                 </div>
-              ) : (
-                sIdx > 0 && <div className="border-t border-base/70 my-2 mx-1" />
               )}
 
               {section.items.map((item) => {
@@ -233,46 +339,70 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
                   ? pathname === item.href
                   : pathname === item.href || pathname.startsWith(item.href + '/');
 
+                const itemBadge = item.href === '/admin' && pendingCount > 0 ? pendingCount : item.badge;
+
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    title={isCollapsed ? `${item.label} — ${item.subtitle}` : undefined}
-                    className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all relative group ${
+                    onClick={(e) => {
+                      e.currentTarget.blur();
+                      setIsHovered(false);
+                    }}
+                    className={`flex items-center rounded-xl font-medium text-xs transition-all duration-200 relative group/item h-11 w-full ${
                       isActive
-                        ? 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-500/35 font-bold shadow-xs'
+                        ? 'bg-emerald-600 text-white font-bold shadow-sm shadow-emerald-900/20'
                         : 'text-secondary hover:text-primary hover:bg-elevated border border-transparent hover:border-base'
-                    } ${isCollapsed ? 'justify-center px-0 py-3' : ''}`}
+                    }`}
                   >
-                    <div className="relative shrink-0 flex items-center justify-center">
+                    {/* Fixed Icon container (always centered at 32px from sidebar edge) */}
+                    <div className="w-12 h-10 flex items-center justify-center shrink-0 relative">
                       <Icon
-                        className={`w-5 h-5 transition-transform group-hover:scale-110 ${
-                          isActive
-                            ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-muted group-hover:text-amber-500'
+                        className={`w-4 h-4 transition-transform group-hover/item:scale-110 ${
+                          isActive ? 'text-amber-300' : 'text-emerald-700'
                         }`}
                       />
+                      {itemBadge && (
+                        <span
+                          className={`group-hover/sidebar:hidden absolute top-1.5 ${
+                            isRTL ? 'left-2.5' : 'right-2.5'
+                          } w-2 h-2 rounded-full bg-amber-400 ${isHovered ? 'hidden' : ''}`}
+                        />
+                      )}
                     </div>
 
-                    {!isCollapsed && (
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="truncate text-xs font-bold">{item.label}</span>
-                          {isActive && (
-                            <span className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.9)] shrink-0" />
-                          )}
-                        </div>
-                        <span
-                          className={`text-[10.5px] block truncate font-medium ${
-                            isActive
-                              ? 'text-amber-700/90'
-                              : 'text-muted group-hover:text-secondary'
-                          }`}
-                        >
-                          {item.subtitle}
-                        </span>
+                    {/* Animated label, subtitle, and badge */}
+                    <div
+                      className={`flex-1 min-w-0 ${
+                        isRTL ? 'pr-1.5 pl-2 text-right' : 'pl-1.5 pr-2 text-left'
+                      } overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+                        isHovered
+                          ? 'opacity-100 max-w-[180px] translate-x-0 pointer-events-auto'
+                          : `opacity-0 max-w-0 pointer-events-none ${slideHiddenClass} group-hover/sidebar:opacity-100 group-hover/sidebar:max-w-[180px] group-hover/sidebar:translate-x-0 group-hover/sidebar:pointer-events-auto`
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="truncate text-xs font-semibold">{getItemLabel(item)}</span>
+                        {itemBadge && (
+                          <span
+                            className={`shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
+                              isActive
+                                ? 'bg-white/20 text-white'
+                                : 'bg-emerald-500/15 text-emerald-800 border border-emerald-500/30'
+                            }`}
+                          >
+                            {itemBadge}
+                          </span>
+                        )}
                       </div>
-                    )}
+                      <span
+                        className={`text-[9.5px] block truncate mt-0.5 ${
+                          isActive ? 'text-emerald-100' : 'text-slate-500'
+                        }`}
+                      >
+                        {getItemSubtitle(item)}
+                      </span>
+                    </div>
                   </Link>
                 );
               })}
@@ -280,78 +410,149 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
           ))}
         </nav>
 
-        {/* Sidebar Footer: Live Public Site & Sign Out */}
-        <div className="p-3.5 border-t border-base space-y-2 bg-surface/40 mt-auto shrink-0">
-          {/* Live Public Website Link */}
-          {!isCollapsed ? (
-            <Link
-              href="/"
-              className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-secondary hover:text-primary hover:bg-elevated border border-transparent hover:border-base transition-colors group"
+        {/* Sidebar Footer: Public Website & Sign Out */}
+        <div className="p-2 border-t border-slate-200 bg-white mt-auto shrink-0 space-y-1">
+          {/* Public Live Website */}
+          <Link
+            href="/"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              setIsHovered(false);
+            }}
+            className="flex items-center rounded-xl text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer h-11 w-full border border-transparent hover:border-slate-200 group/item"
+            title={isRTL ? 'الموقع العام' : 'Public Website'}
+          >
+            <div className="w-12 h-10 flex items-center justify-center shrink-0">
+              <Globe className="w-4 h-4 text-amber-500 shrink-0 transition-transform group-hover/item:rotate-12" />
+            </div>
+            <div
+              className={`flex-1 min-w-0 ${
+                isRTL ? 'pr-1.5 pl-2 text-right' : 'pl-1.5 pr-2 text-left'
+              } overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+                isHovered
+                  ? 'opacity-100 max-w-[170px] translate-x-0 pointer-events-auto'
+                  : `opacity-0 max-w-0 pointer-events-none ${slideHiddenClass} group-hover/sidebar:opacity-100 group-hover/sidebar:max-w-[170px] group-hover/sidebar:translate-x-0 group-hover/sidebar:pointer-events-auto`
+              }`}
             >
-              <span className="flex items-center gap-2.5">
-                <Globe className="w-4 h-4 text-amber-500 group-hover:rotate-12 transition-transform shrink-0" />
-                <span className="truncate">Public Live Website</span>
-              </span>
-              <ExternalLink className="w-3.5 h-3.5 text-muted group-hover:text-primary shrink-0" />
-            </Link>
-          ) : (
-            <Link
-              href="/"
-              title="Visit Public Website"
-              className="w-full flex items-center justify-center py-2.5 rounded-xl text-secondary hover:text-amber-500 hover:bg-elevated transition-colors"
-            >
-              <Globe className="w-5 h-5 text-amber-500" />
-            </Link>
-          )}
+              <div className="flex items-center justify-between gap-1.5">
+                <span className="truncate font-semibold">{isRTL ? 'الموقع العام' : 'Public Website'}</span>
+                <ExternalLink className="w-3 h-3 text-slate-400 shrink-0" />
+              </div>
+            </div>
+          </Link>
 
           {/* Sign Out */}
-          {!isCollapsed ? (
-            <button
-              onClick={() => signOut()}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-300/40 transition-colors cursor-pointer"
+          <button
+            type="button"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              setIsHovered(false);
+              signOut();
+            }}
+            className="w-full flex items-center rounded-xl text-xs font-semibold text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer h-11"
+            aria-label={t('signOut', 'Sign Out')}
+          >
+            <div className="w-12 h-10 flex items-center justify-center shrink-0">
+              <LogOut className="w-4 h-4 shrink-0 transition-transform group-hover/item:scale-105" />
+            </div>
+            <div
+              className={`flex-1 min-w-0 ${
+                isRTL ? 'pr-1.5 pl-2 text-right' : 'pl-1.5 pr-2 text-left'
+              } overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+                isHovered
+                  ? 'opacity-100 max-w-[170px] translate-x-0 pointer-events-auto'
+                  : `opacity-0 max-w-0 pointer-events-none ${slideHiddenClass} group-hover/sidebar:opacity-100 group-hover/sidebar:max-w-[170px] group-hover/sidebar:translate-x-0 group-hover/sidebar:pointer-events-auto`
+              }`}
             >
-              <LogOut className="w-4 h-4 shrink-0" />
-              <span>Sign Out Admin HQ</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => signOut()}
-              title="Sign Out"
-              className="w-full flex items-center justify-center py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          )}
+              <span className="truncate font-semibold">{t('signOut', 'Sign Out')} HQ</span>
+            </div>
+          </button>
 
           {/* Official Brand Stamp */}
-          <div className="pt-2 border-t border-base/60">
-            {isCollapsed ? (
-              <div className="flex justify-center">
-                <BrandEmblem size="xs" className="scale-90" />
+          <div className="pt-1.5 border-t border-base/60">
+            <div className="flex items-center h-7 px-1">
+              <div className="w-12 h-7 flex items-center justify-center shrink-0">
+                <BrandEmblem size="xs" className="scale-75" />
               </div>
-            ) : (
-              <div className="flex items-center justify-between text-[10px] text-muted px-1">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <BrandEmblem size="xs" className="scale-75 origin-left" />
+              <div
+                className={`flex-1 min-w-0 ${
+                  isRTL ? 'pr-1 pl-1 text-right' : 'pl-1 pr-1 text-left'
+                } overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+                  isHovered
+                    ? 'opacity-100 max-w-[170px] pointer-events-auto'
+                    : `opacity-0 max-w-0 pointer-events-none group-hover/sidebar:opacity-100 group-hover/sidebar:max-w-[170px] group-hover/sidebar:pointer-events-auto`
+                }`}
+              >
+                <div className="flex items-center justify-between text-[10px] text-muted">
                   <span className="font-semibold text-primary truncate">Al Harmain Travels</span>
+                  <span className="shrink-0 text-amber-500 font-bold ml-1">HQ</span>
                 </div>
-                <span className="shrink-0 text-amber-500 font-bold">HQ</span>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </aside>
 
       {/* ─────────────────────────────────────────────────────────────
-          2. INDEPENDENT MAIN CONTENT AREA
+          2. MAIN CONTENT AREA
+          Fixed padding (lg:pl-16 or lg:pr-16) ensures dashboard content
+          NEVER shifts or resizes when the sidebar expands on hover.
       ───────────────────────────────────────────────────────────── */}
       <main
-        className={`min-w-0 w-full overflow-x-hidden transition-all duration-300 pb-16 ${
-          isCollapsed ? 'lg:pl-20' : 'lg:pl-72'
+        onMouseEnter={() => setIsHovered(false)}
+        className={`min-w-0 w-full overflow-x-hidden pb-20 lg:pb-6 ${
+          isRTL ? 'lg:pr-16 lg:pl-0' : 'lg:pl-16 lg:pr-0'
         }`}
       >
         {children}
       </main>
+
+      {/* ─────────────────────────────────────────────────────────────
+          3. MOBILE BOTTOM NAVIGATION BAR (< lg screen size)
+          Provides quick, ergonomic, single-tap access to primary modules
+      ───────────────────────────────────────────────────────────── */}
+      <nav
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-2xl px-2 py-1 pb-[max(0.4rem,env(safe-area-inset-bottom))]"
+        aria-label="Mobile Admin Navigation"
+      >
+        <div className="grid grid-cols-5 gap-1 items-center max-w-md mx-auto">
+          {mobileNavLinks.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all relative ${
+                  isActive
+                    ? 'text-emerald-700 font-bold'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <div className="relative">
+                  <Icon
+                    className={`w-4 h-4 transition-transform ${
+                      isActive ? 'scale-105 text-emerald-700' : ''
+                    }`}
+                  />
+                  {item.badge && (
+                    <span className={`absolute -top-1 ${isRTL ? '-left-2' : '-right-2'} px-1 py-0.2 bg-amber-500 text-slate-950 rounded-full text-[8.5px] font-bold`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[9px] tracking-tight mt-0.5 truncate max-w-[62px] text-center">
+                  {item.label}
+                </span>
+                {isActive && (
+                  <span className="w-1 h-1 rounded-full bg-emerald-500 mt-0.5" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

@@ -194,13 +194,13 @@ export default function AdminReportsPage() {
                 ) : (
                   bookings.map((b) => (
                     <tr key={b.id} className="hover:bg-elevated/60 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-amber-600 dark:text-amber-400">
+                      <td className="py-3.5 px-4 font-mono font-bold text-amber-600">
                         {b.booking_reference}
                       </td>
                       <td className="py-3.5 px-4 font-medium text-primary">
                         {b.passenger_name || 'Anonymous Passenger'}
                       </td>
-                      <td className="py-3.5 px-4 uppercase text-emerald-600 dark:text-emerald-400 font-semibold tracking-wide">
+                      <td className="py-3.5 px-4 uppercase text-emerald-600 font-semibold tracking-wide">
                         {b.vehicle_type?.replace(/_/g, ' ')}
                       </td>
                       <td className="py-3.5 px-4 text-muted text-[11px] whitespace-nowrap">
@@ -226,7 +226,7 @@ export default function AdminReportsPage() {
         <div className="bg-card border border-base rounded-3xl p-6 sm:p-7 shadow-xl space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-base pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/20">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
@@ -266,7 +266,7 @@ export default function AdminReportsPage() {
                 >
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-[10.5px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded-lg border border-amber-500/25">
+                      <span className="font-mono text-[10.5px] font-bold text-amber-700 bg-amber-500/10 px-2.5 py-0.5 rounded-lg border border-amber-500/25">
                         {log.action}
                       </span>
                       <span className="font-semibold text-primary truncate max-w-xl">

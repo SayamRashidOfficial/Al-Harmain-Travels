@@ -24,6 +24,8 @@ import {
   RateServiceType,
   RateRoute,
   RateTerminal,
+  DriverLocation,
+  DriverSettlement,
 } from '@/types';
 import {
   INITIAL_SETTINGS,
@@ -36,7 +38,7 @@ import {
   CANONICAL_RATE_ROUTES,
   CANONICAL_RATE_TERMINALS,
 } from '@/lib/fixed-fare';
-import { generateBookingReference } from '@/lib/utils';
+import { generateBookingReference, formatCurrency } from '@/lib/utils';
 import { calculateEstimatedFare } from '@/lib/fare-calculator';
 import { calculateDistanceKm, estimateDurationMinutes } from '@/lib/geo';
 import { supabase } from '@/lib/supabase/client';
@@ -47,12 +49,28 @@ import {
   isBookingCompleted,
   isBookingCancelled,
   isBookingForCustomer,
+  isCashBooking,
+  isCashPaid,
 } from '@/lib/assignment-utils';
 import {
   calculateDriverRating,
   calculateDriverCompletedRides,
   resolveDriverVehicle,
 } from '@/lib/driver-stats';
+import { isValidCoordinate } from '@/lib/maps/location-service';
+
+// Location write throttling map (driverId -> last written payload & timestamp)
+const locationThrottleMap = new Map<
+  string,
+  {
+    lat: number;
+    lng: number;
+    heading: number;
+    speed: number;
+    timestamp: number;
+    timer?: ReturnType<typeof setTimeout>;
+  }
+>();
 
 export interface NotificationItem {
   id: string;
@@ -183,6 +201,7 @@ interface AppContextType {
     license_number?: string;
     national_id?: string;
     assigned_vehicle_id?: string;
+    avatar_url?: string;
   }) => Promise<{ success: boolean; user?: Profile; error?: string; generatedPassword?: string }>;
   adminUpdateUser: (userId: string, data: {
     full_name?: string;
@@ -196,12 +215,15 @@ interface AppContextType {
     national_id?: string;
     assigned_vehicle_id?: string | null;
     password?: string;
+    avatar_url?: string | null;
   }) => Promise<{ success: boolean; error?: string }>;
   adminAssignVehicle: (driverId: string, vehicleId: string | null) => Promise<{ success: boolean; error?: string }>;
   createStaffAccount: (data: { full_name: string; email: string; phone: string }) => Promise<Profile>;
   createDriverAccount: (data: { full_name: string; email: string; phone: string; license_number: string; vehicle_id?: string }) => Promise<Profile>;
-  toggleUserStatus: (id: string) => void;
-  deleteUser: (id: string) => Promise<boolean>;
+  toggleUserStatus: (id: string) => Promise<void> | void;
+  deleteUser: (id: string, force?: boolean) => Promise<boolean>;
+  uploadDriverAvatar: (file: File, driverId?: string) => Promise<string | null>;
+  uploadCustomerAvatar: (file: File, customerId?: string) => Promise<string | null>;
 
   // Vehicle Management (Admin)
   addVehicle: (vehicle: Omit<Vehicle, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -235,10 +257,17 @@ interface AppContextType {
     terminal?: string | null;
     fixed_fare_amount?: number | null;
     fare_rate_id?: string | null;
+    // Dispatcher & Custom extensions
+    customer_id?: string | null;
+    custom_fare?: number | null;
+    initial_status?: BookingStatus;
+    payment_method?: 'cash' | 'online' | 'card';
+    dispatcher_notes?: string | null;
   }) => Promise<Booking>;
 
   confirmBooking: (bookingId: string) => Promise<void>;
   verifyPayment: (bookingId: string) => Promise<void>;
+  confirmCashReceived: (bookingId: string, driverId?: string) => Promise<{ success: boolean; error?: string }>;
   rejectPayment: (bookingId: string, reason: string) => Promise<void>;
   rejectBooking: (bookingId: string, reason: string) => Promise<void>;
   setCustomBookingFare: (bookingId: string, fare: number, dispatcherNotes?: string) => Promise<void>;
@@ -272,7 +301,7 @@ interface AppContextType {
       | 'trip_started'
       | 'completed'
       | 'trip_completed'
-  ) => Promise<void>;
+  ) => Promise<{ success: boolean; error?: string } | void>;
   startTrip: (bookingId: string) => Promise<void>;
   completeTrip: (bookingId: string) => Promise<void>;
   updateBookingStatus: (bookingId: string, status: BookingStatus, notes?: string) => Promise<void>;
@@ -288,6 +317,17 @@ interface AppContextType {
   submitRating: (
     data: Omit<RatingFeedback, 'id' | 'created_at'>
   ) => Promise<{ success: boolean; alreadyRated?: boolean; message?: string; rating?: RatingFeedback; error?: string }>;
+
+  // Driver Settlements
+  driverSettlements: DriverSettlement[];
+  createDriverSettlement: (data: {
+    driver_id: string;
+    amount: number;
+    payment_method?: 'bank_transfer' | 'cash';
+    bank_name?: string;
+    transaction_number?: string;
+    notes?: string;
+  }) => Promise<{ success: boolean; settlement?: DriverSettlement; error?: string }>;
 
   // Helper getters
   activeCustomerBooking?: Booking;
@@ -385,6 +425,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
   const [recentLocations, setRecentLocations] = useState<RecentLocation[]>([]);
+  const [driverSettlements, setDriverSettlements] = useState<DriverSettlement[]>([]);
 
   // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -448,6 +489,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         { data: dbRateRoutes },
         { data: dbRateTerminals },
         { data: dbRatings },
+        { data: dbSettlements },
       ] = await Promise.all([
         supabase.from('services').select('*').order('display_order', { ascending: true }),
         supabase.from('profiles').select('*'),
@@ -465,7 +507,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         `),
         supabase.from('bookings').select(`
           *,
-          driver:drivers(*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*), location:driver_locations(*))
+          driver:drivers(*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*), location:driver_locations(*)),
+          payments(*)
         `).order('created_at', { ascending: false }),
         supabase.from('fixed_fare_rates').select('*').order('created_at', { ascending: true }),
         supabase.from('rate_vehicle_types').select('*').order('display_order', { ascending: true }),
@@ -473,7 +516,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         supabase.from('rate_routes').select('*').order('display_order', { ascending: true }),
         supabase.from('rate_terminals').select('*').order('display_order', { ascending: true }),
         supabase.from('ratings_feedback').select('*').order('created_at', { ascending: false }),
+        supabase.from('driver_settlements').select('*').order('created_at', { ascending: false }),
       ]);
+
+      if (dbSettlements) {
+        setDriverSettlements(dbSettlements as DriverSettlement[]);
+      }
 
       if (dbRatings) {
         setRatings(dbRatings as RatingFeedback[]);
@@ -569,6 +617,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const ratingStats = calculateDriverRating(allRatings, d.id);
           const resolvedVeh = resolveDriverVehicle(d.assigned_vehicle_id, currentRateVehs, currentVehicles);
 
+          const rawLoc = Array.isArray(d.location) ? d.location[0] : d.location;
+          const cleanLoc: DriverLocation | null =
+            rawLoc &&
+            !isNaN(Number(rawLoc.latitude)) &&
+            !isNaN(Number(rawLoc.longitude)) &&
+            isValidCoordinate(Number(rawLoc.latitude), Number(rawLoc.longitude))
+              ? {
+                  driver_id: rawLoc.driver_id || d.id,
+                  latitude: Number(rawLoc.latitude),
+                  longitude: Number(rawLoc.longitude),
+                  heading: Number(rawLoc.heading || 0),
+                  speed: Number(rawLoc.speed || 0),
+                  updated_at: rawLoc.updated_at || d.updated_at || new Date().toISOString(),
+                }
+              : null;
+
           return {
             ...d,
             profile: prof || d.profile,
@@ -580,6 +644,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             total_rides: completedRides,
             assigned_vehicle: resolvedVeh || d.assigned_vehicle,
             vehicle: resolvedVeh || d.vehicle,
+            location: cleanLoc,
           };
         });
         setDrivers(mappedDrivers);
@@ -595,6 +660,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               if (matchedD) {
                 b.driver = matchedD;
               }
+            }
+            if (rawB.payments && Array.isArray(rawB.payments) && rawB.payments.length > 0) {
+              b.payment = rawB.payments[0];
             }
             uniqueMap.set(b.id, b as Booking);
           }
@@ -640,21 +708,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             speed?: number;
             updated_at?: string;
           };
+          const numLat = Number(updated.latitude);
+          const numLng = Number(updated.longitude);
+          if (!isValidCoordinate(numLat, numLng)) return;
+
           const nowStr = updated.updated_at || new Date().toISOString();
+          const cleanLoc: DriverLocation = {
+            driver_id: updated.driver_id,
+            latitude: numLat,
+            longitude: numLng,
+            heading: Number(updated.heading || 0),
+            speed: Number(updated.speed || 0),
+            updated_at: nowStr,
+          };
 
           setDrivers((prev) =>
             prev.map((d) =>
               d.id === updated.driver_id
                 ? {
                   ...d,
-                  location: {
-                    driver_id: updated.driver_id,
-                    latitude: updated.latitude,
-                    longitude: updated.longitude,
-                    heading: updated.heading || 0,
-                    speed: updated.speed || 0,
-                    updated_at: nowStr,
-                  },
+                  location: cleanLoc,
                 }
                 : d
             )
@@ -668,14 +741,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                   driver: b.driver
                     ? {
                       ...b.driver,
-                      location: {
-                        driver_id: updated.driver_id,
-                        latitude: updated.latitude,
-                        longitude: updated.longitude,
-                        heading: updated.heading || 0,
-                        speed: updated.speed || 0,
-                        updated_at: nowStr,
-                      },
+                      location: cleanLoc,
                     }
                     : b.driver,
                 }
@@ -954,6 +1020,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       })
       .subscribe();
 
+    // Listen to real-time driver settlements (payouts)
+    const settlementsChannel = supabase
+      .channel('public:driver_settlements')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_settlements' }, (payload) => {
+        if (payload.eventType === 'INSERT' && payload.new) {
+          setDriverSettlements((prev) => [payload.new as DriverSettlement, ...prev.filter((s) => s.id !== (payload.new as any).id)]);
+        } else if (payload.eventType === 'UPDATE' && payload.new) {
+          setDriverSettlements((prev) => prev.map((s) => (s.id === (payload.new as any).id ? (payload.new as DriverSettlement) : s)));
+        } else if (payload.eventType === 'DELETE' && payload.old) {
+          setDriverSettlements((prev) => prev.filter((s) => s.id !== (payload.old as any).id));
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(locationChannel);
       supabase.removeChannel(bookingsChannel);
@@ -963,6 +1043,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       supabase.removeChannel(ratesChannel);
       supabase.removeChannel(notifsChannel);
       supabase.removeChannel(ratingsChannel);
+      supabase.removeChannel(settlementsChannel);
     };
     // Empty dependency array: channels are set up once on mount and torn down
     // on unmount. Using [drivers] here caused re-subscriptions (and channel
@@ -1602,6 +1683,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setCurrentUser(updatedUser);
       setUsersList((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
 
+      // Keep drivers state synchronized with profile updates immediately
+      setDrivers((prev) =>
+        prev.map((d) => {
+          if (d.id === updatedUser.id || d.profile?.id === updatedUser.id) {
+            return {
+              ...d,
+              full_name: updatedUser.full_name,
+              phone: updatedUser.phone,
+              avatar_url: updatedUser.avatar_url,
+              profile: {
+                ...(d.profile || {}),
+                ...updatedUser,
+              },
+            };
+          }
+          return d;
+        })
+      );
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('alharmain_customer_language', sanitizedLang);
         localStorage.setItem('alharmain_preferred_language', sanitizedLang);
@@ -1653,26 +1753,48 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
 
-      const fileExt = file.name.split('.').pop() || 'jpg';
-      const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
       let publicUrl = '';
-      if (!error && data) {
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-        publicUrl = urlData.publicUrl;
-      } else {
-        // Fallback to Data URL
-        publicUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
+
+      // 1. Try server storage route first (admin service role for resilient avatar uploads)
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userId', currentUser.id);
+
+        const res = await fetch('/api/storage/avatar', {
+          method: 'POST',
+          body: formData,
         });
+
+        const data = await res.json().catch(() => null);
+        if (res.ok && data?.success && data?.url) {
+          publicUrl = data.url;
+        }
+      } catch (apiErr) {
+        console.warn('API avatar upload failed, trying direct Supabase storage:', apiErr);
+      }
+
+      // 2. Direct client storage fallback
+      if (!publicUrl) {
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { data, error } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file, { upsert: true });
+
+        if (!error && data) {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+          publicUrl = urlData.publicUrl;
+        } else {
+          // Fallback to Data URL
+          publicUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+        }
       }
 
       await updateUserProfile({ avatar_url: publicUrl });
@@ -1748,6 +1870,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
+      if (currentUser.email && currentPassword) {
+        const { error: verifyErr } = await supabase.auth.signInWithPassword({
+          email: currentUser.email,
+          password: currentPassword,
+        });
+        if (verifyErr && verifyErr.message?.toLowerCase().includes('invalid login credentials')) {
+          return { success: false, error: 'Current password is incorrect. Please verify and try again.' };
+        }
+      }
+
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) {
         return { success: false, error: error.message };
@@ -2668,7 +2800,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // User Management (Admin)
+  // User Management (Admin & Operations)
   const adminCreateUser = async (data: {
     role: UserRole;
     full_name: string;
@@ -2680,6 +2812,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     license_number?: string;
     national_id?: string;
     assigned_vehicle_id?: string;
+    avatar_url?: string;
   }): Promise<{ success: boolean; user?: Profile; error?: string; generatedPassword?: string }> => {
     try {
       const res = await fetch('/api/admin/users', {
@@ -2723,6 +2856,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const newDriver: Driver = {
           ...resData.driver,
           profile: createdProfile,
+          full_name: createdProfile.full_name,
+          phone: createdProfile.phone,
+          avatar_url: createdProfile.avatar_url || data.avatar_url || null,
           assigned_vehicle: assignedVeh,
         };
         setDrivers((prev) => [newDriver, ...prev.filter((d) => d.id !== createdProfile.id)]);
@@ -2761,6 +2897,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       national_id?: string;
       assigned_vehicle_id?: string | null;
       password?: string;
+      avatar_url?: string | null;
     }
   ): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -2782,56 +2919,73 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         prev.map((u) => (u.id === userId ? { ...u, ...updatedProfile } : u))
       );
 
-      // Handle driver state update if relevant
-      if (
-        updates.assigned_vehicle_id !== undefined ||
-        updates.license_number !== undefined ||
-        updates.national_id !== undefined
-      ) {
-        const matchedRateVeh = updates.assigned_vehicle_id
-          ? rateVehicles.find((rv) => rv.id === updates.assigned_vehicle_id || rv.category === updates.assigned_vehicle_id) || null
-          : null;
-        const matchedLegacyVeh = !matchedRateVeh && updates.assigned_vehicle_id
-          ? vehicles.find((v) => v.id === updates.assigned_vehicle_id) || null
-          : null;
+      // Handle driver state update whenever this user is in the fleet roster
+      setDrivers((prev) =>
+        prev.map((d) => {
+          if (d.id === userId || d.profile?.id === userId) {
+            let assignedVeh = d.assigned_vehicle;
+            if (updates.assigned_vehicle_id !== undefined) {
+              const matchedRateVeh = updates.assigned_vehicle_id
+                ? rateVehicles.find((rv) => rv.id === updates.assigned_vehicle_id || rv.category === updates.assigned_vehicle_id) || null
+                : null;
+              const matchedLegacyVeh = !matchedRateVeh && updates.assigned_vehicle_id
+                ? vehicles.find((v) => v.id === updates.assigned_vehicle_id) || null
+                : null;
 
-        const assignedVeh: Vehicle | null = matchedRateVeh
-          ? {
-              id: matchedRateVeh.id,
-              plate_number: matchedRateVeh.category.toUpperCase(),
-              make: matchedRateVeh.name,
-              model: `(${matchedRateVeh.seating_capacity} Seats)`,
-              vehicle_type: matchedRateVeh.category as any,
-              seating_capacity: matchedRateVeh.seating_capacity,
-              status: 'assigned',
-              created_at: matchedRateVeh.created_at || new Date().toISOString(),
-              updated_at: new Date().toISOString(),
+              assignedVeh = matchedRateVeh
+                ? {
+                    id: matchedRateVeh.id,
+                    plate_number: matchedRateVeh.category.toUpperCase(),
+                    make: matchedRateVeh.name,
+                    model: `(${matchedRateVeh.seating_capacity} Seats)`,
+                    vehicle_type: matchedRateVeh.category as any,
+                    seating_capacity: matchedRateVeh.seating_capacity,
+                    status: 'assigned',
+                    created_at: matchedRateVeh.created_at || new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  }
+                : matchedLegacyVeh;
             }
-          : matchedLegacyVeh;
 
-        setDrivers((prev) =>
-          prev.map((d) => {
-            if (d.id === userId) {
-              return {
-                ...d,
-                license_number:
-                  updates.license_number !== undefined ? updates.license_number : d.license_number,
-                national_id:
-                  updates.national_id !== undefined ? updates.national_id : d.national_id,
-                assigned_vehicle_id:
-                  updates.assigned_vehicle_id !== undefined
-                    ? updates.assigned_vehicle_id
-                    : d.assigned_vehicle_id,
-                assigned_vehicle:
-                  updates.assigned_vehicle_id !== undefined ? assignedVeh : d.assigned_vehicle,
-                status: updates.assigned_vehicle_id ? 'assigned' : 'available',
-                profile: { ...d.profile, ...updatedProfile } as Profile,
-              };
+            const updatedStatus = updates.status !== undefined ? updates.status : d.profile?.status;
+            let resolvedDutyStatus = d.status;
+            if (updatedStatus === 'deactivated' || updatedStatus === 'suspended') {
+              resolvedDutyStatus = 'unavailable';
+            } else if (updates.status === 'active' && resolvedDutyStatus === 'unavailable') {
+              resolvedDutyStatus = (updates.assigned_vehicle_id !== undefined ? updates.assigned_vehicle_id : d.assigned_vehicle_id) ? 'assigned' : 'available';
+            } else if (updates.assigned_vehicle_id !== undefined) {
+              resolvedDutyStatus = updates.assigned_vehicle_id ? 'assigned' : 'available';
             }
-            return d;
-          })
-        );
-      }
+
+            const newAvatar = updates.avatar_url !== undefined
+              ? (updates.avatar_url || null)
+              : (updatedProfile.avatar_url !== undefined ? updatedProfile.avatar_url : d.avatar_url);
+
+            return {
+              ...d,
+              full_name: updatedProfile.full_name || d.full_name,
+              phone: updatedProfile.phone || d.phone,
+              avatar_url: newAvatar,
+              license_number:
+                updates.license_number !== undefined ? updates.license_number : d.license_number,
+              national_id:
+                updates.national_id !== undefined ? updates.national_id : d.national_id,
+              assigned_vehicle_id:
+                updates.assigned_vehicle_id !== undefined
+                  ? updates.assigned_vehicle_id
+                  : d.assigned_vehicle_id,
+              assigned_vehicle: assignedVeh,
+              status: resolvedDutyStatus,
+              profile: {
+                ...d.profile,
+                ...updatedProfile,
+                avatar_url: newAvatar,
+              } as Profile,
+            };
+          }
+          return d;
+        })
+      );
 
       toast.success(resData.message || 'User updated successfully');
       return { success: true };
@@ -3006,31 +3160,113 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return fallbackDriverProfile;
   };
 
-  const toggleUserStatus = (id: string) => {
-    setUsersList((prev) => {
-      const target = prev.find((u) => u.id === id);
-      const newStatus = target?.status === 'active' ? 'deactivated' : 'active';
-      // Persist to Supabase so the change survives a page refresh
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      if (isUuid) {
-        supabase
-          .from('profiles')
-          .update({ status: newStatus, updated_at: new Date().toISOString() })
-          .eq('id', id)
-          .then(({ error }) => {
-            if (error) console.warn('toggleUserStatus Supabase error:', error.message);
-          });
-      }
-      return prev.map((u) =>
+  const toggleUserStatus = async (id: string) => {
+    const targetUser = usersList.find((u) => u.id === id);
+    const targetDriver = drivers.find((d) => d.id === id || d.profile?.id === id);
+    const currentStatus = targetUser?.status || targetDriver?.profile?.status || 'active';
+    const newStatus: UserStatus = currentStatus === 'active' ? 'deactivated' : 'active';
+    const isCustomer = (targetUser?.role || 'customer') === 'customer' && !targetDriver;
+
+    // 1. Optimistic state updates
+    setUsersList((prev) =>
+      prev.map((u) =>
         u.id === id ? { ...u, status: newStatus, updated_at: new Date().toISOString() } : u
-      );
-    });
-    toast.info('User account status updated');
+      )
+    );
+
+    setDrivers((prev) =>
+      prev.map((d) => {
+        if (d.id === id || d.profile?.id === id) {
+          const updatedProfile = d.profile ? { ...d.profile, status: newStatus } : undefined;
+          return {
+            ...d,
+            profile: updatedProfile as Profile,
+            status: newStatus === 'deactivated'
+              ? 'unavailable'
+              : (d.assigned_vehicle_id ? 'assigned' : 'available'),
+          };
+        }
+        return d;
+      })
+    );
+
+    // 2. Persist to Supabase and Auth via PATCH /api/admin/users
+    try {
+      await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: id, status: newStatus }),
+      });
+    } catch (err) {
+      console.warn('toggleUserStatus server sync warning:', err);
+    }
+
+    if (newStatus === 'deactivated') {
+      if (isCustomer) {
+        toast.info('Customer account deactivated. New bookings are suspended.');
+        addNotification(
+          'Customer Account Deactivated',
+          `${targetUser?.full_name || 'Customer'} account has been suspended.`,
+          'warning',
+          'dispatcher'
+        );
+      } else {
+        toast.info('Driver account deactivated. Cannot receive new ride assignments.');
+        addNotification(
+          'Driver Deactivated',
+          `${targetDriver?.profile?.full_name || 'Captain'} suspended from fleet duty.`,
+          'warning',
+          'admin'
+        );
+      }
+    } else {
+      if (isCustomer) {
+        toast.success('Customer account reactivated. Eligible for bookings.');
+        addNotification(
+          'Customer Account Reactivated',
+          `${targetUser?.full_name || 'Customer'} account restored to active status.`,
+          'info',
+          'dispatcher'
+        );
+      } else {
+        toast.success('Driver account reactivated and restored to fleet duty.');
+        addNotification(
+          'Driver Reactivated',
+          `${targetDriver?.profile?.full_name || 'Captain'} restored to active duty.`,
+          'info',
+          'admin'
+        );
+      }
+    }
   };
 
-  const deleteUser = async (id: string): Promise<boolean> => {
+  const deleteUser = async (id: string, force: boolean = false): Promise<boolean> => {
     try {
-      // 1. Release any vehicle assigned to this driver
+      // 1. For UUID users: call server-side Admin API route with active trip checks
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      if (isUuid) {
+        const res = await fetch('/api/admin/users', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: id, force }),
+        });
+
+        const json = await res.json().catch(() => ({ success: false, error: 'Invalid server response' }));
+
+        if (!res.ok || !json.success) {
+          const errMsg = json.error || 'Server deletion failed.';
+          console.error('deleteUser server error:', errMsg);
+          toast.error(errMsg);
+          return false;
+        }
+      } else {
+        // Local/demo record — remove from public tables
+        await supabase.from('customers').delete().eq('id', id);
+        await supabase.from('drivers').delete().eq('id', id);
+        await supabase.from('profiles').delete().eq('id', id);
+      }
+
+      // 2. Release any vehicle assigned to this driver
       const targetDriver = drivers.find((d) => d.id === id || d.profile?.id === id);
       if (targetDriver?.assigned_vehicle_id) {
         const vehId = targetDriver.assigned_vehicle_id;
@@ -3039,45 +3275,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         );
       }
 
-      // 2. Optimistically remove from all frontend state immediately for snappy UX
+      // 3. Optimistically preserve historical trips in local state by nullifying foreign keys
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.customer_id === id
+            ? { ...b, customer_id: null }
+            : b.assigned_driver_id === id
+            ? { ...b, assigned_driver_id: null }
+            : b
+        )
+      );
+
+      // 4. Optimistically remove from all frontend user lists immediately
       setUsersList((prev) => prev.filter((u) => u.id !== id));
       setDrivers((prev) => prev.filter((d) => d.id !== id && d.profile?.id !== id));
 
-      // 3. If the user being deleted is the currently active session, sign out first
+      // 5. If the user being deleted is the currently active session, sign out first
       if (currentUser.id === id) {
         await signOut();
       }
 
-      // 4. For UUID users: call server-side Admin API route
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      if (isUuid) {
-        const res = await fetch('/api/admin/users', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: id }),
-        });
-
-        const json = await res.json().catch(() => ({ success: false, error: 'Invalid server response' }));
-
-        if (!res.ok || !json.success) {
-          const errMsg = json.error || 'Server deletion failed.';
-          console.error('deleteUser server error:', errMsg);
-          toast.error('Failed to fully delete user: ' + errMsg);
-          await fetchRemoteData();
-          return false;
-        }
-      } else {
-        // Local/demo record — remove from public.profiles only
-        const { error } = await supabase.from('profiles').delete().eq('id', id);
-        if (error) {
-          console.error('deleteUser profiles error (non-UUID):', error);
-          toast.error('Failed to delete user profile: ' + error.message);
-          await fetchRemoteData();
-          return false;
-        }
-      }
-
-      toast.success('User account permanently deleted.');
+      toast.success('Account permanently deleted.');
       return true;
     } catch (err: unknown) {
       console.error('deleteUser error:', err);
@@ -3085,6 +3303,45 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await fetchRemoteData();
       return false;
     }
+  };
+
+  const uploadDriverAvatar = async (file: File, driverId?: string): Promise<string | null> => {
+    try {
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('Please upload a valid image (JPEG, PNG, or WebP).');
+        return null;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size exceeds 5MB limit. Please choose a smaller photo.');
+        return null;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      if (driverId) formData.append('userId', driverId);
+
+      const res = await fetch('/api/storage/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json().catch(() => ({ success: false, error: 'Server error' }));
+      if (!res.ok || !data.success || !data.url) {
+        toast.error(data.error || 'Failed to upload photo.');
+        return null;
+      }
+
+      return data.url;
+    } catch (err) {
+      console.error('uploadDriverAvatar error:', err);
+      toast.error('Failed to upload driver photo.');
+      return null;
+    }
+  };
+
+  const uploadCustomerAvatar = async (file: File, customerId?: string): Promise<string | null> => {
+    return uploadDriverAvatar(file, customerId);
   };
 
   // Vehicle Management
@@ -3138,6 +3395,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     terminal?: string | null;
     fixed_fare_amount?: number | null;
     fare_rate_id?: string | null;
+    // Dispatcher & Custom extensions
+    customer_id?: string | null;
+    custom_fare?: number | null;
+    initial_status?: BookingStatus;
+    payment_method?: 'cash' | 'online' | 'card';
+    dispatcher_notes?: string | null;
   }): Promise<Booking> => {
     const isCustom = data.booking_method === 'custom';
     const bookingMethod = data.booking_method || 'fixed';
@@ -3154,29 +3417,74 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const durationMin = estimateDurationMinutes(distKm);
 
     // CRITICAL REQUIREMENT:
-    // For custom route bookings, NEVER calculate, estimate, or generate a fare.
-    // Fares MUST remain null until explicitly confirmed by the dispatcher.
+    // For custom route bookings submitted without an agreed fare, fare remains null.
+    // If a dispatcher supplies custom_fare (manually agreed rate), use it as confirmedFare!
     // For fixed-fare bookings, use the server-validated fixed fare or distance-based estimate.
     const confirmedFare = isCustom
-      ? null
-      : (data.fixed_fare_amount ?? calculateEstimatedFare(data.vehicle_type, distKm, durationMin).total_fare);
+      ? (data.custom_fare !== undefined && data.custom_fare !== null ? Number(data.custom_fare) : null)
+      : (data.fixed_fare_amount !== undefined && data.fixed_fare_amount !== null
+          ? Number(data.fixed_fare_amount)
+          : calculateEstimatedFare(data.vehicle_type, distKm, durationMin).total_fare);
 
-    const initialStatus: BookingStatus = isCustom ? 'pending_review' : 'pending_verification';
+    // Initial status:
+    // If payment screenshot uploaded -> always pending_verification!
+    // Otherwise respect caller's initial_status, or default based on booking method.
+    const initialStatus: BookingStatus = data.payment_screenshot_url
+      ? 'pending_verification'
+      : (data.initial_status || (isCustom ? (confirmedFare !== null ? 'confirmed' : 'pending_review') : 'confirmed'));
 
     const ref = generateBookingReference();
-    let customerId: string | null = null;
-    try {
-      const { data: sess } = await supabase.auth.getSession();
-      if (sess?.session?.user?.id) {
-        customerId = sess.session.user.id;
+    let customerId: string | null = data.customer_id !== undefined ? data.customer_id : null;
+
+    // Check if phone matches an existing customer in usersList
+    if (!customerId && data.passenger_phone) {
+      const cleanPhone = data.passenger_phone.replace(/[\s\-\(\)\.]/g, '');
+      const matchingProfile = usersList.find(
+        (u) => u.role === 'customer' && u.phone && u.phone.replace(/[\s\-\(\)\.]/g, '') === cleanPhone
+      );
+      if (matchingProfile) {
+        customerId = matchingProfile.id;
       }
-    } catch {}
-    if (!customerId && currentUser.id && currentUser.id !== 'guest') {
+    }
+
+    if (!customerId) {
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        if (sess?.session?.user?.id && currentUser.role === 'customer') {
+          customerId = sess.session.user.id;
+        }
+      } catch {}
+    }
+    if (!customerId && currentUser.role === 'customer' && currentUser.id && currentUser.id !== 'guest') {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id);
       if (isUuid) {
         customerId = currentUser.id;
       }
     }
+
+    // Resolve customer profile object
+    const custProfile = customerId
+      ? (usersList.find((u) => u.id === customerId) || (currentUser.id === customerId ? currentUser : null))
+      : null;
+
+    // Enforce active account constraint: Inactive customers must not be allowed to make new bookings
+    if (custProfile && (custProfile.status === 'deactivated' || custProfile.status === 'suspended')) {
+      const errorMsg = `The customer account for ${custProfile.full_name || 'this passenger'} is currently deactivated. Booking creation is not allowed.`;
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    if (data.passenger_phone) {
+      const cleanPhone = data.passenger_phone.replace(/[\s\-\(\)\.]/g, '');
+      const matchingProfile = usersList.find(
+        (u) => u.role === 'customer' && u.phone && u.phone.replace(/[\s\-\(\)\.]/g, '') === cleanPhone
+      );
+      if (matchingProfile && (matchingProfile.status === 'deactivated' || matchingProfile.status === 'suspended')) {
+        const errorMsg = `The account associated with phone ${data.passenger_phone} is deactivated. Booking creation is not allowed.`;
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+    }
+
     const now = new Date().toISOString();
 
     let newBooking: Booking = {
@@ -3209,15 +3517,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       scheduled_at: data.scheduled_at,
       payment_screenshot_url: data.payment_screenshot_url || null,
       payment_status: 'pending',
+      payment_method: data.payment_method || (data.payment_screenshot_url ? 'online' : 'cash'),
       estimated_distance_km: distKm,
       estimated_duration_min: durationMin,
-      estimated_fare: confirmedFare, // null for custom routes!
-      final_fare: confirmedFare,     // null for custom routes!
-      confirmed_fare: null,
-      dispatcher_notes: null,
+      estimated_fare: confirmedFare,
+      final_fare: confirmedFare,
+      confirmed_fare: confirmedFare,
+      dispatcher_notes: data.dispatcher_notes || null,
       created_at: now,
       updated_at: now,
-      customer: currentUser,
+      customer: custProfile || (currentUser.role === 'customer' ? currentUser : null),
     };
 
     // Push to Supabase
@@ -3250,12 +3559,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         scheduled_at: newBooking.scheduled_at,
         payment_screenshot_url: newBooking.payment_screenshot_url,
         payment_status: 'pending',
+        payment_method: newBooking.payment_method || 'cash',
         estimated_distance_km: newBooking.estimated_distance_km,
         estimated_duration_min: newBooking.estimated_duration_min,
         estimated_fare: newBooking.estimated_fare,
         final_fare: newBooking.final_fare,
-        confirmed_fare: null,
-        dispatcher_notes: null,
+        confirmed_fare: newBooking.confirmed_fare,
+        dispatcher_notes: newBooking.dispatcher_notes,
       }).select(`
         *,
         driver:drivers(*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*), location:driver_locations(*))
@@ -3269,28 +3579,37 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         newBooking = {
           ...newBooking,
           ...inserted,
-          customer: currentUser,
+          customer: custProfile || (currentUser.role === 'customer' ? currentUser : null),
         };
 
-        // For fixed-fare bookings, insert into payments table with the confirmed fare
-        if (!isCustom && newBooking.estimated_fare) {
+        // For fixed-fare or custom bookings with a confirmed fare, insert into payments table
+        const paymentAmount = confirmedFare ?? (isCustom ? null : data.fixed_fare_amount) ?? 0;
+        if (paymentAmount > 0) {
           await supabase.from('payments').insert({
             booking_id: inserted.id,
             customer_id: customerId,
-            amount: newBooking.estimated_fare,
-            method: 'online',
+            amount: paymentAmount,
+            method: data.payment_screenshot_url ? 'online' : (data.payment_method || 'cash'),
             status: 'pending',
             transaction_reference: ref,
           });
         }
 
-        // Insert into booking status history
+        // Insert into booking status history with audit details
+        const actorId = (currentUser.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)) ? currentUser.id : null;
         await supabase.from('booking_status_history').insert({
           booking_id: inserted.id,
           status: newBooking.status,
-          notes: isCustom
-            ? 'Customer submitted custom route booking request. Awaiting dispatcher review and manual fare quote.'
-            : 'Customer submitted booking request with payment proof. Awaiting Staff verification.',
+          notes: data.payment_screenshot_url
+            ? (currentUser.role === 'dispatcher' || currentUser.role === 'admin'
+                ? `Dispatcher uploaded customer payment screenshot. Awaiting verification audit.`
+                : 'Customer submitted booking request with payment proof. Awaiting Staff verification.')
+            : (newBooking.payment_method === 'cash'
+                ? `Booking registered with Cash on Pickup (Pending Cash Collection by chauffeur).`
+                : (isCustom
+                    ? `Custom booking registered with agreed fare (${paymentAmount} SAR).`
+                    : 'Fixed-fare booking registered on behalf of customer.')),
+          changed_by: actorId,
         });
       }
     } catch (dbErr) {
@@ -3304,7 +3623,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return [newBooking, ...filtered];
     });
 
-    if (isCustom) {
+    if (newBooking.status === 'pending_verification') {
+      addNotification(
+        'New Booking Awaiting Verification',
+        `Booking ${ref} submitted by ${data.passenger_name} with payment proof. Review in Queue.`,
+        'info',
+        'dispatcher'
+      );
+      addNotification(
+        'Booking Request Submitted',
+        `Your booking (${ref}) is received and pending payment verification by our dispatch team.`,
+        'success',
+        'customer'
+      );
+    } else if (isCustom && !data.custom_fare) {
       addNotification(
         'New Custom Route Request',
         `Custom booking ${ref} submitted by ${data.passenger_name}. Awaiting fare quote and review.`,
@@ -3319,14 +3651,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       );
     } else {
       addNotification(
-        'New Booking Awaiting Verification',
-        `Booking ${ref} submitted by ${data.passenger_name} with payment proof. Review in Queue.`,
-        'info',
+        'New Confirmed Booking',
+        `Booking ${ref} created for ${data.passenger_name} (${newBooking.vehicle_type.toUpperCase()}). Ready for driver assignment.`,
+        'success',
         'dispatcher'
       );
       addNotification(
-        'Booking Request Submitted',
-        `Your booking (${ref}) is received and pending payment verification by our dispatch team.`,
+        'Booking Confirmed',
+        `Your trip ${ref} has been confirmed. A chauffeur will be assigned shortly.`,
         'success',
         'customer'
       );
@@ -3569,6 +3901,175 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Booking ${booking.booking_reference} payment verified!`);
   };
 
+  // Driver confirms cash received from passenger
+  const confirmCashReceived = async (
+    bookingId: string,
+    driverId?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (!booking) {
+      toast.error('Booking not found.');
+      return { success: false, error: 'Booking not found.' };
+    }
+
+    const effectiveDriverId =
+      driverId ||
+      booking.assigned_driver_id ||
+      (currentUser.role === 'driver' ? currentUser.id : null);
+
+    if (!effectiveDriverId) {
+      toast.error('Driver ID required to confirm cash receipt.');
+      return { success: false, error: 'Driver ID required.' };
+    }
+
+    const fareAmount = Number(
+      booking.final_fare ?? booking.confirmed_fare ?? booking.fixed_fare_amount ?? booking.estimated_fare ?? 0
+    );
+
+    const now = new Date().toISOString();
+
+    // 1. Call secure server-side API endpoint
+    try {
+      const { data: sessData } = await supabase.auth.getSession();
+      const token = sessData?.session?.access_token;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch('/api/driver/cash-confirmation', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          bookingId: booking.id,
+          driverId: effectiveDriverId,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok || !json.success) {
+        const errorMsg = json.error || 'Server error confirming cash payment.';
+        toast.error(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+    } catch (apiErr) {
+      console.warn('API call failed, attempting direct Supabase fallback:', apiErr);
+      // Resilient fallback: direct Supabase update
+      try {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.id);
+        if (isUuid) {
+          await supabase
+            .from('bookings')
+            .update({
+              payment_status: 'paid',
+              payment_method: 'cash',
+              updated_at: now,
+            })
+            .eq('id', booking.id);
+
+          await supabase
+            .from('payments')
+            .update({
+              status: 'paid',
+              method: 'cash',
+              collected_by: effectiveDriverId,
+              updated_at: now,
+            })
+            .eq('booking_id', booking.id);
+
+          await supabase.from('booking_status_history').insert({
+            booking_id: booking.id,
+            status: booking.status,
+            notes: `Cash on Pickup: SAR ${fareAmount} confirmed received by Chauffeur (${effectiveDriverId}).`,
+            changed_by: effectiveDriverId,
+          });
+
+          const { data: dData } = await supabase
+            .from('drivers')
+            .select('cash_collected')
+            .eq('id', effectiveDriverId)
+            .maybeSingle();
+
+          if (dData) {
+            await supabase
+              .from('drivers')
+              .update({
+                cash_collected: Number(dData.cash_collected || 0) + fareAmount,
+                updated_at: now,
+              })
+              .eq('id', effectiveDriverId);
+          }
+        }
+      } catch (fbErr) {
+        console.warn('Direct fallback error:', fbErr);
+      }
+    }
+
+    // 2. Synchronize local Bookings state immediately
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.id === bookingId
+          ? {
+              ...b,
+              payment_status: 'paid',
+              payment_method: 'cash',
+              payment: {
+                ...(b.payment || {
+                  id: 'pmt-' + Date.now(),
+                  booking_id: b.id,
+                  customer_id: b.customer_id,
+                  amount: fareAmount,
+                  created_at: now,
+                }),
+                method: 'cash',
+                status: 'paid',
+                collected_by: effectiveDriverId,
+                updated_at: now,
+              },
+              updated_at: now,
+            }
+          : b
+      )
+    );
+
+    // 3. Synchronize Driver local state cash_collected
+    setDrivers((prev) =>
+      prev.map((d) =>
+        d.id === effectiveDriverId
+          ? {
+              ...d,
+              cash_collected: Math.round(((d.cash_collected || 0) + fareAmount) * 100) / 100,
+              updated_at: now,
+            }
+          : d
+      )
+    );
+
+    // 4. Notifications
+    addNotification(
+      'Cash Fare Collected',
+      `You confirmed collecting ${formatCurrency(fareAmount, settings.currency)} in cash for booking #${booking.booking_reference}.`,
+      'success',
+      'driver'
+    );
+    addNotification(
+      'Cash Fare Collected by Driver',
+      `Captain confirmed cash collection of ${formatCurrency(fareAmount, settings.currency)} for booking ${booking.booking_reference}.`,
+      'info',
+      'dispatcher'
+    );
+    addNotification(
+      'Payment Received',
+      `Your cash payment of ${formatCurrency(fareAmount, settings.currency)} has been recorded as paid by your chauffeur for trip ${booking.booking_reference}.`,
+      'success',
+      'customer'
+    );
+
+    toast.success(`Cash payment of ${formatCurrency(fareAmount, settings.currency)} confirmed received!`);
+    return { success: true };
+  };
+
   // Staff rejects payment
   const rejectPayment = async (bookingId: string, reason: string) => {
     const booking = bookings.find((b) => b.id === bookingId);
@@ -3693,6 +4194,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
+    if (selectedDriver.profile?.status === 'deactivated' || selectedDriver.profile?.status === 'suspended') {
+      toast.error(`Cannot assign ${selectedDriver.profile?.full_name || 'Driver'}: Chauffeur account is currently inactive / deactivated.`);
+      return false;
+    }
+
     // Overlap prevention: Ensure no time conflict with existing active/scheduled assignments
     const existingDriverBookings = bookings.filter((b) => b.assigned_driver_id === driverId);
     const overlapResult = checkDriverOverlap(existingDriverBookings, booking);
@@ -3771,6 +4277,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const newDriver = drivers.find((d) => d.id === newDriverId);
     if (!newDriver) {
       toast.error('Selected driver not found.');
+      return false;
+    }
+
+    if (newDriver.profile?.status === 'deactivated' || newDriver.profile?.status === 'suspended') {
+      toast.error(`Cannot assign ${newDriver.profile?.full_name || 'Driver'}: Chauffeur account is currently inactive / deactivated.`);
       return false;
     }
 
@@ -3862,9 +4373,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const booking = bookings.find((b) => b.id === bookingId);
     if (!booking) return false;
 
-    // Filter available drivers without time overlap
+    // Filter available drivers without time overlap and ensure account is active
     const eligibleDrivers = drivers.filter((d) => {
       if (d.status === 'offline' || d.status === 'unavailable' || d.status === 'on_break') return false;
+      if (d.profile?.status === 'deactivated' || d.profile?.status === 'suspended') return false;
       if (booking.vehicle_type && d.assigned_vehicle?.vehicle_type && d.assigned_vehicle.vehicle_type !== booking.vehicle_type) {
         return false;
       }
@@ -4170,7 +4682,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (newStatus === 'on_the_way') canonicalStatus = 'driver_arriving';
     if (newStatus === 'arrived') canonicalStatus = 'driver_arrived';
     if (newStatus === 'started') canonicalStatus = 'trip_started';
-    if (newStatus === 'completed') canonicalStatus = 'trip_completed';
+    if (newStatus === 'completed') canonicalStatus = 'completed';
+
+    const isCompleted = canonicalStatus === 'trip_completed' || canonicalStatus === 'completed';
+
+    // Strict validation: For Cash on Pickup rides, cash must be confirmed before ride completion
+    if (isCompleted && isCashBooking(booking) && !isCashPaid(booking)) {
+      toast.error('Cannot complete ride: Full cash payment must be confirmed received first.');
+      return { success: false, error: 'Full cash payment must be confirmed received first.' };
+    }
 
     // Strict validation: driver cannot start another trip while one is active
     if (
@@ -4190,7 +4710,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         toast.error(
           `Cannot start: Mission #${otherActive.booking_reference} is active. Please complete it first.`
         );
-        return;
+        return { success: false, error: 'Another mission is currently active.' };
+      }
+    }
+
+    // Call server-side API to enforce sequence and validation
+    if (isCompleted) {
+      try {
+        const { data: sessData } = await supabase.auth.getSession();
+        const token = sessData?.session?.access_token;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch('/api/driver/complete-ride', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            bookingId: booking.id,
+            driverId: booking.assigned_driver_id || (currentUser.role === 'driver' ? currentUser.id : undefined),
+            status: canonicalStatus,
+          }),
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.success) {
+          const errMsg = json.error || 'Server error completing ride.';
+          toast.error(errMsg);
+          return { success: false, error: errMsg };
+        }
+      } catch (apiErr) {
+        console.warn('API complete-ride error, continuing with fallback:', apiErr);
       }
     }
 
@@ -4206,8 +4755,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           : b
       )
     );
-
-    const isCompleted = canonicalStatus === 'trip_completed' || canonicalStatus === 'completed';
 
     if (isCompleted && booking.assigned_driver_id) {
       // Check if driver has other upcoming assigned bookings
@@ -4289,6 +4836,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       driver_arrived: 'Captain Arrived at Pickup',
       trip_started: 'Trip Started',
       trip_completed: 'Trip Completed Successfully. Next scheduled assignment is now unlocked.',
+      completed: 'Ride Completed Successfully. Next scheduled assignment is now unlocked.',
     };
 
     addNotification(
@@ -4298,6 +4846,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       'customer'
     );
     toast.success(labelMap[canonicalStatus] || `Ride status updated: ${canonicalStatus}`);
+    return { success: true };
   };
 
   // Driver starts trip (alias)
@@ -4307,7 +4856,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // Driver completes trip (alias)
   const completeTrip = async (bookingId: string) => {
-    await driverUpdateRideStatus(bookingId, 'trip_completed');
+    await driverUpdateRideStatus(bookingId, 'completed');
   };
 
   // Generic status update with strict transition checks
@@ -4320,7 +4869,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       toast.error('Cannot change the status of a cancelled booking.');
       return;
     }
-    if (booking.status === 'trip_completed' && status === 'trip_started') {
+    if ((booking.status === 'trip_completed' || booking.status === 'completed') && status === 'trip_started') {
       toast.error('Completed trip cannot be restarted.');
       return;
     }
@@ -4328,7 +4877,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (status === 'confirmed') return confirmBooking(bookingId);
     if (status === 'driver_accepted') return driverAcceptBooking(bookingId);
     if (status === 'trip_started' || status === 'ride_started') return startTrip(bookingId);
-    if (status === 'trip_completed' || status === 'ride_completed') return completeTrip(bookingId);
+    if (status === 'trip_completed' || status === 'ride_completed' || status === 'completed') {
+      if (isCashBooking(booking) && !isCashPaid(booking)) {
+        toast.error('Cannot complete ride: Full cash payment must be confirmed received first.');
+        return;
+      }
+      return completeTrip(bookingId);
+    }
 
     setBookings((prev) =>
       prev.map((b) =>
@@ -4455,22 +5010,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     heading: number = 0,
     speed: number = 0
   ) => {
-    const now = new Date().toISOString();
+    const numLat = Number(lat);
+    const numLng = Number(lng);
+    if (!isValidCoordinate(numLat, numLng)) return;
 
-    // 1. Immediately update local drivers state
+    const now = new Date().toISOString();
+    const numHeading = Math.round(Number(heading) || 0);
+    const numSpeed = Math.round(Number(speed) || 0);
+
+    const cleanLocation: DriverLocation = {
+      driver_id: driverId,
+      latitude: numLat,
+      longitude: numLng,
+      heading: numHeading,
+      speed: numSpeed,
+      updated_at: now,
+    };
+
+    // 1. Immediately update local drivers state (zero latency for UI & smooth animation)
     setDrivers((prev) =>
       prev.map((d) =>
         d.id === driverId
           ? {
             ...d,
-            location: {
-              driver_id: driverId,
-              latitude: lat,
-              longitude: lng,
-              heading,
-              speed,
-              updated_at: now,
-            },
+            location: cleanLocation,
           }
           : d
       )
@@ -4485,14 +5048,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             driver: b.driver
               ? {
                 ...b.driver,
-                location: {
-                  driver_id: driverId,
-                  latitude: lat,
-                  longitude: lng,
-                  heading,
-                  speed,
-                  updated_at: now,
-                },
+                location: cleanLocation,
               }
               : b.driver,
           }
@@ -4500,28 +5056,83 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       )
     );
 
-    // 3. Persist to Supabase so Realtime broadcasts to customer tracking page
+    // 3. Persist to Supabase with write-throttling to prevent database thrashing
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(driverId);
-    if (isUuid) {
+    if (!isUuid) return;
+
+    const nowTime = Date.now();
+    const last = locationThrottleMap.get(driverId);
+    const timeSinceLastMs = last ? nowTime - last.timestamp : Infinity;
+    const distanceMovedMeters = last
+      ? calculateDistanceKm(last.lat, last.lng, numLat, numLng) * 1000
+      : Infinity;
+    const headingDelta = last ? Math.abs((last.heading - numHeading + 360) % 360) : Infinity;
+
+    // Throttle condition:
+    // Write immediately if:
+    // - Never written before, OR
+    // - At least 2500ms passed AND (moved >= 6 meters OR heading turned >= 15° OR speed changed), OR
+    // - At least 8000ms passed (keep-alive heartbeat while driving)
+    const shouldWriteNow =
+      !last ||
+      (timeSinceLastMs >= 2500 && (distanceMovedMeters >= 6 || headingDelta >= 15 || Math.abs((last.speed || 0) - numSpeed) > 5)) ||
+      timeSinceLastMs >= 8000;
+
+    if (shouldWriteNow) {
+      if (last?.timer) clearTimeout(last.timer);
+      locationThrottleMap.set(driverId, {
+        lat: numLat,
+        lng: numLng,
+        heading: numHeading,
+        speed: numSpeed,
+        timestamp: nowTime,
+      });
+
       (async () => {
         try {
           const { error } = await supabase
             .from('driver_locations')
             .upsert({
               driver_id: driverId,
-              latitude: lat,
-              longitude: lng,
-              heading: Math.round(heading || 0),
-              speed: Math.round(speed || 0),
+              latitude: numLat,
+              longitude: numLng,
+              heading: numHeading,
+              speed: numSpeed,
               updated_at: now,
             });
           if (error) {
             console.warn('Supabase driver_locations upsert error:', error.message);
           }
         } catch (err) {
-          console.warn('Supabase driver_locations error:', err);
+          console.warn('Supabase driver_locations network error:', err);
         }
       })();
+    } else {
+      // Debounce trailing flush: guarantees final resting coordinate is saved when vehicle stops
+      if (last?.timer) clearTimeout(last.timer);
+      const timer = setTimeout(async () => {
+        const trailingNow = new Date().toISOString();
+        locationThrottleMap.set(driverId, {
+          lat: numLat,
+          lng: numLng,
+          heading: numHeading,
+          speed: numSpeed,
+          timestamp: Date.now(),
+        });
+        try {
+          await supabase
+            .from('driver_locations')
+            .upsert({
+              driver_id: driverId,
+              latitude: numLat,
+              longitude: numLng,
+              heading: numHeading,
+              speed: numSpeed,
+              updated_at: trailingNow,
+            });
+        } catch {}
+      }, 2500);
+      if (last) last.timer = timer;
     }
   };
 
@@ -4660,6 +5271,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       'success'
     );
     toast.success('Payment recorded successfully');
+  };
+
+  const createDriverSettlement = async (data: {
+    driver_id: string;
+    amount: number;
+    payment_method?: 'bank_transfer' | 'cash';
+    bank_name?: string;
+    transaction_number?: string;
+    notes?: string;
+  }): Promise<{ success: boolean; settlement?: DriverSettlement; error?: string }> => {
+    try {
+      const res = await fetch('/api/driver/settlements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          processed_by: currentUser.id && currentUser.id !== 'guest' ? currentUser.id : null,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        toast.error(json.error || 'Failed to record driver settlement.');
+        return { success: false, error: json.error };
+      }
+      toast.success(json.message || 'Settlement payout recorded successfully!');
+      if (json.settlement) {
+        setDriverSettlements((prev) => [json.settlement, ...prev.filter((s) => s.id !== json.settlement.id)]);
+      }
+      return { success: true, settlement: json.settlement };
+    } catch (err: any) {
+      toast.error(err.message || 'Network error recording settlement.');
+      return { success: false, error: err.message };
+    }
   };
 
   const submitRating = async (
@@ -4908,6 +5552,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         createDriverAccount,
         toggleUserStatus,
         deleteUser,
+        uploadDriverAvatar,
+        uploadCustomerAvatar,
 
         addVehicle,
         updateVehicle,
@@ -4915,6 +5561,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         createBooking,
         confirmBooking,
         verifyPayment,
+        confirmCashReceived,
         rejectPayment,
         rejectBooking,
         setCustomBookingFare,
@@ -4935,6 +5582,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addAdditionalCharge,
         recordPayment,
         submitRating,
+
+        driverSettlements,
+        createDriverSettlement,
 
         activeCustomerBooking,
         activeDriverBooking,

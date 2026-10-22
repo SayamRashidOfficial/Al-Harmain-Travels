@@ -812,7 +812,7 @@ export default function AdminRatesPage() {
     filterVehicle !== 'all' || filterService !== 'all' || filterStatus !== 'all' || Boolean(searchQuery);
 
   return (
-    <div className="page-shell space-y-7 pb-20 animate-fade-in text-slate-800 dark:text-slate-100">
+    <div className="page-shell space-y-7 pb-20 animate-fade-in text-slate-800">
       {/* ── TOP EXECUTIVE HEADER ──────────────────────────────────────────────── */}
       <AdminPageHeader
         eyebrow="Tariff Master & Financial Policy"
@@ -845,7 +845,7 @@ export default function AdminRatesPage() {
               onClick={() => setShowMatrix(!showMatrix)}
               className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-xs ${
                 showMatrix
-                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                  ? 'bg-amber-500/15 text-amber-700 border-amber-500/30'
                   : 'border-base bg-surface hover:bg-elevated text-secondary hover:text-primary'
               }`}
               title="Toggle table versus matrix view"
@@ -885,9 +885,9 @@ export default function AdminRatesPage() {
             </button>
             <button
               onClick={handleOpenAddTerminal}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-700 text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer"
             >
-              <Plane className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <Plane className="w-4 h-4 text-purple-600" />
               <span>+ Add Terminal</span>
             </button>
           </div>
@@ -950,19 +950,19 @@ export default function AdminRatesPage() {
       </div>
 
       {/* ── TAB NAVIGATION BUTTONS ───────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-100/90 dark:bg-slate-900/80 border border-base rounded-2xl">
+      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-100/90 border border-base rounded-2xl">
         <button
           type="button"
           onClick={() => setActiveTab('rates')}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === 'rates'
-              ? 'bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-300 shadow-sm border border-slate-200 dark:border-slate-700'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Tag className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <Tag className="w-3.5 h-3.5 text-blue-600" />
           <span>Fixed Rates &amp; Matrix</span>
-          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeTab === 'rates' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeTab === 'rates' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-200/70 text-slate-600'}`}>
             {fixedFareRates.length}
           </span>
         </button>
@@ -972,13 +972,13 @@ export default function AdminRatesPage() {
           onClick={() => setActiveTab('vehicles')}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === 'vehicles'
-              ? 'bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-300 shadow-sm border border-slate-200 dark:border-slate-700'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Car className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <Car className="w-3.5 h-3.5 text-blue-600" />
           <span>Vehicles &amp; Capacity</span>
-          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeTab === 'vehicles' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeTab === 'vehicles' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-200/70 text-slate-600'}`}>
             {activeVehiclesList.length}
           </span>
         </button>
@@ -988,13 +988,13 @@ export default function AdminRatesPage() {
           onClick={() => setActiveTab('routes_terminals')}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === 'routes_terminals'
-              ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-sm border border-slate-200 dark:border-slate-700'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Route className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+          <Route className="w-3.5 h-3.5 text-indigo-600" />
           <span>Routes &amp; Terminals</span>
-          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeTab === 'routes_terminals' ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800' : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeTab === 'routes_terminals' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-200/70 text-slate-600'}`}>
             {activeRoutesList.length}
           </span>
         </button>
@@ -1004,13 +1004,13 @@ export default function AdminRatesPage() {
           onClick={() => setActiveTab('services')}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === 'services'
-              ? 'bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 shadow-sm border border-slate-200 dark:border-slate-700'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-white text-purple-700 shadow-sm border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Layers className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+          <Layers className="w-3.5 h-3.5 text-purple-600" />
           <span>Service Categories</span>
-          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeTab === 'services' ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800' : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeTab === 'services' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-slate-200/70 text-slate-600'}`}>
             {activeServicesList.length}
           </span>
         </button>
@@ -1032,12 +1032,12 @@ export default function AdminRatesPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search rates by vehicle, route, or terminal..."
-                  className="w-full pl-10 pr-9 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-medium transition-all"
+                  className="w-full pl-10 pr-9 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-medium transition-all"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -1049,7 +1049,7 @@ export default function AdminRatesPage() {
                 <select
                   value={filterVehicle}
                   onChange={(e) => setFilterVehicle(e.target.value)}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:border-blue-500 transition-all"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm font-medium focus:outline-none focus:border-blue-500 transition-all"
                 >
                   <option value="all">All Vehicles ({activeVehiclesList.length})</option>
                   {activeVehiclesList.map((v) => (
@@ -1065,7 +1065,7 @@ export default function AdminRatesPage() {
                 <select
                   value={filterService}
                   onChange={(e) => setFilterService(e.target.value)}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:border-indigo-500 transition-all"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm font-medium focus:outline-none focus:border-indigo-500 transition-all"
                 >
                   <option value="all">All Corridors ({activeRoutesList.length})</option>
                   {activeRoutesList.map((r) => (
@@ -1081,7 +1081,7 @@ export default function AdminRatesPage() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:border-blue-500 transition-all"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm font-medium focus:outline-none focus:border-blue-500 transition-all"
                 >
                   <option value="all">All Status</option>
                   <option value="active">🟢 Active Only</option>
@@ -1091,10 +1091,10 @@ export default function AdminRatesPage() {
             </div>
 
             {hasActiveFilters && (
-              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
                 <span>
-                  Showing <strong className="text-slate-900 dark:text-white">{filteredRates.length}</strong> of{' '}
-                  <strong className="text-slate-900 dark:text-white">{fixedFareRates.length}</strong> configured rates
+                  Showing <strong className="text-slate-900">{filteredRates.length}</strong> of{' '}
+                  <strong className="text-slate-900">{fixedFareRates.length}</strong> configured rates
                 </span>
                 <button
                   onClick={() => {
@@ -1103,7 +1103,7 @@ export default function AdminRatesPage() {
                     setFilterStatus('all');
                     setSearchQuery('');
                   }}
-                  className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-semibold"
+                  className="text-blue-600 hover:underline cursor-pointer font-semibold"
                 >
                   Reset all filters
                 </button>
@@ -1116,15 +1116,15 @@ export default function AdminRatesPage() {
             <div className="p-5 sm:p-6 rounded-2xl bg-card border border-base shadow-sm space-y-4 overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-base">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <TableProperties className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <TableProperties className="w-4 h-4 text-blue-600" />
                     <span>Cross-Fleet Tariff Matrix</span>
                   </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-slate-500">
                     Comprehensive cross-reference of fixed prices per vehicle category and corridor.
                   </p>
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <div className="text-xs text-slate-500 flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   <span>All fares in Saudi Riyal (SAR)</span>
                 </div>
@@ -1132,12 +1132,12 @@ export default function AdminRatesPage() {
 
               <div className="border border-base rounded-xl overflow-x-auto min-w-[700px]">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-900/90 border-b border-base text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                  <thead className="bg-slate-50 border-b border-base text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
                     <tr>
-                      <th className="py-3 px-4 font-bold text-blue-700 dark:text-blue-400">Vehicle Class</th>
-                      <th className="py-3 px-4 font-bold text-center text-teal-700 dark:text-teal-400">Capacity</th>
+                      <th className="py-3 px-4 font-bold text-blue-700">Vehicle Class</th>
+                      <th className="py-3 px-4 font-bold text-center text-teal-700">Capacity</th>
                       {matrixCols.map((c, i) => (
-                        <th key={i} className="py-3 px-3 font-bold text-center text-indigo-700 dark:text-indigo-400">
+                        <th key={i} className="py-3 px-3 font-bold text-center text-indigo-700">
                           {c.label}
                         </th>
                       ))}
@@ -1147,16 +1147,16 @@ export default function AdminRatesPage() {
                     {activeVehiclesList.map((v) => {
                       const cat = v.category || v.id;
                       return (
-                        <tr key={v.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="py-3 px-4 font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-3 px-4 font-semibold text-slate-900 flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 flex items-center justify-center">
                               <Car className="w-3.5 h-3.5" />
                             </div>
                             <span>{v.name}</span>
                           </td>
                           <td className="py-3 px-4 text-center">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
-                              <Users className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-teal-500/10 text-teal-700 border border-teal-500/20">
+                              <Users className="w-3 h-3 text-teal-600" />
                               <span>{v.seating_capacity} Seats</span>
                             </span>
                           </td>
@@ -1165,11 +1165,11 @@ export default function AdminRatesPage() {
                             return (
                               <td key={i} className="py-3 px-3 text-center">
                                 {res.found ? (
-                                  <span className="font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                  <span className="font-extrabold text-emerald-600 tabular-nums">
                                     {formatFareSAR(res.fare)}
                                   </span>
                                 ) : (
-                                  <span className="text-slate-400 dark:text-slate-600 font-mono text-[11px]">—</span>
+                                  <span className="text-slate-400 font-mono text-[11px]">—</span>
                                 )}
                               </td>
                             );
@@ -1186,13 +1186,13 @@ export default function AdminRatesPage() {
             <div className="rounded-2xl bg-card border border-base shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-900/90 border-b border-base text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                  <thead className="bg-slate-50 border-b border-base text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
                     <tr>
-                      <th className="py-3.5 px-4 font-bold text-blue-700 dark:text-blue-400">Vehicle Class</th>
-                      <th className="py-3.5 px-4 font-bold text-indigo-700 dark:text-indigo-400">Service Corridor</th>
-                      <th className="py-3.5 px-4 font-bold text-purple-700 dark:text-purple-400">Airport / Gate</th>
-                      <th className="py-3.5 px-4 font-bold text-center text-teal-700 dark:text-teal-400">Capacity</th>
-                      <th className="py-3.5 px-4 font-semibold text-right text-slate-700 dark:text-slate-300">Fixed Tariff (SAR)</th>
+                      <th className="py-3.5 px-4 font-bold text-blue-700">Vehicle Class</th>
+                      <th className="py-3.5 px-4 font-bold text-indigo-700">Service Corridor</th>
+                      <th className="py-3.5 px-4 font-bold text-purple-700">Airport / Gate</th>
+                      <th className="py-3.5 px-4 font-bold text-center text-teal-700">Capacity</th>
+                      <th className="py-3.5 px-4 font-semibold text-right text-slate-700">Fixed Tariff (SAR)</th>
                       <th className="py-3.5 px-4 font-bold text-center">Status</th>
                       <th className="py-3.5 px-4 font-bold text-right">Actions</th>
                     </tr>
@@ -1202,9 +1202,9 @@ export default function AdminRatesPage() {
                       <TableSkeletonRows rows={6} cols={7} />
                     ) : filteredRates.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-slate-500 dark:text-slate-400 space-y-2">
+                        <td colSpan={7} className="py-12 text-center text-slate-500 space-y-2">
                           <Info className="w-7 h-7 text-slate-400 mx-auto" />
-                          <p className="font-semibold text-sm text-slate-800 dark:text-slate-200">
+                          <p className="font-semibold text-sm text-slate-800">
                             No fixed rates match your search criteria
                           </p>
                           <p className="text-xs text-slate-500">
@@ -1227,16 +1227,16 @@ export default function AdminRatesPage() {
                           : 'Standard Corridor';
 
                         return (
-                          <tr key={r.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                          <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
                             {/* Vehicle (Blue Theme) */}
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 shrink-0">
                                   <Car className="w-4 h-4" />
                                 </div>
                                 <div>
-                                  <div className="font-bold text-slate-900 dark:text-white">{vLabel}</div>
-                                  <div className="text-[10px] font-mono text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                                  <div className="font-bold text-slate-900">{vLabel}</div>
+                                  <div className="text-[10px] font-mono text-blue-600 uppercase tracking-wider">
                                     {r.vehicle_category}
                                   </div>
                                 </div>
@@ -1245,8 +1245,8 @@ export default function AdminRatesPage() {
 
                             {/* Service Route (Indigo Theme) */}
                             <td className="py-3.5 px-4">
-                              <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-slate-200">
-                                <Route className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
+                              <div className="flex items-center gap-1.5 font-medium text-slate-800">
+                                <Route className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                                 <span>{sLabel}</span>
                               </div>
                             </td>
@@ -1254,17 +1254,17 @@ export default function AdminRatesPage() {
                             {/* Terminal (Purple Theme) */}
                             <td className="py-3.5 px-4">
                               {r.terminal ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/25">
-                                  <Plane className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/10 text-purple-700 border border-purple-500/25">
+                                  <Plane className="w-3 h-3 text-purple-600" />
                                   <span>{tLabel}</span>
                                 </span>
                               ) : isAirport ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/25">
-                                  <Plane className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/10 text-purple-700 border border-purple-500/25">
+                                  <Plane className="w-3 h-3 text-purple-600" />
                                   <span>All Terminals</span>
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
                                   <MapPin className="w-3 h-3 text-slate-400" />
                                   <span>Standard City Corridor</span>
                                 </span>
@@ -1273,14 +1273,14 @@ export default function AdminRatesPage() {
 
                             {/* Capacity (Teal Theme) */}
                             <td className="py-3.5 px-4 text-center">
-                              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-800 dark:text-teal-300 text-[11px] font-semibold">
+                              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-800 text-[11px] font-semibold">
                                 <span className="flex items-center gap-1">
-                                  <Users className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                                  <Users className="w-3 h-3 text-teal-600" />
                                   <span>{cap.passengers}</span>
                                 </span>
                                 <span className="text-teal-400/50">•</span>
                                 <span className="flex items-center gap-1">
-                                  <Luggage className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                                  <Luggage className="w-3 h-3 text-teal-600" />
                                   <span>{cap.luggage}</span>
                                 </span>
                               </div>
@@ -1290,10 +1290,10 @@ export default function AdminRatesPage() {
                             <td className="py-3.5 px-4 text-right">
                               <div className="flex flex-col items-end justify-center">
                                 <div className="mt-0.5 inline-flex items-baseline gap-1.5 tabular-nums">
-                                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                  <span className="text-xs font-bold text-emerald-600">
                                     SAR
                                   </span>
-                                  <span className="text-base sm:text-lg font-black text-slate-950 dark:text-white tracking-tight">
+                                  <span className="text-base sm:text-lg font-black text-slate-950 tracking-tight">
                                     {r.fare_amount.toLocaleString('en-SA')}
                                   </span>
                                 </div>
@@ -1308,8 +1308,8 @@ export default function AdminRatesPage() {
                                 title={r.is_active ? 'Active: Click to deactivate' : 'Inactive: Click to activate'}
                                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border cursor-pointer transition-all ${
                                   r.is_active
-                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20'
-                                    : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20'
+                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/20'
+                                    : 'bg-rose-500/10 border-rose-500/30 text-rose-700 hover:bg-rose-500/20'
                                 }`}
                               >
                                 {r.is_active ? (
@@ -1362,11 +1362,11 @@ export default function AdminRatesPage() {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl bg-card border border-base shadow-sm">
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Car className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Car className="w-4 h-4 text-blue-600" />
                 <span>Fleet Vehicle Specifications &amp; Capacity</span>
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Define fleet categories, maximum passenger seats, and baggage allowances. Used for customer booking validations.
               </p>
             </div>
@@ -1382,12 +1382,12 @@ export default function AdminRatesPage() {
           <div className="rounded-2xl bg-card border border-base shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-slate-50 dark:bg-slate-900/90 border-b border-base text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                <thead className="bg-slate-50 border-b border-base text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
                   <tr>
-                    <th className="py-3.5 px-4 font-bold text-blue-700 dark:text-blue-400">Vehicle Fleet Model</th>
-                    <th className="py-3.5 px-4 font-bold text-blue-700 dark:text-blue-400">Internal Category Code</th>
-                    <th className="py-3.5 px-4 font-bold text-center text-teal-700 dark:text-teal-400">Max Passengers</th>
-                    <th className="py-3.5 px-4 font-bold text-center text-teal-700 dark:text-teal-400">Max Luggage</th>
+                    <th className="py-3.5 px-4 font-bold text-blue-700">Vehicle Fleet Model</th>
+                    <th className="py-3.5 px-4 font-bold text-blue-700">Internal Category Code</th>
+                    <th className="py-3.5 px-4 font-bold text-center text-teal-700">Max Passengers</th>
+                    <th className="py-3.5 px-4 font-bold text-center text-teal-700">Max Luggage</th>
                     <th className="py-3.5 px-4 font-bold">Description / Notes</th>
                     <th className="py-3.5 px-4 font-bold text-center">Status</th>
                     <th className="py-3.5 px-4 font-bold text-right">Actions</th>
@@ -1402,31 +1402,31 @@ export default function AdminRatesPage() {
                     </tr>
                   ) : (
                     activeVehiclesList.map((v) => (
-                      <tr key={v.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
+                      <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600">
                               <Car className="w-4 h-4" />
                             </div>
                             <span>{v.name}</span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-[11px] text-blue-600 dark:text-blue-400">
+                        <td className="py-3.5 px-4 font-mono text-[11px] text-blue-600">
                           {v.category || v.id}
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-800 dark:text-teal-300 font-bold text-xs">
-                            <Users className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-800 font-bold text-xs">
+                            <Users className="w-3.5 h-3.5 text-teal-600" />
                             <span>{v.seating_capacity} Seats</span>
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-800 dark:text-teal-300 font-bold text-xs">
-                            <Luggage className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-800 font-bold text-xs">
+                            <Luggage className="w-3.5 h-3.5 text-teal-600" />
                             <span>{v.luggage_capacity} Bags</span>
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">
+                        <td className="py-3.5 px-4 text-slate-500 max-w-xs truncate">
                           {v.description || '—'}
                         </td>
                         <td className="py-3.5 px-4 text-center">
@@ -1435,8 +1435,8 @@ export default function AdminRatesPage() {
                             onClick={() => updateRateVehicle(v.id, { is_active: !v.is_active })}
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border cursor-pointer transition-all ${
                               v.is_active
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20'
-                                : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20'
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/20'
+                                : 'bg-rose-500/10 border-rose-500/30 text-rose-700 hover:bg-rose-500/20'
                             }`}
                           >
                             <span className={`w-2 h-2 rounded-full ${v.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -1476,11 +1476,11 @@ export default function AdminRatesPage() {
           <div className="space-y-3.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl bg-card border border-base shadow-sm">
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Route className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Route className="w-4 h-4 text-indigo-600" />
                   <span>Service Corridors &amp; Travel Routes</span>
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Origins and destinations supporting fixed tariffs and airport flight connections.
                 </p>
               </div>
@@ -1496,31 +1496,31 @@ export default function AdminRatesPage() {
             <div className="rounded-2xl bg-card border border-base shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-900/90 border-b border-base text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                  <thead className="bg-slate-50 border-b border-base text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
                     <tr>
-                      <th className="py-3.5 px-4 font-bold text-indigo-700 dark:text-indigo-400">Corridor Name</th>
+                      <th className="py-3.5 px-4 font-bold text-indigo-700">Corridor Name</th>
                       <th className="py-3.5 px-4 font-bold">Origin Pickup Point</th>
                       <th className="py-3.5 px-4 font-bold">Destination Drop-off</th>
-                      <th className="py-3.5 px-4 font-bold text-center text-purple-700 dark:text-purple-400">KAIA Airport</th>
+                      <th className="py-3.5 px-4 font-bold text-center text-purple-700">KAIA Airport</th>
                       <th className="py-3.5 px-4 font-bold text-center">Status</th>
                       <th className="py-3.5 px-4 font-bold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-base">
                     {activeRoutesList.map((r) => (
-                      <tr key={r.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
+                      <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
                           <div className="flex items-center gap-2">
-                            <Route className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                            <Route className="w-3.5 h-3.5 text-indigo-600" />
                             <span>{r.route_name}</span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{r.origin_name}</td>
-                        <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{r.destination_name}</td>
+                        <td className="py-3.5 px-4 text-slate-600">{r.origin_name}</td>
+                        <td className="py-3.5 px-4 text-slate-600">{r.destination_name}</td>
                         <td className="py-3.5 px-4 text-center">
                           {r.is_airport ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/25">
-                              <Plane className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-700 border border-purple-500/25">
+                              <Plane className="w-3 h-3 text-purple-600" />
                               <span>Airport Connected</span>
                             </span>
                           ) : (
@@ -1533,8 +1533,8 @@ export default function AdminRatesPage() {
                             onClick={() => updateRateRoute(r.id, { is_active: !r.is_active })}
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border cursor-pointer transition-all ${
                               r.is_active
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20'
-                                : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20'
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/20'
+                                : 'bg-rose-500/10 border-rose-500/30 text-rose-700 hover:bg-rose-500/20'
                             }`}
                           >
                             <span className={`w-2 h-2 rounded-full ${r.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -1567,11 +1567,11 @@ export default function AdminRatesPage() {
           <div className="space-y-3.5 pt-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl bg-card border border-base shadow-sm">
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Plane className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Plane className="w-4 h-4 text-purple-600" />
                   <span>Jeddah KAIA Airport Terminals</span>
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Designated airport terminals (Terminal 1, Hajj Terminal H, North Terminal N) for flight-specific fixed rates.
                 </p>
               </div>
@@ -1587,11 +1587,11 @@ export default function AdminRatesPage() {
             <div className="rounded-2xl bg-card border border-base shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-900/90 border-b border-base text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                  <thead className="bg-slate-50 border-b border-base text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
                     <tr>
-                      <th className="py-3.5 px-4 font-bold text-purple-700 dark:text-purple-400">Terminal Name</th>
-                      <th className="py-3.5 px-4 font-bold text-purple-700 dark:text-purple-400">Internal Terminal Code</th>
-                      <th className="py-3.5 px-4 font-bold text-indigo-700 dark:text-indigo-400">Linked Service Corridor</th>
+                      <th className="py-3.5 px-4 font-bold text-purple-700">Terminal Name</th>
+                      <th className="py-3.5 px-4 font-bold text-purple-700">Internal Terminal Code</th>
+                      <th className="py-3.5 px-4 font-bold text-indigo-700">Linked Service Corridor</th>
                       <th className="py-3.5 px-4 font-bold">Description</th>
                       <th className="py-3.5 px-4 font-bold text-center">Status</th>
                       <th className="py-3.5 px-4 font-bold text-right">Actions</th>
@@ -1599,20 +1599,20 @@ export default function AdminRatesPage() {
                   </thead>
                   <tbody className="divide-y divide-base">
                     {rateTerminals.map((t) => (
-                      <tr key={t.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
+                      <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
                           <div className="flex items-center gap-2">
-                            <Plane className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                            <Plane className="w-3.5 h-3.5 text-purple-600" />
                             <span>{t.name}</span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-[11px] text-purple-600 dark:text-purple-400">
+                        <td className="py-3.5 px-4 font-mono text-[11px] text-purple-600">
                           {t.code}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-800 dark:text-slate-200 font-medium">
+                        <td className="py-3.5 px-4 text-slate-800 font-medium">
                           {t.route_id ? getServiceLabel(t.route_id, rateRoutes) : 'All Airport Routes'}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">
+                        <td className="py-3.5 px-4 text-slate-500 max-w-xs truncate">
                           {t.description || '—'}
                         </td>
                         <td className="py-3.5 px-4 text-center">
@@ -1621,8 +1621,8 @@ export default function AdminRatesPage() {
                             onClick={() => updateRateTerminal(t.id, { is_active: !t.is_active })}
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border cursor-pointer transition-all ${
                               t.is_active
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20'
-                                : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20'
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/20'
+                                : 'bg-rose-500/10 border-rose-500/30 text-rose-700 hover:bg-rose-500/20'
                             }`}
                           >
                             <span className={`w-2 h-2 rounded-full ${t.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -1660,11 +1660,11 @@ export default function AdminRatesPage() {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl bg-card border border-base shadow-sm">
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Layers className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-purple-600" />
                 <span>Service Package Categories</span>
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Top-level operational categories organizing transportation corridors (e.g. VIP Intercity, Sacred Ziyarat, Airport Pickups).
               </p>
             </div>
@@ -1680,10 +1680,10 @@ export default function AdminRatesPage() {
           <div className="rounded-2xl bg-card border border-base shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-slate-50 dark:bg-slate-900/90 border-b border-base text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                <thead className="bg-slate-50 border-b border-base text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
                   <tr>
-                    <th className="py-3.5 px-4 font-bold text-purple-700 dark:text-purple-400">Category Title</th>
-                    <th className="py-3.5 px-4 font-bold text-purple-700 dark:text-purple-400">Slug Identifier</th>
+                    <th className="py-3.5 px-4 font-bold text-purple-700">Category Title</th>
+                    <th className="py-3.5 px-4 font-bold text-purple-700">Slug Identifier</th>
                     <th className="py-3.5 px-4 font-bold">Description</th>
                     <th className="py-3.5 px-4 font-bold text-center">Status</th>
                     <th className="py-3.5 px-4 font-bold text-right">Actions</th>
@@ -1691,13 +1691,13 @@ export default function AdminRatesPage() {
                 </thead>
                 <tbody className="divide-y divide-base">
                   {activeServicesList.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Layers className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                    <tr key={s.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2">
+                        <Layers className="w-3.5 h-3.5 text-purple-600" />
                         <span>{s.name}</span>
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-[11px] text-purple-600 dark:text-purple-400">{s.id}</td>
-                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 max-w-sm truncate">
+                      <td className="py-3.5 px-4 font-mono text-[11px] text-purple-600">{s.id}</td>
+                      <td className="py-3.5 px-4 text-slate-500 max-w-sm truncate">
                         {s.description || '—'}
                       </td>
                       <td className="py-3.5 px-4 text-center">
@@ -1706,8 +1706,8 @@ export default function AdminRatesPage() {
                           onClick={() => updateRateService(s.id, { is_active: !s.is_active })}
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border cursor-pointer transition-all ${
                             s.is_active
-                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20'
-                              : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20'
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/20'
+                              : 'bg-rose-500/10 border-rose-500/30 text-rose-700 hover:bg-rose-500/20'
                           }`}
                         >
                           <span className={`w-2 h-2 rounded-full ${s.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -1744,21 +1744,21 @@ export default function AdminRatesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-base rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[92vh] flex flex-col">
             {/* Modal Header */}
-            <div className="p-5 sm:p-6 border-b border-base bg-slate-50/60 dark:bg-slate-900/60 flex items-center justify-between">
+            <div className="p-5 sm:p-6 border-b border-base bg-slate-50/60 flex items-center justify-between">
               <div>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 mb-1">
-                  <Tag className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-700 border border-blue-500/20 mb-1">
+                  <Tag className="w-3 h-3 text-blue-600" />
                   <span>Bulk Tariff Setup</span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Configure Corridor Vehicle Fares</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <h3 className="text-lg font-bold text-slate-900">Configure Corridor Vehicle Fares</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
                   Define fixed Saudi Riyal tariffs for multiple fleet classes simultaneously.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsBulkModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1768,8 +1768,8 @@ export default function AdminRatesPage() {
             <form onSubmit={handleBulkSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
               {/* Route Selection */}
               <div>
-                <label className="type-label block mb-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5">
-                  <Route className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <label className="type-label block mb-1.5 text-xs text-slate-700 font-semibold flex items-center gap-1.5">
+                  <Route className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Service Corridor <span className="text-rose-500">*</span></span>
                 </label>
                 <select
@@ -1793,7 +1793,7 @@ export default function AdminRatesPage() {
                     });
                     setBulkFares(nextFares);
                   }}
-                  className="w-full py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:outline-none focus:border-blue-500"
+                  className="w-full py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none focus:border-blue-500"
                 >
                   {activeRoutesList.map((r) => (
                     <option key={r.id} value={r.id}>
@@ -1807,12 +1807,12 @@ export default function AdminRatesPage() {
               {isAirportRoute(bulkRoute, rateRoutes) && (
                 <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-2.5">
                   <div className="flex items-center gap-2">
-                    <Plane className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                    <label className="text-xs font-bold text-purple-900 dark:text-purple-300">
+                    <Plane className="w-4 h-4 text-purple-600" />
+                    <label className="text-xs font-bold text-purple-900">
                       KAIA Airport Terminal Selection
                     </label>
                   </div>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
                     Select &ldquo;All Terminals&rdquo; to apply the tariff across all gates, or specify an individual flight terminal.
                   </p>
                   <select
@@ -1834,7 +1834,7 @@ export default function AdminRatesPage() {
                       });
                       setBulkFares(nextFares);
                     }}
-                    className="w-full py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:border-purple-500"
+                    className="w-full py-2 px-3 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs font-semibold focus:outline-none focus:border-purple-500"
                   >
                     {currentBulkTerminals.map((t) => (
                       <option key={t.code} value={t.code}>
@@ -1848,8 +1848,8 @@ export default function AdminRatesPage() {
               {/* Vehicle Fares Entry */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                    <Coins className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Coins className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Fleet Fixed Tariffs (SAR)</span>
                   </span>
                   <span className="text-[11px] text-slate-400">Empty vehicle rows are skipped</span>
@@ -1866,22 +1866,22 @@ export default function AdminRatesPage() {
                         key={v.id}
                         className={`p-3.5 rounded-2xl border transition-all ${
                           hasValue
-                            ? 'bg-slate-50 dark:bg-slate-800/60 border-emerald-500/40 shadow-sm'
-                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                            ? 'bg-slate-50 border-emerald-500/40 shadow-sm'
+                            : 'bg-white border-slate-200 hover:border-slate-300'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-                            <Car className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                            <Car className="w-3.5 h-3.5 text-blue-600" />
                             <span>{v.name}</span>
                           </div>
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-500/10 text-teal-800 dark:text-teal-300 border border-teal-500/20">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-500/10 text-teal-800 border border-teal-500/20">
                             {v.seating_capacity} Seats
                           </span>
                         </div>
 
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 dark:text-emerald-400 pointer-events-none">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 pointer-events-none">
                             SAR
                           </span>
                           <input
@@ -1891,7 +1891,7 @@ export default function AdminRatesPage() {
                             placeholder="e.g. 200"
                             value={val}
                             onChange={(e) => setBulkFares((prev) => ({ ...prev, [cat]: e.target.value }))}
-                            className="w-full pl-12 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-emerald-700 dark:text-emerald-300 font-extrabold text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 tabular-nums"
+                            className="w-full pl-12 pr-3 py-2 rounded-xl bg-white border border-slate-200 text-emerald-700 font-extrabold text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 tabular-nums"
                           />
                         </div>
                       </div>
@@ -1901,10 +1901,10 @@ export default function AdminRatesPage() {
               </div>
 
               {/* Status Toggle (Green Active / Red Inactive) */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
                 <div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-white">Activate Tariffs Immediately</div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="text-xs font-bold text-slate-900">Activate Tariffs Immediately</div>
+                  <div className="text-[11px] text-slate-500">
                     Active rates are immediately made bookable for customers.
                   </div>
                 </div>
@@ -1913,8 +1913,8 @@ export default function AdminRatesPage() {
                   onClick={() => setBulkIsActive(!bulkIsActive)}
                   className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                     bulkIsActive
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
-                      : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400'
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700'
+                      : 'bg-rose-500/10 border-rose-500/30 text-rose-700'
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${bulkIsActive ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -1927,7 +1927,7 @@ export default function AdminRatesPage() {
                 <button
                   type="button"
                   onClick={() => setIsBulkModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1960,20 +1960,20 @@ export default function AdminRatesPage() {
       {isVehicleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-base rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-base bg-slate-50/60 dark:bg-slate-900/60 flex items-center justify-between">
+            <div className="p-5 border-b border-base bg-slate-50/60 flex items-center justify-between">
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Car className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Car className="w-4 h-4 text-blue-600" />
                   <span>{editingVehicle ? 'Edit Vehicle Type & Capacity' : 'Add New Vehicle Type'}</span>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Configure vehicle fleet details and passenger/luggage seating capacity.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsVehicleModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1981,7 +1981,7 @@ export default function AdminRatesPage() {
 
             <form onSubmit={handleVehicleFormSubmit} className="p-5 space-y-4">
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Vehicle Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -1990,12 +1990,12 @@ export default function AdminRatesPage() {
                   placeholder="e.g. Toyota Camry VIP, Hyundai Sonata, GMC Yukon XL"
                   value={vehicleForm.name}
                   onChange={(e) => setVehicleForm((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Category Code Slug <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -2005,7 +2005,7 @@ export default function AdminRatesPage() {
                   placeholder="e.g. sedan, camry, sonata, staria, gmc"
                   value={vehicleForm.category}
                   onChange={(e) => setVehicleForm((p) => ({ ...p, category: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-blue-500 disabled:opacity-60"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500 disabled:opacity-60"
                 />
                 <span className="text-[10px] text-slate-500 mt-1 block">
                   Unique internal key matching rate entries (e.g. &ldquo;camry&rdquo;, &ldquo;sonata&rdquo;)
@@ -2014,8 +2014,8 @@ export default function AdminRatesPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="type-label block mb-1 text-xs text-teal-800 dark:text-teal-300 font-semibold flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <label className="type-label block mb-1 text-xs text-teal-800 font-semibold flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-teal-600" />
                     <span>Seats (Max) <span className="text-rose-500">*</span></span>
                   </label>
                   <input
@@ -2025,13 +2025,13 @@ export default function AdminRatesPage() {
                     required
                     value={vehicleForm.seating_capacity}
                     onChange={(e) => setVehicleForm((p) => ({ ...p, seating_capacity: parseInt(e.target.value) || 1 }))}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-xs focus:outline-none focus:border-teal-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs focus:outline-none focus:border-teal-500"
                   />
                 </div>
 
                 <div>
-                  <label className="type-label block mb-1 text-xs text-teal-800 dark:text-teal-300 font-semibold flex items-center gap-1">
-                    <Luggage className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <label className="type-label block mb-1 text-xs text-teal-800 font-semibold flex items-center gap-1">
+                    <Luggage className="w-3.5 h-3.5 text-teal-600" />
                     <span>Bags (Max)</span>
                   </label>
                   <input
@@ -2041,13 +2041,13 @@ export default function AdminRatesPage() {
                     required
                     value={vehicleForm.luggage_capacity}
                     onChange={(e) => setVehicleForm((p) => ({ ...p, luggage_capacity: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-xs focus:outline-none focus:border-teal-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Description (Optional)
                 </label>
                 <textarea
@@ -2055,19 +2055,19 @@ export default function AdminRatesPage() {
                   placeholder="e.g. VIP executive sedan with comfortable leather interior"
                   value={vehicleForm.description}
                   onChange={(e) => setVehicleForm((p) => ({ ...p, description: e.target.value }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Active for bookings</span>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-xs font-semibold text-slate-800">Active for bookings</span>
                 <button
                   type="button"
                   onClick={() => setVehicleForm((p) => ({ ...p, is_active: !p.is_active }))}
                   className={`px-3 py-1 rounded-full text-xs font-bold border transition-all flex items-center gap-1.5 ${
                     vehicleForm.is_active
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
-                      : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400'
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700'
+                      : 'bg-rose-500/10 border-rose-500/30 text-rose-700'
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${vehicleForm.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -2079,7 +2079,7 @@ export default function AdminRatesPage() {
                 <button
                   type="button"
                   onClick={() => setIsVehicleModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2102,20 +2102,20 @@ export default function AdminRatesPage() {
       {isRouteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-base rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-base bg-slate-50/60 dark:bg-slate-900/60 flex items-center justify-between">
+            <div className="p-5 border-b border-base bg-slate-50/60 flex items-center justify-between">
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Route className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Route className="w-4 h-4 text-indigo-600" />
                   <span>{editingRoute ? 'Edit Service Route' : 'Add New Service Route'}</span>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Configure corridor pickup, destination, and airport terminal linking.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsRouteModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2123,7 +2123,7 @@ export default function AdminRatesPage() {
 
             <form onSubmit={handleRouteFormSubmit} className="p-5 space-y-4">
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Route Display Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -2132,13 +2132,13 @@ export default function AdminRatesPage() {
                   placeholder="e.g. Jeddah → Makkah, Taif Sacred Ziyarat"
                   value={routeForm.route_name}
                   onChange={(e) => setRouteForm((p) => ({ ...p, route_name: e.target.value }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                  <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                     Origin Pickup Area <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -2147,12 +2147,12 @@ export default function AdminRatesPage() {
                     placeholder="e.g. Jeddah KAIA Airport"
                     value={routeForm.origin_name}
                     onChange={(e) => setRouteForm((p) => ({ ...p, origin_name: e.target.value }))}
-                    className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-indigo-500"
+                    className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                  <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                     Destination Drop-off <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -2161,19 +2161,19 @@ export default function AdminRatesPage() {
                     placeholder="e.g. Makkah Al-Mukarramah"
                     value={routeForm.destination_name}
                     onChange={(e) => setRouteForm((p) => ({ ...p, destination_name: e.target.value }))}
-                    className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-indigo-500"
+                    className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Service Category
                 </label>
                 <select
                   value={routeForm.service_id}
                   onChange={(e) => setRouteForm((p) => ({ ...p, service_id: e.target.value }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:border-indigo-500"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-semibold focus:outline-none focus:border-indigo-500"
                 >
                   {activeServicesList.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -2185,11 +2185,11 @@ export default function AdminRatesPage() {
 
               <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
-                    <Plane className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span className="text-xs font-bold text-purple-900 flex items-center gap-1.5">
+                    <Plane className="w-3.5 h-3.5 text-purple-600" />
                     <span>Involves Airport KAIA</span>
                   </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                  <span className="text-[11px] text-slate-500 block mt-0.5">
                     Enables terminal selection (Terminal 1, H, N) for customer bookings
                   </span>
                 </div>
@@ -2205,7 +2205,7 @@ export default function AdminRatesPage() {
                 <button
                   type="button"
                   onClick={() => setIsRouteModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2228,20 +2228,20 @@ export default function AdminRatesPage() {
       {isTerminalModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-base rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-base bg-slate-50/60 dark:bg-slate-900/60 flex items-center justify-between">
+            <div className="p-5 border-b border-base bg-slate-50/60 flex items-center justify-between">
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Plane className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Plane className="w-4 h-4 text-purple-600" />
                   <span>{editingTerminal ? 'Edit Airport Terminal' : 'Add Airport Terminal'}</span>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Configure terminal designation, slug code, and linked corridor.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsTerminalModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2249,7 +2249,7 @@ export default function AdminRatesPage() {
 
             <form onSubmit={handleTerminalFormSubmit} className="p-5 space-y-4">
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Terminal Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -2258,12 +2258,12 @@ export default function AdminRatesPage() {
                   placeholder="e.g. Terminal 1, Terminal H (Hajj), Terminal N"
                   value={terminalForm.name}
                   onChange={(e) => setTerminalForm((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-purple-500"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-purple-500"
                 />
               </div>
 
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Terminal Code Slug <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -2272,18 +2272,18 @@ export default function AdminRatesPage() {
                   placeholder="e.g. terminal_1, terminal_h, terminal_n"
                   value={terminalForm.code}
                   onChange={(e) => setTerminalForm((p) => ({ ...p, code: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-xs focus:outline-none focus:border-purple-500"
                 />
               </div>
 
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Linked Service Corridor
                 </label>
                 <select
                   value={terminalForm.route_id}
                   onChange={(e) => setTerminalForm((p) => ({ ...p, route_id: e.target.value }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:border-purple-500"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-semibold focus:outline-none focus:border-purple-500"
                 >
                   {activeRoutesList.map((r) => (
                     <option key={r.id} value={r.id}>
@@ -2294,7 +2294,7 @@ export default function AdminRatesPage() {
               </div>
 
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Description (Optional)
                 </label>
                 <textarea
@@ -2302,7 +2302,7 @@ export default function AdminRatesPage() {
                   placeholder="e.g. New main international & Saudia terminal"
                   value={terminalForm.description}
                   onChange={(e) => setTerminalForm((p) => ({ ...p, description: e.target.value }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -2310,7 +2310,7 @@ export default function AdminRatesPage() {
                 <button
                   type="button"
                   onClick={() => setIsTerminalModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2333,20 +2333,20 @@ export default function AdminRatesPage() {
       {isServiceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-base rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-base bg-slate-50/60 dark:bg-slate-900/60 flex items-center justify-between">
+            <div className="p-5 border-b border-base bg-slate-50/60 flex items-center justify-between">
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-purple-600" />
                   <span>{editingService ? 'Edit Service Category' : 'Add Service Category'}</span>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   High-level category grouping transportation corridors.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsServiceModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2354,7 +2354,7 @@ export default function AdminRatesPage() {
 
             <form onSubmit={handleServiceFormSubmit} className="p-5 space-y-4">
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Category Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -2363,12 +2363,12 @@ export default function AdminRatesPage() {
                   placeholder="e.g. VIP Intercity Transfer, Sacred Ziyarat Tours"
                   value={serviceForm.name}
                   onChange={(e) => setServiceForm((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-purple-500"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-purple-500"
                 />
               </div>
 
               <div>
-                <label className="type-label block mb-1 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <label className="type-label block mb-1 text-xs text-slate-700 font-semibold">
                   Description
                 </label>
                 <textarea
@@ -2376,7 +2376,7 @@ export default function AdminRatesPage() {
                   placeholder="e.g. Luxury direct highway transfers with meet & greet"
                   value={serviceForm.description}
                   onChange={(e) => setServiceForm((p) => ({ ...p, description: e.target.value }))}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -2384,7 +2384,7 @@ export default function AdminRatesPage() {
                 <button
                   type="button"
                   onClick={() => setIsServiceModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2408,28 +2408,28 @@ export default function AdminRatesPage() {
       {deletingRate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-base rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 mx-auto">
               <AlertTriangle className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Fixed Rate Tariff?</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <h3 className="text-base font-bold text-slate-900">Delete Fixed Rate Tariff?</h3>
+              <p className="text-xs text-slate-500">
                 This will remove the standard tariff for{' '}
-                <strong className="text-blue-700 dark:text-blue-400">{getVehicleLabel(deletingRate.vehicle_category, rateVehicles)}</strong>{' '}
+                <strong className="text-blue-700">{getVehicleLabel(deletingRate.vehicle_category, rateVehicles)}</strong>{' '}
                 on route{' '}
-                <strong className="text-indigo-700 dark:text-indigo-400">{getServiceLabel(deletingRate.service_type, rateRoutes)}</strong> (
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatFareSAR(deletingRate.fare_amount)}</span>).
+                <strong className="text-indigo-700">{getServiceLabel(deletingRate.service_type, rateRoutes)}</strong> (
+                <span className="font-bold text-emerald-600">{formatFareSAR(deletingRate.fare_amount)}</span>).
               </p>
             </div>
 
             {rateDeleteConflict && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 text-xs space-y-2">
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 text-xs space-y-2">
                 <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
                   <span>Linked Historical Bookings Detected</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-[11px] text-slate-600 leading-relaxed">
                   {rateDeleteConflict.message}
                 </p>
                 <button
@@ -2446,7 +2446,7 @@ export default function AdminRatesPage() {
               <button
                 type="button"
                 onClick={() => setDeletingRate(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -2467,25 +2467,25 @@ export default function AdminRatesPage() {
       {deletingVehicle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-base rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 mx-auto">
               <Car className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Vehicle Type?</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <h3 className="text-base font-bold text-slate-900">Delete Vehicle Type?</h3>
+              <p className="text-xs text-slate-500">
                 Are you sure you want to delete vehicle type{' '}
-                <strong className="text-blue-700 dark:text-blue-400">&ldquo;{deletingVehicle.name}&rdquo;</strong>?
+                <strong className="text-blue-700">&ldquo;{deletingVehicle.name}&rdquo;</strong>?
               </p>
             </div>
 
             {vehicleDeleteConflict && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 text-xs space-y-2">
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 text-xs space-y-2">
                 <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
                   <span>Cannot Delete: Record in Active Use</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-[11px] text-slate-600 leading-relaxed">
                   {vehicleDeleteConflict.error}
                 </p>
                 <button
@@ -2502,7 +2502,7 @@ export default function AdminRatesPage() {
               <button
                 type="button"
                 onClick={() => setDeletingVehicle(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -2523,25 +2523,25 @@ export default function AdminRatesPage() {
       {deletingRoute && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-base rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 mx-auto">
               <Route className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Service Route?</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <h3 className="text-base font-bold text-slate-900">Delete Service Route?</h3>
+              <p className="text-xs text-slate-500">
                 Are you sure you want to delete route{' '}
-                <strong className="text-indigo-700 dark:text-indigo-400">&ldquo;{deletingRoute.route_name}&rdquo;</strong>?
+                <strong className="text-indigo-700">&ldquo;{deletingRoute.route_name}&rdquo;</strong>?
               </p>
             </div>
 
             {routeDeleteConflict && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 text-xs space-y-2">
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 text-xs space-y-2">
                 <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
                   <span>Linked Booking Records Detected</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-[11px] text-slate-600 leading-relaxed">
                   {routeDeleteConflict.error}
                 </p>
                 <button
@@ -2558,7 +2558,7 @@ export default function AdminRatesPage() {
               <button
                 type="button"
                 onClick={() => setDeletingRoute(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -2579,25 +2579,25 @@ export default function AdminRatesPage() {
       {deletingTerminal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-base rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 mx-auto">
               <Plane className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Airport Terminal?</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <h3 className="text-base font-bold text-slate-900">Delete Airport Terminal?</h3>
+              <p className="text-xs text-slate-500">
                 Are you sure you want to delete terminal{' '}
-                <strong className="text-purple-700 dark:text-purple-400">&ldquo;{deletingTerminal.name}&rdquo;</strong>?
+                <strong className="text-purple-700">&ldquo;{deletingTerminal.name}&rdquo;</strong>?
               </p>
             </div>
 
             {terminalDeleteConflict && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 text-xs space-y-2">
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 text-xs space-y-2">
                 <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
                   <span>Linked Booking Records Detected</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-[11px] text-slate-600 leading-relaxed">
                   {terminalDeleteConflict.error}
                 </p>
                 <button
@@ -2614,7 +2614,7 @@ export default function AdminRatesPage() {
               <button
                 type="button"
                 onClick={() => setDeletingTerminal(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -2635,15 +2635,15 @@ export default function AdminRatesPage() {
       {deletingService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-base rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 mx-auto">
               <Layers className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Service Category?</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <h3 className="text-base font-bold text-slate-900">Delete Service Category?</h3>
+              <p className="text-xs text-slate-500">
                 Are you sure you want to delete service category{' '}
-                <strong className="text-purple-700 dark:text-purple-400">&ldquo;{deletingService.name}&rdquo;</strong>?
+                <strong className="text-purple-700">&ldquo;{deletingService.name}&rdquo;</strong>?
               </p>
             </div>
 
@@ -2651,7 +2651,7 @@ export default function AdminRatesPage() {
               <button
                 type="button"
                 onClick={() => setDeletingService(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 Cancel
               </button>

@@ -161,7 +161,7 @@ export type BookingStatus =
   | 'payment_completed';
 
 export type PaymentMethod = 'cash' | 'online' | 'card';
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+export type PaymentStatus = 'pending' | 'paid' | 'confirmed' | 'failed' | 'refunded';
 
 export type AdditionalChargeType = 'waiting' | 'parking' | 'toll' | 'extra_luggage' | 'special_service';
 
@@ -342,6 +342,7 @@ export interface Booking {
   cancelled_at?: string | null;
   payment_screenshot_url?: string | null;
   payment_status?: PaymentStatus;
+  payment_method?: PaymentMethod;
   payment_rejected_reason?: string | null;
   created_by?: string | null;
   created_at: string;
@@ -493,4 +494,59 @@ export interface RouteEstimate {
   polylineCoords?: [number, number][];
   source: 'google' | 'osrm' | 'haversine';
 }
+
+export interface DriverSettlement {
+  id: string;
+  driver_id: string;
+  amount: number;
+  settlement_reference: string;
+  payment_method: 'bank_transfer' | 'cash';
+  status: 'pending' | 'completed' | 'cancelled';
+  bank_name?: string | null;
+  transaction_number?: string | null;
+  notes?: string | null;
+  processed_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DriverTransactionType = 'ride' | 'settlement';
+
+export interface DriverTransaction {
+  id: string;
+  type: DriverTransactionType;
+  reference: string;
+  date: string;
+  route: string;
+  passenger_name: string;
+  vehicle_type: string;
+  payment_method: 'cash' | 'online' | 'card' | 'bank_transfer';
+  payment_destination: 'company_account' | 'driver_pocket' | 'driver_account';
+  payment_method_label: string;
+  gross_amount: number;
+  deduction_amount: number;
+  net_amount: number;
+  status: string;
+  payment_status: string;
+  notes?: string | null;
+  booking_id?: string;
+  additional_charges?: number;
+}
+
+export interface DriverEarningsSummary {
+  driver_id: string;
+  currency: string;
+  gross_earnings: number;
+  cash_collection: number;
+  total_deductions: number;
+  net_earnings: number;
+  paid_via_bank: number;
+  paid_via_cash_settlement: number;
+  remaining_payable: number;
+  cash_due_to_company: number;
+  completed_rides_count: number;
+  commission_rate: number;
+  settlements_count: number;
+}
+
 

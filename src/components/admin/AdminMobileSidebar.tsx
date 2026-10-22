@@ -4,17 +4,18 @@ import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   X,
   Shield,
   ShieldCheck,
   ChevronRight,
+  ChevronLeft,
   Globe,
   LogOut,
   Sliders,
   ExternalLink,
 } from 'lucide-react';
-import BrandLogo from '@/components/ui/BrandLogo';
 import { ADMIN_NAV_SECTIONS } from './AdminDashboardShell';
 
 interface AdminMobileSidebarProps {
@@ -25,6 +26,7 @@ interface AdminMobileSidebarProps {
 export default function AdminMobileSidebar({ isOpen, onClose }: AdminMobileSidebarProps) {
   const pathname = usePathname();
   const { currentUser, signOut } = useApp();
+  const { dir, isRTL, t } = useLanguage();
 
   // Close sidebar only when pathname actually changes
   const prevPathnameRef = useRef(pathname);
@@ -69,10 +71,50 @@ export default function AdminMobileSidebar({ isOpen, onClose }: AdminMobileSideb
     await signOut();
   };
 
+  const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
+
+  const getSectionTitle = (title: string) => {
+    switch (title) {
+      case 'Core HQ': return isRTL ? 'المقر الرئيسي' : 'Core HQ';
+      case 'Operations': return isRTL ? 'العمليات' : 'Operations';
+      case 'Tariff & Finance': return isRTL ? 'التعريفات والمالية' : 'Tariff & Finance';
+      case 'Governance': return isRTL ? 'الحوكمة والأمان' : 'Governance';
+      default: return title;
+    }
+  };
+
+  const getItemLabel = (item: (typeof ADMIN_NAV_SECTIONS)[0]['items'][0]) => {
+    switch (item.href) {
+      case '/admin': return t('nav.overview', item.label);
+      case '/admin/users': return t('nav.users', item.label);
+      case '/admin/reviews': return t('nav.reviews', item.label);
+      case '/admin/services': return t('nav.services', item.label);
+      case '/admin/rates': return t('nav.rates', item.label);
+      case '/admin/reports': return t('nav.reports', item.label);
+      case '/admin/audit-logs': return t('nav.auditLogs', item.label);
+      case '/admin/settings': return t('nav.settings', item.label);
+      default: return item.label;
+    }
+  };
+
+  const getItemSubtitle = (item: (typeof ADMIN_NAV_SECTIONS)[0]['items'][0]) => {
+    switch (item.href) {
+      case '/admin': return t('nav.overviewSub', item.subtitle);
+      case '/admin/users': return t('nav.usersSub', item.subtitle);
+      case '/admin/reviews': return t('nav.reviewsSub', item.subtitle);
+      case '/admin/services': return t('nav.servicesSub', item.subtitle);
+      case '/admin/rates': return t('nav.ratesSub', item.subtitle);
+      case '/admin/reports': return t('nav.reportsSub', item.subtitle);
+      case '/admin/audit-logs': return t('nav.auditLogsSub', item.subtitle);
+      case '/admin/settings': return t('nav.settingsSub', item.subtitle);
+      default: return item.subtitle;
+    }
+  };
+
   return (
     <>
       {/* ─────────────────────────────────────────────────────────────
-          1. BACKDROP OVERLAY (Smooth fade with blur)
+          1. BACKDROP (Semi-transparent overlay with smooth fade)
       ───────────────────────────────────────────────────────────── */}
       <div
         className={`lg:hidden fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
@@ -86,25 +128,40 @@ export default function AdminMobileSidebar({ isOpen, onClose }: AdminMobileSideb
       />
 
       {/* ─────────────────────────────────────────────────────────────
-          2. OFF-CANVAS MOBILE DRAWER (Slides smoothly from left)
+          2. MOBILE SIDEBAR DRAWER (Slides smoothly from side)
       ───────────────────────────────────────────────────────────── */}
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Admin Navigation Drawer"
+        dir={dir}
         onClick={(e) => e.stopPropagation()}
-        className={`lg:hidden fixed top-0 bottom-0 left-0 z-[70] w-[min(360px,88vw)] max-w-sm h-full flex flex-col bg-card text-primary border-r border-base shadow-2xl transition-transform duration-300 ease-out transform ${
-          isOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
+        className={`lg:hidden fixed top-0 bottom-0 ${
+          isRTL ? 'right-0 border-l' : 'left-0 border-r'
+        } z-[70] w-[min(300px,85vw)] max-w-sm h-full flex flex-col bg-white text-slate-900 border-slate-200/90 shadow-2xl transition-transform duration-300 ease-out transform ${
+          isOpen
+            ? 'translate-x-0 pointer-events-auto'
+            : isRTL
+            ? 'translate-x-full pointer-events-none'
+            : '-translate-x-full pointer-events-none'
         }`}
         style={{
-          paddingTop: 'max(1rem, env(safe-area-inset-top))',
-          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
-          paddingLeft: 'max(0.75rem, env(safe-area-inset-left))',
+          paddingTop: 'max(0.75rem, env(safe-area-inset-top))',
+          paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+          paddingLeft: isRTL ? '0.75rem' : 'max(0.75rem, env(safe-area-inset-left))',
+          paddingRight: isRTL ? 'max(0.75rem, env(safe-area-inset-right))' : '0.75rem',
         }}
       >
-        {/* Header: Brand Logo + Close Button */}
-        <div className="flex items-center justify-between px-4 pb-4 border-b border-base shrink-0">
-          <BrandLogo size="sm" href="/admin" subtitle="Executive Admin HQ" />
+        {/* Header: Title + Close Button */}
+        <div className="flex items-center justify-between px-3.5 pb-3 border-b border-slate-200/90 shrink-0">
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-slate-900 tracking-tight">
+              {isRTL ? 'بوابة الإدارة العليا' : 'Executive Admin HQ'}
+            </h2>
+            <p className="text-[10px] text-slate-500 font-medium">
+              {isRTL ? 'التحكم بالعمليات والتعريفات' : 'Operations & Tariff Control'}
+            </p>
+          </div>
 
           <button
             type="button"
@@ -112,51 +169,51 @@ export default function AdminMobileSidebar({ isOpen, onClose }: AdminMobileSideb
               e.stopPropagation();
               onClose();
             }}
-            className="p-2 rounded-xl text-muted hover:text-primary hover:bg-elevated border border-base transition-colors w-10 h-10 flex items-center justify-center shrink-0 cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/90 transition-colors w-8 h-8 flex items-center justify-center shrink-0 cursor-pointer"
             aria-label="Close navigation drawer"
           >
-            <X className="w-5 h-5 text-amber-500" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Scrollable Content Container */}
         <div
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-5 overscroll-contain"
+          className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3.5 overscroll-contain"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {/* Admin Identity Card */}
-          <div className="rounded-2xl bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 p-4 space-y-3.5 shadow-xs">
-            <div className="flex items-center gap-3.5 min-w-0">
+          <div className="rounded-xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 p-3 space-y-2.5 shadow-2xs">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div className="relative shrink-0">
                 {currentUser?.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={currentUser.avatar_url}
                     alt={currentUser.full_name || 'Admin'}
-                    className="w-12 h-12 rounded-2xl object-cover border-2 border-amber-500/70 shadow-sm"
+                    className="w-10 h-10 rounded-xl object-cover border-2 border-amber-500/60 shadow-sm"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 text-slate-950 font-extrabold flex items-center justify-center border border-amber-400/60 shadow-sm text-sm">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 text-slate-950 font-bold flex items-center justify-center border border-amber-400/50 shadow-xs text-sm">
                     {currentUser?.full_name?.charAt(0)?.toUpperCase() || 'A'}
                   </div>
                 )}
-                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-card shadow-xs" />
+                <span className={`absolute -bottom-0.5 ${isRTL ? '-left-0.5' : '-right-0.5'} w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white`} />
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-primary truncate">
-                    {currentUser?.full_name || 'System Administrator'}
+                <div className="flex items-center gap-1">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                    {currentUser?.full_name || (isRTL ? 'مدير النظام' : 'Administrator')}
                   </h3>
-                  <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
+                  <ShieldCheck className="w-3 h-3 text-amber-500 shrink-0" />
                 </div>
-                <p className="text-xs text-muted truncate mt-0.5 font-medium">
+                <p className="text-[10px] text-slate-500 truncate">
                   {currentUser?.email || 'admin@alharmaintravels.com'}
                 </p>
-                <div className="mt-1.5">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-md border border-amber-500/35">
-                    <Shield className="w-3 h-3 text-amber-500" />
-                    Executive Single Authority
+                <div className="mt-0.5">
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">
+                    <Shield className="w-2.5 h-2.5 text-amber-600" />
+                    {isRTL ? 'إدارة عليا موحدة' : 'Single Authority HQ'}
                   </span>
                 </div>
               </div>
@@ -166,26 +223,23 @@ export default function AdminMobileSidebar({ isOpen, onClose }: AdminMobileSideb
             <Link
               href="/admin/settings"
               onClick={onClose}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-card hover:bg-elevated border border-base text-xs font-semibold text-secondary hover:text-primary transition-colors shadow-xs group"
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/90 text-xs font-semibold text-slate-800 hover:text-emerald-700 transition-colors shadow-2xs group"
             >
-              <span className="flex items-center gap-2.5">
-                <Sliders className="w-4 h-4 text-amber-500 group-hover:rotate-45 transition-transform" />
-                <span>System Configuration</span>
+              <span className="flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5 text-amber-600 group-hover:rotate-45 transition-transform" />
+                <span>{isRTL ? 'إعدادات النظام والشركة' : 'System Configuration'}</span>
               </span>
-              <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition-transform" />
+              <ChevronIcon className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
 
           {/* Organized Navigation Sections */}
-          <div className="space-y-5">
+          <div className="space-y-4">
             {ADMIN_NAV_SECTIONS.map((section) => (
-              <div key={section.title} className="space-y-1.5">
-                <div className="px-2 pb-1">
-                  <p className="text-[11px] font-extrabold uppercase tracking-wider text-muted font-sans">
-                    {section.title}
-                  </p>
-                </div>
-
+              <div key={section.title} className="space-y-1">
+                <p className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 px-1.5">
+                  {getSectionTitle(section.title)}
+                </p>
                 <div className="space-y-1">
                   {section.items.map((item) => {
                     const Icon = item.icon;
@@ -198,36 +252,36 @@ export default function AdminMobileSidebar({ isOpen, onClose }: AdminMobileSideb
                         key={item.href}
                         href={item.href}
                         onClick={onClose}
-                        className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all ${
+                        className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                           isActive
-                            ? 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-500/35 font-bold shadow-xs'
-                            : 'text-secondary hover:text-primary hover:bg-elevated border border-transparent hover:border-base'
+                            ? 'bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold shadow-2xs'
+                            : 'text-slate-700 hover:text-slate-950 hover:bg-slate-50 border border-transparent'
                         }`}
                       >
-                        <div className="flex items-center gap-3.5 min-w-0">
-                          <Icon
-                            className={`w-5 h-5 shrink-0 ${
-                              isActive ? 'text-amber-600 dark:text-amber-400' : 'text-muted'
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                              isActive
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-slate-100 text-slate-600'
                             }`}
-                          />
-                          <div className="min-w-0">
-                            <span className="block truncate text-xs font-bold">{item.label}</span>
-                            <span
-                              className={`text-[10.5px] block truncate font-medium ${
-                                isActive
-                                  ? 'text-amber-700/90 dark:text-amber-300/90'
-                                  : 'text-muted'
-                              }`}
-                            >
-                              {item.subtitle}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 text-left rtl:text-right">
+                            <span className="block truncate text-xs font-bold leading-tight">
+                              {getItemLabel(item)}
+                            </span>
+                            <span className="text-[10px] text-slate-500 block truncate leading-tight mt-0.5">
+                              {getItemSubtitle(item)}
                             </span>
                           </div>
                         </div>
 
                         {isActive ? (
-                          <span className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.9)] shrink-0 ml-2" />
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-muted shrink-0 ml-2" />
+                          <ChevronIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         )}
                       </Link>
                     );
@@ -236,35 +290,36 @@ export default function AdminMobileSidebar({ isOpen, onClose }: AdminMobileSideb
               </div>
             ))}
           </div>
-
-          {/* Quick Link to Live Website */}
-          <div className="pt-2 border-t border-base space-y-2">
-            <Link
-              href="/"
-              onClick={onClose}
-              className="flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold text-secondary hover:text-primary hover:bg-elevated border border-base transition-colors group"
-            >
-              <div className="flex items-center gap-2.5">
-                <Globe className="w-4 h-4 text-amber-500 group-hover:rotate-12 transition-transform" />
-                <span>Visit Live Public Website</span>
-              </div>
-              <ExternalLink className="w-4 h-4 text-muted" />
-            </Link>
-          </div>
         </div>
 
-        {/* Footer: Sign Out */}
-        <div className="p-4 border-t border-base shrink-0 bg-surface/50 space-y-2">
+        {/* SIGN OUT & FOOTER */}
+        <div className="p-3 border-t border-slate-200/90 shrink-0 bg-slate-50/80 space-y-2">
+          <Link
+            href="/"
+            onClick={onClose}
+            className="flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-950 hover:bg-white border border-slate-200/90 transition-colors group"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <Globe className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-xs font-bold text-slate-900">
+                {isRTL ? 'الموقع العام' : 'Public Website'}
+              </span>
+            </div>
+            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+          </Link>
+
           <button
             type="button"
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 transition-colors shadow-xs cursor-pointer"
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-700 hover:bg-rose-50 border border-rose-200 transition-colors shadow-2xs cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out Admin HQ</span>
+            <LogOut className="w-3.5 h-3.5" />
+            <span>{t('signOut', 'Sign Out')} HQ</span>
           </button>
-          <p className="text-[10px] text-center text-muted">
-            KSA Transport Authority Fleet Operations
+          <p className="text-[9px] text-center text-slate-400">
+            {isRTL ? 'نقل مرخص من الهيئة العامة للنقل · الحرمين' : 'KSA MOT Licensed Transport · Al Harmain'}
           </p>
         </div>
       </aside>

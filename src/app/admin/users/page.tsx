@@ -630,29 +630,29 @@ export default function AdminUsersPage() {
     switch (role) {
       case 'admin':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30">
-            <Shield className="w-3 h-3 text-purple-500" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
+            <Shield className="w-3 h-3 text-purple-600" />
             Admin
           </span>
         );
       case 'dispatcher':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-sky-500/10 text-sky-600 dark:text-sky-300 border border-sky-500/30">
-            <ShieldCheck className="w-3 h-3 text-sky-500" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200">
+            <ShieldCheck className="w-3 h-3 text-sky-600" />
             Dispatcher
           </span>
         );
       case 'driver':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-            <Car className="w-3 h-3 text-amber-500" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+            <Car className="w-3 h-3 text-amber-600" />
             Captain / Driver
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-            <Users className="w-3 h-3 text-emerald-500" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <Users className="w-3 h-3 text-emerald-600" />
             Customer / Pilgrim
           </span>
         );
@@ -664,22 +664,22 @@ export default function AdminUsersPage() {
     switch (status) {
       case 'active':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
             Active
           </span>
         );
       case 'suspended':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
             Suspended
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-50 text-rose-700 border border-rose-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
             Deactivated
           </span>
         );
@@ -971,7 +971,7 @@ export default function AdminUsersPage() {
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-bold text-primary truncate">{u.full_name}</span>
                               {isCurrentAccount && (
-                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/30">
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-700 font-bold border border-amber-500/30">
                                   You
                                 </span>
                               )}
@@ -996,7 +996,7 @@ export default function AdminUsersPage() {
                               <button
                                 onClick={() => handleToggleVerification(u)}
                                 title="Click to toggle email verification"
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
                               >
                                 <CheckCircle2 className="w-3 h-3" />
                                 <span>Verified</span>
@@ -1005,7 +1005,7 @@ export default function AdminUsersPage() {
                               <button
                                 onClick={() => handleToggleVerification(u)}
                                 title="Click to mark email as verified"
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
                               >
                                 <AlertTriangle className="w-3 h-3" />
                                 <span>Unverified</span>
@@ -1017,7 +1017,7 @@ export default function AdminUsersPage() {
 
                       {/* 3. Phone Number */}
                       <td className="p-4">
-                        <div className="font-mono text-amber-600 dark:text-amber-400 text-xs flex items-center gap-1.5">
+                        <div className="font-mono text-amber-700 text-xs flex items-center gap-1.5">
                           <Phone className="w-3 h-3 text-muted shrink-0" />
                           <span>{u.phone || 'N/A'}</span>
                         </div>
@@ -1042,19 +1042,19 @@ export default function AdminUsersPage() {
                               <div className="flex items-center gap-1.5 text-[10px] text-muted">
                                 <span>{assignedVehicle.seating_capacity || 4} Seats</span>
                                 {assignedVehicle.is_rate_vehicle && (
-                                  <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20 text-[9px]">
+                                  <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[9px]">
                                     Rates Master
                                   </span>
                                 )}
                                 {assignedVehicle.is_active === false && (
-                                  <span className="px-1.5 py-0.2 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/20 text-[9px]">
+                                  <span className="px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 font-bold border border-rose-200 text-[9px]">
                                     Inactive in Rates
                                   </span>
                                 )}
                               </div>
                               <button
                                 onClick={() => openVehicleModal(u)}
-                                className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 mt-0.5"
+                                className="text-[10px] font-bold text-emerald-700 hover:underline flex items-center gap-1 mt-0.5"
                               >
                                 <CarFront className="w-3 h-3" />
                                 <span>Change Vehicle</span>
@@ -1062,13 +1062,13 @@ export default function AdminUsersPage() {
                             </div>
                           ) : (
                             <div className="space-y-1">
-                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 font-medium">
+                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
                                 Unassigned
                               </span>
                               <div>
                                 <button
                                   onClick={() => openVehicleModal(u)}
-                                  className="text-[10px] font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+                                  className="text-[10px] font-bold text-sky-700 hover:underline flex items-center gap-1"
                                 >
                                   <Plus className="w-3 h-3" />
                                   <span>Assign Vehicle</span>
@@ -1166,7 +1166,7 @@ export default function AdminUsersPage() {
 
       {/* ── Modal: Add New User ────────────────────────────────────────── */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-card border border-base rounded-3xl p-6 sm:p-7 max-w-xl w-full space-y-5 shadow-2xl my-8">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-base pb-4">
@@ -1191,7 +1191,7 @@ export default function AdminUsersPage() {
             {/* Created Credentials Success Callout */}
             {createdCredentials ? (
               <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
                   <CheckCircle2 className="w-5 h-5" />
                   <span>Account Successfully Created in Supabase!</span>
                 </div>
@@ -1318,7 +1318,7 @@ export default function AdminUsersPage() {
                 {/* Driver Specific Fields */}
                 {addRole === 'driver' && (
                   <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-3">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700">
                       <Car className="w-4 h-4" />
                       <span>Chauffeur &amp; Vehicle Allocation</span>
                     </div>
@@ -1357,7 +1357,7 @@ export default function AdminUsersPage() {
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="type-label">Assign Vehicle from Rates</label>
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <span className="text-[10px] text-emerald-700 font-semibold">
                           {activeRateVehicles.length} active in Rates
                         </span>
                       </div>
@@ -1454,7 +1454,7 @@ export default function AdminUsersPage() {
 
       {/* ── Modal: Edit User ──────────────────────────────────────────── */}
       {isEditModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-card border border-base rounded-3xl p-6 sm:p-7 max-w-xl w-full space-y-5 shadow-2xl my-8">
             <div className="flex items-center justify-between border-b border-base pb-3">
               <div className="flex items-center gap-2.5">
@@ -1553,7 +1553,7 @@ export default function AdminUsersPage() {
               {/* Driver Details if role === driver */}
               {editRole === 'driver' && (
                 <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-3">
-                  <div className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                  <div className="text-xs font-bold text-amber-700 flex items-center gap-1.5">
                     <Car className="w-4 h-4" />
                     <span>Captain License &amp; Vehicle Allocation</span>
                   </div>
@@ -1588,7 +1588,7 @@ export default function AdminUsersPage() {
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="type-label">Assigned Vehicle from Rates</label>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <span className="text-[10px] text-emerald-700 font-semibold">
                         {activeRateVehicles.length} active in Rates
                       </span>
                     </div>
@@ -1680,7 +1680,7 @@ export default function AdminUsersPage() {
 
       {/* ── Modal: Quick Vehicle Assignment ────────────────────────────── */}
       {isVehicleModalOpen && vehicleModalDriver && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-card border border-base rounded-3xl p-6 sm:p-7 max-w-lg w-full space-y-5 shadow-2xl my-8">
             <div className="flex items-center justify-between border-b border-base pb-3">
               <div className="flex items-center gap-2.5">
@@ -1713,7 +1713,7 @@ export default function AdminUsersPage() {
                 onClick={() => setVehicleModalSelectedId('')}
                 className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                   vehicleModalSelectedId === ''
-                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-600 dark:text-rose-400 font-bold'
+                    ? 'bg-rose-50 border-rose-300 text-rose-700 font-bold'
                     : 'bg-input border-base text-secondary hover:text-primary'
                 }`}
               >
@@ -1735,7 +1735,7 @@ export default function AdminUsersPage() {
                     </p>
                     <a
                       href="/admin/rates"
-                      className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline mt-2"
+                      className="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-bold hover:underline mt-2"
                     >
                       <span>Open Rates Management</span>
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -1771,7 +1771,7 @@ export default function AdminUsersPage() {
                             <span className="text-xs font-semibold text-primary">
                               {v.name}
                             </span>
-                            <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                               Rates Master
                             </span>
                           </div>
@@ -1845,7 +1845,7 @@ export default function AdminUsersPage() {
 
       {/* ── Modal: User Profile Inspection ────────────────────────────── */}
       {isDetailsModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-card border border-base rounded-3xl p-6 sm:p-7 max-w-lg w-full space-y-5 shadow-2xl my-8">
             <div className="flex items-center justify-between border-b border-base pb-3">
               <div className="flex items-center gap-2.5">
@@ -1932,7 +1932,7 @@ export default function AdminUsersPage() {
               {/* Driver Specific Dossier */}
               {selectedUser.role === 'driver' && selectedDriver && (
                 <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-3">
-                  <div className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                  <div className="text-xs font-bold text-amber-700 flex items-center gap-1.5">
                     <Car className="w-4 h-4" />
                     <span>Captain Credentials &amp; Vehicle</span>
                   </div>
@@ -1977,12 +1977,12 @@ export default function AdminUsersPage() {
                     const driverReviews = ratings.filter((r) => r.driver_id === selectedDriver.id);
                     return (
                       <div className="pt-2 border-t border-amber-500/20 space-y-2">
-                        <div className="flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
+                        <div className="flex items-center justify-between text-xs font-bold text-amber-700">
                           <span className="flex items-center gap-1.5">
                             <Star className="w-3.5 h-3.5 fill-amber-500" />
                             <span>Passenger Reviews &amp; Ratings</span>
                           </span>
-                          <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 font-mono">
+                          <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200 font-mono">
                             {driverReviews.length} {driverReviews.length === 1 ? 'review' : 'reviews'}
                           </span>
                         </div>
@@ -2015,7 +2015,7 @@ export default function AdminUsersPage() {
                                           className={`w-3 h-3 ${
                                             s <= rev.rating
                                               ? 'text-amber-500 fill-amber-500'
-                                              : 'text-slate-300 dark:text-slate-600'
+                                              : 'text-slate-300'
                                           }`}
                                         />
                                       ))}
@@ -2027,7 +2027,7 @@ export default function AdminUsersPage() {
 
                                   {(b || rev.booking) && (
                                     <div className="text-[10px] text-muted flex items-center justify-between">
-                                      <span className="font-mono text-amber-600 dark:text-amber-400">
+                                      <span className="font-mono text-amber-700">
                                         {b?.booking_reference || (rev.booking as any)?.booking_reference}
                                       </span>
                                       <span>
@@ -2097,7 +2097,7 @@ export default function AdminUsersPage() {
 
       {/* ── Modal: Delete Confirmation ─────────────────────────────────── */}
       {isDeleteModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-card border border-rose-500/30 rounded-3xl p-6 sm:p-7 max-w-md w-full space-y-4 shadow-2xl">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/30">
               <AlertTriangle className="w-6 h-6" />

@@ -231,8 +231,8 @@ export default function AdminServicesPage() {
                   onClick={() => toggleServiceActive(s.id)}
                   className={`inline-flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-colors px-2.5 py-1.5 rounded-xl border ${
                     s.is_active
-                      ? 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/25 hover:bg-amber-500/20'
-                      : 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/20'
+                      ? 'text-amber-700 bg-amber-500/10 border-amber-500/25 hover:bg-amber-500/20'
+                      : 'text-emerald-700 bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/20'
                   }`}
                 >
                   {s.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -259,14 +259,14 @@ export default function AdminServicesPage() {
 
       {/* ── 4. Add / Edit Service Modal ────────────────────────────────────── */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleFormSubmit}
             className="bg-card border border-base rounded-3xl p-6 sm:p-7 max-w-lg w-full space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-base pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/30">
                   <Briefcase className="w-5 h-5" />
                 </div>
                 <div>

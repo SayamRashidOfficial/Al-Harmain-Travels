@@ -151,6 +151,7 @@ export async function POST(req: NextRequest) {
       license_number,
       national_id,
       assigned_vehicle_id,
+      avatar_url,
     } = body;
 
     // 1. Basic validation
@@ -338,6 +339,7 @@ export async function POST(req: NextRequest) {
         full_name: full_name.trim(),
         email: cleanEmail,
         phone: cleanPhone,
+        avatar_url: avatar_url ? String(avatar_url).trim() : null,
         email_verified: Boolean(email_verified),
         phone_verified: true,
         status: status === 'suspended' || status === 'deactivated' ? status : 'active',
@@ -354,16 +356,22 @@ export async function POST(req: NextRequest) {
     // 7. Role specific database entries
     let createdDriver = null;
     if (role === 'driver') {
+      const isDriverActive = status !== 'suspended' && status !== 'deactivated';
       const driverRecord = {
         id: newUserId,
         license_number: license_number.trim(),
         national_id: national_id?.trim() || null,
         assigned_vehicle_id: assigned_vehicle_id || null,
-        status: assigned_vehicle_id ? 'assigned' : 'available',
+        status: !isDriverActive
+          ? 'unavailable'
+          : assigned_vehicle_id
+          ? 'assigned'
+          : 'available',
         rating: 5.0,
         total_rides: 0,
         total_earnings: 0,
         cash_collected: 0,
+        avatar_url: avatar_url ? String(avatar_url).trim() : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -435,6 +443,7 @@ export async function PATCH(req: NextRequest) {
       national_id,
       assigned_vehicle_id,
       password,
+      avatar_url,
     } = body;
 
     if (!userId || typeof userId !== 'string') {
@@ -589,20 +598,39 @@ export async function PATCH(req: NextRequest) {
           }
         }
 
+        // Determine driver duty status based on account status & vehicle assignment
+        let resolvedDriverStatus = targetVehicleId ? 'assigned' : 'available';
+        if (status === 'deactivated' || status === 'suspended' || existingProfile.status === 'deactivated') {
+          resolvedDriverStatus = 'unavailable';
+        } else if (status === 'active') {
+          resolvedDriverStatus = targetVehicleId ? 'assigned' : 'available';
+        }
+
         // Upsert or update drivers row
         await admin.from('drivers').upsert({
           id: uid,
           license_number: license_number !== undefined ? license_number.trim() : currentDriver?.license_number || 'DL-PENDING',
           national_id: national_id !== undefined ? (national_id?.trim() || null) : currentDriver?.national_id,
           assigned_vehicle_id: targetVehicleId,
-          status: targetVehicleId ? 'assigned' : 'available',
+          status: resolvedDriverStatus,
+          avatar_url: avatar_url !== undefined ? (avatar_url ? avatar_url.trim() : null) : currentDriver?.avatar_url,
           updated_at: new Date().toISOString(),
         });
-      } else if (license_number !== undefined || national_id !== undefined) {
+      } else if (license_number !== undefined || national_id !== undefined || avatar_url !== undefined || status !== undefined) {
+        let resolvedDriverStatus = currentDriver?.status || 'available';
+        if (status === 'deactivated' || status === 'suspended') {
+          resolvedDriverStatus = 'unavailable';
+        } else if (status === 'active' && resolvedDriverStatus === 'unavailable') {
+          resolvedDriverStatus = currentDriver?.assigned_vehicle_id ? 'assigned' : 'available';
+        }
+
         await admin.from('drivers').upsert({
           id: uid,
           license_number: license_number !== undefined ? license_number.trim() : currentDriver?.license_number || 'DL-PENDING',
           national_id: national_id !== undefined ? (national_id?.trim() || null) : currentDriver?.national_id,
+          assigned_vehicle_id: currentDriver?.assigned_vehicle_id ?? null,
+          status: resolvedDriverStatus,
+          avatar_url: avatar_url !== undefined ? (avatar_url ? avatar_url.trim() : null) : currentDriver?.avatar_url,
           updated_at: new Date().toISOString(),
         });
       }
@@ -615,6 +643,7 @@ export async function PATCH(req: NextRequest) {
     if (full_name !== undefined) profileUpdates.full_name = full_name.trim();
     if (email !== undefined) profileUpdates.email = email.trim().toLowerCase();
     if (phone !== undefined) profileUpdates.phone = phone.trim();
+    if (avatar_url !== undefined) profileUpdates.avatar_url = avatar_url ? avatar_url.trim() : null;
     if (role !== undefined) profileUpdates.role = role;
     if (status !== undefined) profileUpdates.status = status;
     if (email_verified !== undefined) profileUpdates.email_verified = Boolean(email_verified);
@@ -679,7 +708,7 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { userId } = body as { userId?: string };
+    const { userId, force = false } = body as { userId?: string; force?: boolean };
 
     if (!userId || typeof userId !== 'string' || userId.trim() === '') {
       return NextResponse.json({ success: false, error: 'userId is required.' }, { status: 400 });
@@ -688,7 +717,79 @@ export async function DELETE(req: NextRequest) {
     const admin = getSupabaseAdmin();
     const uid = userId.trim();
 
-    // 1. If user had an assigned vehicle, release it back to available
+    // Check user's role and existing profile
+    const { data: targetProfile } = await admin
+      .from('profiles')
+      .select('id, role, full_name')
+      .eq('id', uid)
+      .maybeSingle();
+
+    const userRole = targetProfile?.role || 'user';
+
+    // 1. Check for active ongoing bookings before deleting
+    let activeTrips: { id: string; booking_reference: string; status: string }[] | null = null;
+    let countErr: any = null;
+
+    if (userRole === 'driver') {
+      const res = await admin
+        .from('bookings')
+        .select('id, booking_reference, status')
+        .eq('assigned_driver_id', uid)
+        .in('status', [
+          'driver_assigned',
+          'driver_accepted',
+          'accepted',
+          'driver_arriving',
+          'on_the_way',
+          'driver_arrived',
+          'arrived',
+          'trip_started',
+          'started',
+          'ride_started',
+        ]);
+      activeTrips = res.data;
+      countErr = res.error;
+    } else if (userRole === 'customer') {
+      const res = await admin
+        .from('bookings')
+        .select('id, booking_reference, status')
+        .eq('customer_id', uid)
+        .in('status', [
+          'pending_review',
+          'pending_verification',
+          'pending',
+          'confirmed',
+          'driver_assigned',
+          'driver_accepted',
+          'accepted',
+          'driver_arriving',
+          'on_the_way',
+          'driver_arrived',
+          'arrived',
+          'trip_started',
+          'started',
+          'ride_started',
+        ]);
+      activeTrips = res.data;
+      countErr = res.error;
+    }
+
+    const activeCount = activeTrips?.length ?? 0;
+    if (!countErr && activeCount > 0 && !force) {
+      const entityName = userRole === 'customer' ? 'Customer' : 'Driver';
+      return NextResponse.json(
+        {
+          success: false,
+          hasActiveBookings: true,
+          activeCount,
+          activeTrips: (activeTrips || []).map((t) => t.booking_reference),
+          error: `${entityName} currently has ${activeCount} active in-progress booking(s). Please conclude or cancel these trips before permanently deleting.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 2. If user had an assigned vehicle (driver), release it back to available
     const { data: driverData } = await admin
       .from('drivers')
       .select('assigned_vehicle_id')
@@ -702,7 +803,67 @@ export async function DELETE(req: NextRequest) {
         .eq('id', driverData.assigned_vehicle_id);
     }
 
-    // 2. Cascade delete via RPC
+    // 3. Safe deletion strategy: Preserve completed trip history, financial records, ratings, and audit logs!
+    // Nullify assigned_driver_id and customer_id on bookings so historical booking records remain intact
+    await admin
+      .from('bookings')
+      .update({ assigned_driver_id: null, updated_at: new Date().toISOString() })
+      .eq('assigned_driver_id', uid);
+
+    await admin
+      .from('bookings')
+      .update({ customer_id: null, updated_at: new Date().toISOString() })
+      .eq('customer_id', uid);
+
+    await admin
+      .from('bookings')
+      .update({ created_by: null })
+      .eq('created_by', uid);
+
+    await admin
+      .from('bookings')
+      .update({ cancelled_by: null })
+      .eq('cancelled_by', uid);
+
+    // Preserve financial records: nullify customer_id and collected_by on payments
+    await admin
+      .from('payments')
+      .update({ customer_id: null })
+      .eq('customer_id', uid);
+
+    await admin
+      .from('payments')
+      .update({ collected_by: null })
+      .eq('collected_by', uid);
+
+    // Preserve rating history: nullify customer_id and driver_id on ratings_feedback
+    await admin
+      .from('ratings_feedback')
+      .update({ customer_id: null })
+      .eq('customer_id', uid);
+
+    await admin
+      .from('ratings_feedback')
+      .update({ driver_id: null })
+      .eq('driver_id', uid);
+
+    // Preserve audit logs: nullify user_id
+    await admin
+      .from('audit_logs')
+      .update({ user_id: null })
+      .eq('user_id', uid);
+
+    // Delete customer dependent tables (contacts, saved places, recents, customers row)
+    await admin.from('emergency_contacts').delete().eq('customer_id', uid);
+    await admin.from('saved_places').delete().eq('customer_id', uid);
+    await admin.from('recent_locations').delete().eq('customer_id', uid);
+    await admin.from('customers').delete().eq('id', uid);
+
+    // Remove driver telemetry/locations & driver row
+    await admin.from('driver_locations').delete().eq('driver_id', uid);
+    await admin.from('drivers').delete().eq('id', uid);
+
+    // 4. Cascade delete via RPC or auth.admin
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid);
     if (isUuid) {
       try {
@@ -715,13 +876,15 @@ export async function DELETE(req: NextRequest) {
       } catch (e: unknown) {
         console.warn('[DELETE /api/admin/users] Auth delete error:', e);
       }
-    } else {
-      // Local or mock ID
-      await admin.from('drivers').delete().eq('id', uid);
-      await admin.from('profiles').delete().eq('id', uid);
     }
 
-    return NextResponse.json({ success: true, message: 'User deleted permanently.' });
+    // 5. Delete public.profiles record
+    await admin.from('profiles').delete().eq('id', uid);
+
+    return NextResponse.json({
+      success: true,
+      message: `${userRole.charAt(0).toUpperCase() + userRole.slice(1)} account deleted permanently while preserving trip and financial history.`,
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Server error while deleting user';
     console.error('[DELETE /api/admin/users] Error:', err);

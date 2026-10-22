@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
@@ -16,6 +16,7 @@ import {
   MapPin,
   Clock,
   CheckCircle2,
+  CheckCircle,
   XCircle,
   UserCheck,
   Zap,
@@ -27,6 +28,10 @@ import {
   RefreshCw,
   AlertCircle,
   FileCheck,
+  FileText,
+  CreditCard,
+  Navigation,
+  Layers,
   DollarSign,
   MessageSquare,
   Star,
@@ -34,6 +39,54 @@ import {
 import { TableSkeletonRows } from '@/components/ui/DataStateSkeletons';
 import { toast } from 'sonner';
 import { checkDriverOverlap } from '@/lib/assignment-utils';
+
+type QueueStatusFilter =
+  | 'all'
+  | 'pending_review'
+  | 'pending_verification'
+  | 'confirmed'
+  | 'assigned'
+  | 'active'
+  | 'completed';
+
+function isCustomRouteReviewBooking(b: Booking): boolean {
+  return b.status === 'pending_review';
+}
+
+function isPendingPaymentBooking(b: Booking): boolean {
+  return b.status === 'pending_verification' || b.status === 'payment_pending';
+}
+
+function isConfirmedBooking(b: Booking): boolean {
+  return b.status === 'confirmed' || b.status === 'payment_verified';
+}
+
+function isAssignedBooking(b: Booking): boolean {
+  return b.status === 'driver_assigned';
+}
+
+function isActiveTripBooking(b: Booking): boolean {
+  return (
+    b.status === 'driver_accepted' ||
+    b.status === 'accepted' ||
+    b.status === 'driver_arriving' ||
+    b.status === 'on_the_way' ||
+    b.status === 'driver_arrived' ||
+    b.status === 'arrived' ||
+    b.status === 'trip_started' ||
+    b.status === 'started' ||
+    b.status === 'ride_started'
+  );
+}
+
+function isCompletedBooking(b: Booking): boolean {
+  return (
+    b.status === 'trip_completed' ||
+    b.status === 'ride_completed' ||
+    b.status === 'payment_completed' ||
+    b.status === 'completed'
+  );
+}
 
 export default function DispatcherQueuePage() {
   const {
@@ -51,7 +104,76 @@ export default function DispatcherQueuePage() {
     settings,
     ratings,
     isDataLoading,
+    refreshData,
   } = useApp();
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Sync fresh bookings directly from Supabase on mount
+  useEffect(() => {
+    refreshData().catch(() => {});
+  }, [refreshData]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshData();
+      toast.success('Live ride queue synchronized with Supabase');
+    } catch {
+      toast.error('Failed to sync queue data');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Deduplicate bookings by ID to prevent duplicate counting and duplicate table records
+  const deduplicatedBookings = useMemo(() => {
+    const map = new Map<string, Booking>();
+    for (const b of bookings) {
+      if (b?.id && !map.has(b.id)) {
+        map.set(b.id, b);
+      }
+    }
+    return Array.from(map.values());
+  }, [bookings]);
+
+  // Compute live, mutually exclusive counts matching each filter
+  const counts = useMemo(() => {
+    let all = 0;
+    let pending_review = 0;
+    let pending_verification = 0;
+    let confirmed = 0;
+    let assigned = 0;
+    let active = 0;
+    let completed = 0;
+
+    for (const b of deduplicatedBookings) {
+      all++;
+      if (isCustomRouteReviewBooking(b)) {
+        pending_review++;
+      } else if (isPendingPaymentBooking(b)) {
+        pending_verification++;
+      } else if (isConfirmedBooking(b)) {
+        confirmed++;
+      } else if (isAssignedBooking(b)) {
+        assigned++;
+      } else if (isActiveTripBooking(b)) {
+        active++;
+      } else if (isCompletedBooking(b)) {
+        completed++;
+      }
+    }
+
+    return {
+      all,
+      pending_review,
+      pending_verification,
+      confirmed,
+      assigned,
+      active,
+      completed,
+    };
+  }, [deduplicatedBookings]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [assignModalBooking, setAssignModalBooking] = useState<Booking | null>(null);
@@ -85,7 +207,7 @@ export default function DispatcherQueuePage() {
   const [selectedReviewBooking, setSelectedReviewBooking] = useState<{ booking: Booking; rating: RatingFeedback } | null>(null);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<QueueStatusFilter>('all');
 
   // Form for dispatcher creating booking for call-in customer
   const [custName, setCustName] = useState('');
@@ -96,8 +218,8 @@ export default function DispatcherQueuePage() {
   const [pax, setPax] = useState(2);
   const [notes, setNotes] = useState('');
 
-  const pendingVerificationCount = bookings.filter((b) => b.status === 'pending_verification').length;
-  const pendingReviewCount = bookings.filter((b) => b.status === 'pending_review').length;
+  const pendingVerificationCount = counts.pending_verification;
+  const pendingReviewCount = counts.pending_review;
 
   const handleQuoteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,47 +327,51 @@ export default function DispatcherQueuePage() {
 
   const activeFleetDrivers = drivers.filter((d) => d.status !== 'offline');
 
-  const filtered = bookings.filter((b) => {
-    const matchesSearch =
-      b.booking_reference.toLowerCase().includes(search.toLowerCase()) ||
-      b.passenger_name.toLowerCase().includes(search.toLowerCase()) ||
-      b.passenger_phone.includes(search) ||
-      b.pickup_address.toLowerCase().includes(search.toLowerCase()) ||
-      b.destination_address.toLowerCase().includes(search.toLowerCase());
+  const filtered = useMemo(() => {
+    return deduplicatedBookings.filter((b) => {
+      // 1. Status Filter matching
+      let matchesStatus = true;
+      switch (statusFilter) {
+        case 'all':
+          matchesStatus = true;
+          break;
+        case 'pending_review':
+          matchesStatus = isCustomRouteReviewBooking(b);
+          break;
+        case 'pending_verification':
+          matchesStatus = isPendingPaymentBooking(b);
+          break;
+        case 'confirmed':
+          matchesStatus = isConfirmedBooking(b);
+          break;
+        case 'assigned':
+          matchesStatus = isAssignedBooking(b);
+          break;
+        case 'active':
+          matchesStatus = isActiveTripBooking(b);
+          break;
+        case 'completed':
+          matchesStatus = isCompletedBooking(b);
+          break;
+        default:
+          matchesStatus = true;
+          break;
+      }
 
-    if (!matchesSearch) return false;
+      if (!matchesStatus) return false;
 
-    if (statusFilter === 'all') return true;
-    if (statusFilter === 'pending_review') return b.status === 'pending_review';
-    if (statusFilter === 'pending_verification') return b.status === 'pending_verification';
-    if (statusFilter === 'confirmed') return b.status === 'confirmed';
-    if (statusFilter === 'assigned') return b.status === 'driver_assigned';
-    if (statusFilter === 'active') {
+      // 2. Search query matching
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
       return (
-        b.status === 'driver_accepted' ||
-        b.status === 'accepted' ||
-        b.status === 'driver_arriving' ||
-        b.status === 'on_the_way' ||
-        b.status === 'driver_arrived' ||
-        b.status === 'arrived' ||
-        b.status === 'trip_started' ||
-        b.status === 'started' ||
-        b.status === 'ride_started'
+        b.booking_reference.toLowerCase().includes(q) ||
+        b.passenger_name.toLowerCase().includes(q) ||
+        b.passenger_phone.includes(q) ||
+        b.pickup_address.toLowerCase().includes(q) ||
+        b.destination_address.toLowerCase().includes(q)
       );
-    }
-    if (statusFilter === 'completed') {
-      return (
-        b.status === 'trip_completed' ||
-        b.status === 'ride_completed' ||
-        b.status === 'payment_completed' ||
-        b.status === 'completed'
-      );
-    }
-    if (statusFilter === 'rejected') {
-      return b.status === 'cancelled' || b.status === 'rejected' || b.status === 'payment_rejected';
-    }
-    return true;
-  });
+    });
+  }, [deduplicatedBookings, statusFilter, search]);
 
   const getStatusBadge = (status: BookingStatus) => {
     switch (status) {
@@ -345,13 +471,24 @@ export default function DispatcherQueuePage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setModalOpen(true)}
-          className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all self-start sm:self-auto"
-        >
-          <PhoneCall className="w-4 h-4" />
-          <span>+ Create Call-In Booking</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="bg-surface hover:bg-card-hover border border-base text-secondary hover:text-primary text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all disabled:opacity-50"
+            title="Refresh ride queue directly from Supabase"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-500' : ''}`} />
+            <span>{isRefreshing ? 'Syncing...' : 'Sync Live'}</span>
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all"
+          >
+            <PhoneCall className="w-4 h-4" />
+            <span>+ Create Call-In Booking</span>
+          </button>
+        </div>
       </div>
 
       {/* Pending Custom Route Review Alert */}
@@ -404,56 +541,172 @@ export default function DispatcherQueuePage() {
         </div>
       )}
 
-      {/* Filters & Search */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Filters & Search Toolbar */}
+      <div className="bg-card border border-base p-2.5 rounded-3xl shadow-xl flex flex-col xl:flex-row xl:items-center justify-between gap-3">
         {/* Status Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-card p-1 rounded-2xl border border-base text-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 xl:pb-0 scrollbar-none -mx-0.5 px-0.5">
           {[
-            { id: 'all', label: 'All' },
             {
-              id: 'pending_review',
-              label: `Custom Route Review ${pendingReviewCount > 0 ? `(${pendingReviewCount})` : ''}`,
-              highlight: pendingReviewCount > 0,
+              id: 'all' as QueueStatusFilter,
+              label: 'All',
+              count: counts.all,
+              icon: Layers,
+              activeColor: 'bg-emerald-600 text-white shadow-md shadow-emerald-950/20',
+              badgeActiveColor: 'bg-white/20 text-white border-white/30',
+              badgeInactiveColor: 'bg-surface text-secondary border-base/80',
             },
             {
-              id: 'pending_verification',
-              label: `Pending Payment ${pendingVerificationCount > 0 ? `(${pendingVerificationCount})` : ''}`,
-              highlight: pendingVerificationCount > 0,
+              id: 'pending_review' as QueueStatusFilter,
+              label: 'Custom Route Review',
+              count: counts.pending_review,
+              icon: FileText,
+              color: 'text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30',
+              activeColor: 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md shadow-purple-950/20',
+              badgeActiveColor: 'bg-white/20 text-white border-white/30',
+              badgeInactiveColor: counts.pending_review > 0 ? 'bg-purple-500/25 text-purple-300 border-purple-500/40 font-bold' : 'bg-surface text-muted border-base',
+              highlight: counts.pending_review > 0,
             },
-            { id: 'confirmed', label: 'Confirmed' },
-            { id: 'assigned', label: 'Assigned' },
-            { id: 'active', label: 'Active Trips' },
-            { id: 'completed', label: 'Completed' },
-            { id: 'rejected', label: 'Rejected / Cancelled' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
-                statusFilter === tab.id
-                  ? 'bg-emerald-600 text-white font-bold shadow-sm'
-                  : tab.highlight
-                  ? 'text-amber-400 hover:text-amber-300 font-bold bg-amber-500/10'
-                  : 'text-secondary hover:text-primary'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+            {
+              id: 'pending_verification' as QueueStatusFilter,
+              label: 'Pending Payment',
+              count: counts.pending_verification,
+              icon: CreditCard,
+              color: 'text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30',
+              activeColor: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold shadow-md shadow-amber-950/20',
+              badgeActiveColor: 'bg-slate-950/20 text-slate-950 border-slate-950/30 font-extrabold',
+              badgeInactiveColor: counts.pending_verification > 0 ? 'bg-amber-500/25 text-amber-300 border-amber-500/40 font-bold' : 'bg-surface text-muted border-base',
+              highlight: counts.pending_verification > 0,
+            },
+            {
+              id: 'confirmed' as QueueStatusFilter,
+              label: 'Confirmed',
+              count: counts.confirmed,
+              icon: CheckCircle2,
+              activeColor: 'bg-gradient-to-r from-sky-600 to-sky-700 text-white shadow-md shadow-sky-950/20',
+              badgeActiveColor: 'bg-white/20 text-white border-white/30',
+              badgeInactiveColor: 'bg-surface text-secondary border-base/80',
+            },
+            {
+              id: 'assigned' as QueueStatusFilter,
+              label: 'Assigned',
+              count: counts.assigned,
+              icon: UserCheck,
+              activeColor: 'bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-md shadow-teal-950/20',
+              badgeActiveColor: 'bg-white/20 text-white border-white/30',
+              badgeInactiveColor: 'bg-surface text-secondary border-base/80',
+            },
+            {
+              id: 'active' as QueueStatusFilter,
+              label: 'Active Trips',
+              count: counts.active,
+              icon: Navigation,
+              color: 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30',
+              activeColor: 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-950/20',
+              badgeActiveColor: 'bg-white/20 text-white border-white/30',
+              badgeInactiveColor: counts.active > 0 ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 font-bold' : 'bg-surface text-muted border-base',
+              highlight: counts.active > 0,
+            },
+            {
+              id: 'completed' as QueueStatusFilter,
+              label: 'Completed',
+              count: counts.completed,
+              icon: CheckCircle,
+              activeColor: 'bg-gradient-to-r from-slate-700 to-slate-800 text-white shadow-md shadow-slate-950/20',
+              badgeActiveColor: 'bg-white/20 text-white border-white/30',
+              badgeInactiveColor: 'bg-surface text-secondary border-base/80',
+            },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = statusFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setStatusFilter(tab.id)}
+                aria-label={`${tab.label} (${tab.count})`}
+                title={`${tab.label} (${tab.count})`}
+                className={`group relative inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-semibold transition-all duration-200 whitespace-nowrap cursor-pointer border shrink-0 select-none ${
+                  isActive
+                    ? `${tab.activeColor} border-transparent font-bold`
+                    : tab.highlight
+                    ? tab.color
+                    : 'text-secondary hover:text-primary bg-surface/50 hover:bg-surface border-base/70 hover:border-base'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-current' : 'opacity-80 group-hover:opacity-100'}`} />
+                <span>{tab.label}</span>
+                <span
+                  className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold border tabular-nums transition-colors shadow-xs ${
+                    isActive
+                      ? tab.badgeActiveColor
+                      : tab.badgeInactiveColor
+                  }`}
+                >
+                  {tab.count}
+                </span>
+                {tab.id === 'active' && tab.count > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Search Input */}
-        <div className="relative md:w-80">
-          <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+        {/* Search Input Bar */}
+        <div className="relative w-full xl:w-80 shrink-0">
+          <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" />
           <input
             type="text"
             placeholder="Search passenger, phone, ref..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-input border border-base rounded-xl pl-10 pr-4 py-2 text-xs text-primary placeholder:text-muted focus:outline-none focus:border-emerald-500"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setSearch('');
+            }}
+            className="w-full bg-input/80 border border-base rounded-2xl pl-10 pr-9 py-2 text-xs text-primary placeholder:text-muted focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-inner"
           />
+          {search ? (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-lg text-muted hover:text-primary hover:bg-surface transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <span className="hidden sm:inline-flex items-center absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-muted bg-surface border border-base/80 pointer-events-none">
+              ESC
+            </span>
+          )}
         </div>
       </div>
+
+      {/* Active Search Feedback Bar */}
+      {search.trim() && (
+        <div className="flex items-center justify-between px-4 py-2 bg-surface/70 border border-base rounded-2xl text-xs text-secondary animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>
+              Searching for &ldquo;<strong className="text-primary">{search}</strong>&rdquo;
+            </span>
+            <span className="text-muted">&bull;</span>
+            <span className="font-semibold text-emerald-500 dark:text-emerald-400">
+              {filtered.length} ride{filtered.length === 1 ? '' : 's'} matching
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            className="text-[11px] font-bold text-amber-500 hover:text-amber-400 hover:underline cursor-pointer flex items-center gap-1"
+          >
+            <X className="w-3 h-3" /> Clear search
+          </button>
+        </div>
+      )}
 
       {/* Bookings Queue Table */}
       <div className="bg-card border border-base rounded-3xl p-6 shadow-xl overflow-x-auto">

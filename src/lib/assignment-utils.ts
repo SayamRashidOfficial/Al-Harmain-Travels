@@ -348,3 +348,32 @@ export function categorizeDriverAssignments(
     actionableAssignmentId,
   };
 }
+
+/**
+ * Determine if a booking is configured for Cash on Pickup collection.
+ */
+export function isCashBooking(booking?: Booking | Partial<Booking> | null): boolean {
+  if (!booking) return false;
+  if (booking.payment_method === 'cash') return true;
+  if (booking.payment?.method === 'cash') return true;
+  if (booking.payment_screenshot_url) return false;
+  if (booking.payment_method === 'online' || booking.payment_method === 'card') return false;
+  if (booking.payment?.method === 'online' || booking.payment?.method === 'card') return false;
+  // Default for Al Harmain bookings without screenshot is cash
+  return true;
+}
+
+/**
+ * Determine if the cash payment has been confirmed/paid.
+ */
+export function isCashPaid(booking?: Booking | Partial<Booking> | null): boolean {
+  if (!booking) return false;
+  return (
+    booking.payment_status === 'paid' ||
+    booking.payment_status === 'confirmed' ||
+    booking.payment?.status === 'paid' ||
+    booking.payment?.status === 'confirmed' ||
+    booking.status === 'payment_completed'
+  );
+}
+

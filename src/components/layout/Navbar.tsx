@@ -29,7 +29,9 @@ import {
 
 import BrandLogo from '@/components/ui/BrandLogo';
 import CustomerMobileSidebar from '@/components/customer/CustomerMobileSidebar';
+import DispatcherMobileSidebar from '@/components/dispatcher/DispatcherMobileSidebar';
 import AdminMobileSidebar from '@/components/admin/AdminMobileSidebar';
+import DriverMobileSidebar from '@/components/driver/DriverMobileSidebar';
 import UserProfileDropdown from '@/components/layout/UserProfileDropdown';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -51,7 +53,9 @@ export default function Navbar() {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCustomerSidebarOpen, setIsCustomerSidebarOpen] = useState(false);
+  const [isDispatcherSidebarOpen, setIsDispatcherSidebarOpen] = useState(false);
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false);
+  const [isDriverSidebarOpen, setIsDriverSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -101,7 +105,7 @@ export default function Navbar() {
       }
 
       // 2. Never hide navbar if mobile menus or sidebars are open
-      if (isMobileMenuOpen || isCustomerSidebarOpen || isAdminSidebarOpen) {
+      if (isMobileMenuOpen || isCustomerSidebarOpen || isDispatcherSidebarOpen || isAdminSidebarOpen || isDriverSidebarOpen) {
         if (!isVisibleRef.current) {
           isVisibleRef.current = true;
           setIsVisible(true);
@@ -155,7 +159,7 @@ export default function Navbar() {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [isMobileMenuOpen, isCustomerSidebarOpen, isAdminSidebarOpen]);
+  }, [isMobileMenuOpen, isCustomerSidebarOpen, isDispatcherSidebarOpen, isAdminSidebarOpen]);
 
   const handleCloseCustomerSidebar = useCallback(() => {
     setIsCustomerSidebarOpen(false);
@@ -163,6 +167,15 @@ export default function Navbar() {
 
   const handleToggleCustomerSidebar = useCallback(() => {
     setIsCustomerSidebarOpen((prev) => !prev);
+    setIsNotifOpen(false);
+  }, []);
+
+  const handleCloseDispatcherSidebar = useCallback(() => {
+    setIsDispatcherSidebarOpen(false);
+  }, []);
+
+  const handleToggleDispatcherSidebar = useCallback(() => {
+    setIsDispatcherSidebarOpen((prev) => !prev);
     setIsNotifOpen(false);
   }, []);
 
@@ -175,9 +188,20 @@ export default function Navbar() {
     setIsNotifOpen(false);
   }, []);
 
+  const handleCloseDriverSidebar = useCallback(() => {
+    setIsDriverSidebarOpen(false);
+  }, []);
+
+  const handleToggleDriverSidebar = useCallback(() => {
+    setIsDriverSidebarOpen((prev) => !prev);
+    setIsNotifOpen(false);
+  }, []);
+
   const notifRef = useRef<HTMLDivElement>(null);
   const customerMobileNotifRef = useRef<HTMLDivElement>(null);
+  const dispatcherMobileNotifRef = useRef<HTMLDivElement>(null);
   const adminMobileNotifRef = useRef<HTMLDivElement>(null);
+  const driverMobileNotifRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -208,6 +232,7 @@ export default function Navbar() {
   const getAdminPageTitle = (path: string) => {
     if (path === '/admin') return 'Overview';
     if (path.startsWith('/admin/users')) return 'Users & Access';
+    if (path.startsWith('/admin/reviews')) return 'Reviews & Ratings';
     if (path.startsWith('/admin/rates')) return 'Rates & Tariff';
     if (path.startsWith('/admin/services')) return 'Services CMS';
     if (path.startsWith('/admin/reports')) return 'Reports & Ledger';
@@ -221,8 +246,10 @@ export default function Navbar() {
       const target = event.target as Node;
       const insideDesktopNotif = notifRef.current?.contains(target);
       const insideMobileNotif = customerMobileNotifRef.current?.contains(target);
+      const insideDispatcherMobileNotif = dispatcherMobileNotifRef.current?.contains(target);
       const insideAdminMobileNotif = adminMobileNotifRef.current?.contains(target);
-      if (!insideDesktopNotif && !insideMobileNotif && !insideAdminMobileNotif) {
+      const insideDriverMobileNotif = driverMobileNotifRef.current?.contains(target);
+      if (!insideDesktopNotif && !insideMobileNotif && !insideDispatcherMobileNotif && !insideAdminMobileNotif && !insideDriverMobileNotif) {
         setIsNotifOpen(false);
       }
       if (
@@ -241,7 +268,9 @@ export default function Navbar() {
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsCustomerSidebarOpen(false);
+    setIsDispatcherSidebarOpen(false);
     setIsAdminSidebarOpen(false);
+    setIsDriverSidebarOpen(false);
     setIsNotifOpen(false);
     // Ensure navbar is immediately revealed on route transition
     setIsVisible(true);
@@ -333,10 +362,10 @@ export default function Navbar() {
           top: 0rem !important;
           height: 100vh !important;
         }
-        .customer-portal {
+        .customer-portal, .dispatcher-portal, .driver-portal, .admin-portal {
           min-height: calc(100vh - 4rem) !important;
         }
-        html.navbar-hidden .customer-portal {
+        html.navbar-hidden .customer-portal, html.navbar-hidden .dispatcher-portal, html.navbar-hidden .driver-portal, html.navbar-hidden .admin-portal {
           min-height: 100vh !important;
         }
       `}</style>
@@ -424,10 +453,10 @@ export default function Navbar() {
           )}
 
           {/* ─────────────────────────────────────────────────────────────
-              1B. ADMIN DASHBOARD MOBILE NAVBAR (< lg screens)
-              - Mobile menu trigger, page title/breadcrumb, notifications & profile
+              1C. DISPATCHER DASHBOARD MOBILE NAVBAR (< lg screens)
+              - Preserves dedicated dispatcher portal layout with sidebar toggle
           ───────────────────────────────────────────────────────────── */}
-          {isAdminPortal && (
+          {isDispatcherPortal && (
             <div className="lg:hidden relative flex items-center justify-between h-14 sm:h-16 w-full transition-all duration-300">
               {/* Left corner: Hamburger menu icon */}
               <div className="flex items-center z-10 shrink-0">
@@ -436,43 +465,39 @@ export default function Navbar() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleToggleAdminSidebar();
+                    handleToggleDispatcherSidebar();
                   }}
-                  className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
-                  aria-label={isAdminSidebarOpen ? 'Close navigation sidebar' : 'Open navigation sidebar'}
-                  aria-expanded={isAdminSidebarOpen}
+                  className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
+                  aria-label={isDispatcherSidebarOpen ? 'Close navigation sidebar' : 'Open navigation sidebar'}
+                  aria-expanded={isDispatcherSidebarOpen}
                 >
-                  <Menu className="w-5 h-5 text-amber-600" />
+                  <Menu className="w-5 h-5 text-slate-600" />
                 </button>
               </div>
 
-              {/* Center: Admin Brand Logo / Page Title */}
+              {/* Center: Official Al Harmain Travel Logo (centered) */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-10 select-none">
-                <div className="pointer-events-auto flex items-center gap-1.5">
-                  <BrandLogo size="sm" href="/admin" showSubtitle={false} />
-                  <span className="hidden xs:inline-flex items-center gap-1 text-[9.5px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                    <Shield className="w-2.5 h-2.5 text-amber-500" />
-                    HQ
-                  </span>
+                <div className="pointer-events-auto">
+                  <BrandLogo size="sm" href="/dispatcher" showSubtitle={false} forceLight />
                 </div>
               </div>
 
               {/* Right corner: Notification bell icon with unread badge */}
               <div className="flex items-center z-10 shrink-0 gap-1.5">
-                <div className="relative" ref={adminMobileNotifRef}>
+                <div className="relative" ref={dispatcherMobileNotifRef}>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       setIsNotifOpen((prev) => !prev);
-                      if (isAdminSidebarOpen) setIsAdminSidebarOpen(false);
+                      if (isDispatcherSidebarOpen) setIsDispatcherSidebarOpen(false);
                     }}
-                    className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-colors flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
+                    className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
                     aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
                     aria-expanded={isNotifOpen}
                   >
-                    <Bell className="w-4 h-4" />
+                    <Bell className="w-4 h-4 text-slate-600" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold flex items-center justify-center shadow-xs">
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -492,7 +517,147 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
-                <UserProfileDropdown />
+                <UserProfileDropdown forceLight />
+              </div>
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              1B. ADMIN DASHBOARD MOBILE NAVBAR (< lg screens)
+              - Mobile menu trigger, page title/breadcrumb, notifications & profile
+          ───────────────────────────────────────────────────────────── */}
+          {isAdminPortal && (
+            <div className="lg:hidden relative flex items-center justify-between h-14 sm:h-16 w-full transition-all duration-300">
+              {/* Left corner: Hamburger menu icon */}
+              <div className="flex items-center z-10 shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleToggleAdminSidebar();
+                  }}
+                  className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
+                  aria-label={isAdminSidebarOpen ? 'Close navigation sidebar' : 'Open navigation sidebar'}
+                  aria-expanded={isAdminSidebarOpen}
+                >
+                  <Menu className="w-5 h-5 text-slate-600" />
+                </button>
+              </div>
+
+              {/* Center: Admin Brand Logo (centered) */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-10 select-none">
+                <div className="pointer-events-auto">
+                  <BrandLogo size="sm" href="/admin" showSubtitle={false} forceLight />
+                </div>
+              </div>
+
+              {/* Right corner: Notification bell icon with unread badge */}
+              <div className="flex items-center z-10 shrink-0 gap-1.5">
+                <div className="relative" ref={adminMobileNotifRef}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsNotifOpen((prev) => !prev);
+                      if (isAdminSidebarOpen) setIsAdminSidebarOpen(false);
+                    }}
+                    className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
+                    aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+                    aria-expanded={isNotifOpen}
+                  >
+                    <Bell className="w-4 h-4 text-slate-600" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold flex items-center justify-center shadow-xs">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Mobile Notification Popover */}
+                  {isNotifOpen && (
+                    <div className="fixed sm:absolute top-[70px] sm:top-full sm:mt-2 right-2 sm:right-0 w-[min(22rem,calc(100vw-1rem))] bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in-50 duration-200">
+                      <NotificationDropdownContent
+                        notifications={notifications}
+                        unreadCount={unreadCount}
+                        markNotificationAsRead={markNotificationAsRead}
+                        clearNotifications={clearNotifications}
+                      />
+                    </div>
+                  )}
+                </div>
+                <UserProfileDropdown forceLight />
+              </div>
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              1D. DRIVER DASHBOARD MOBILE NAVBAR (< lg screens)
+              - Dedicated driver portal layout with mobile sidebar toggle
+          ───────────────────────────────────────────────────────────── */}
+          {isDriverPortal && (
+            <div className="lg:hidden relative flex items-center justify-between h-14 sm:h-16 w-full transition-all duration-300">
+              {/* Left corner: Hamburger menu icon */}
+              <div className="flex items-center z-10 shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleToggleDriverSidebar();
+                  }}
+                  className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
+                  aria-label={isDriverSidebarOpen ? 'Close navigation sidebar' : 'Open navigation sidebar'}
+                  aria-expanded={isDriverSidebarOpen}
+                >
+                  <Menu className="w-5 h-5 text-slate-600" />
+                </button>
+              </div>
+
+              {/* Center: Official Al Harmain Travel Logo (centered) */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-10 select-none">
+                <div className="pointer-events-auto">
+                  <BrandLogo size="sm" href="/driver" showSubtitle={false} forceLight />
+                </div>
+              </div>
+
+              {/* Right corner: Notification bell icon with unread badge */}
+              <div className="flex items-center z-10 shrink-0 gap-1.5">
+                <div className="relative" ref={driverMobileNotifRef}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsNotifOpen((prev) => !prev);
+                      if (isDriverSidebarOpen) setIsDriverSidebarOpen(false);
+                    }}
+                    className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
+                    aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+                    aria-expanded={isNotifOpen}
+                  >
+                    <Bell className="w-4 h-4 text-slate-600" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold flex items-center justify-center shadow-xs">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Mobile Notification Popover */}
+                  {isNotifOpen && (
+                    <div className="fixed sm:absolute top-[70px] sm:top-full sm:mt-2 right-2 sm:right-0 w-[min(22rem,calc(100vw-1rem))] bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in-50 duration-200">
+                      <NotificationDropdownContent
+                        notifications={notifications}
+                        unreadCount={unreadCount}
+                        markNotificationAsRead={markNotificationAsRead}
+                        clearNotifications={clearNotifications}
+                      />
+                    </div>
+                  )}
+                </div>
+                <UserProfileDropdown forceLight />
               </div>
             </div>
           )}
@@ -501,7 +666,7 @@ export default function Navbar() {
               2. DESKTOP ROW (lg+) OR PUBLIC PAGES ROW (all screens)
           ───────────────────────────────────────────────────────────── */}
           <div
-            className={`${(isCustomerPortal || isAdminPortal) ? 'hidden lg:flex' : 'flex'
+            className={`${(isCustomerPortal || isAdminPortal || isDispatcherPortal || isDriverPortal) ? 'hidden lg:flex' : 'flex'
               } h-14 sm:h-16 items-center justify-between gap-4 transition-all duration-300`}
           >
             {/* Unified Official Brand Logo */}
@@ -534,80 +699,54 @@ export default function Navbar() {
 
             {/* Center Navigation: Portal-specific (Admin Breadcrumb, Dispatcher, Driver, Customer) or Clean Public Links */}
             {isAdminPortal ? (
-              <div className="hidden lg:flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-xs font-medium">
-                <span className="inline-flex items-center gap-1.5 text-amber-800 font-bold">
-                  <Shield className="w-3.5 h-3.5 text-amber-500" />
+              <div className="hidden lg:flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium shadow-xs">
+                <span className="inline-flex items-center gap-1.5 text-emerald-800 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
                   Executive Admin HQ
                 </span>
-                <span className="text-slate-300 font-mono">/</span>
+                <span className="text-slate-400 font-mono">/</span>
                 <span className="font-semibold text-slate-700">
                   {getAdminPageTitle(pathname)}
                 </span>
               </div>
             ) : isDispatcherPortal ? (
-              <nav
-                className="hidden lg:flex items-center gap-1 xl:gap-1.5"
-                aria-label="Dispatcher Navigation"
-              >
-                {dispatcherLinks.map((item) => {
-                  const isActive =
-                    item.href === '/dispatcher'
-                      ? pathname === '/dispatcher'
-                      : pathname === item.href || pathname.startsWith(item.href + '/');
-                  const Icon = item.icon;
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-xl text-xs xl:text-sm font-semibold transition-all duration-200 ${isActive
-                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs'
-                          : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-100'
-                        }`}
-                    >
-                      <Icon
-                        className={`w-3.5 h-3.5 ${isActive
-                            ? 'text-emerald-600'
-                            : 'text-slate-400'
-                          }`}
-                      />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
+              <div className="hidden lg:flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium shadow-xs">
+                <span className="inline-flex items-center gap-1.5 text-emerald-800 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                  Fleet Operations HQ
+                </span>
+                <span className="text-slate-400 font-mono">/</span>
+                <span className="font-semibold text-slate-700">
+                  {pathname === '/dispatcher'
+                    ? 'Live Radar & Telemetry'
+                    : pathname.startsWith('/dispatcher/queue')
+                      ? 'Live Ride Queue'
+                      : pathname.startsWith('/dispatcher/drivers')
+                        ? 'Chauffeur Roster'
+                        : pathname.startsWith('/dispatcher/customers')
+                          ? 'Customer Directory'
+                          : pathname.startsWith('/dispatcher/new-booking')
+                            ? 'Manual Telephone Booking'
+                            : 'Operations Control'}
+                </span>
+              </div>
             ) : isDriverPortal ? (
-              <nav
-                className="hidden lg:flex items-center gap-1 xl:gap-2"
-                aria-label="Driver Navigation"
-              >
-                {driverLinks.map((item) => {
-                  const isActive =
-                    item.href === '/driver'
-                      ? pathname === '/driver'
-                      : pathname === item.href || pathname.startsWith(item.href + '/');
-                  const Icon = item.icon;
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs xl:text-sm font-semibold transition-all duration-200 ${isActive
-                          ? 'bg-teal-50 text-teal-800 border border-teal-200 shadow-xs'
-                          : 'text-slate-600 hover:text-teal-700 hover:bg-slate-100'
-                        }`}
-                    >
-                      <Icon
-                        className={`w-3.5 h-3.5 ${isActive
-                            ? 'text-teal-600'
-                            : 'text-slate-400'
-                          }`}
-                      />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
+              <div className="hidden lg:flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium shadow-xs">
+                <span className="inline-flex items-center gap-1.5 text-emerald-800 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                  Captain Driver Cockpit
+                </span>
+                <span className="text-slate-400 font-mono">/</span>
+                <span className="font-semibold text-slate-700">
+                  {pathname === '/driver'
+                    ? 'Cockpit & Missions'
+                    : pathname.startsWith('/driver/earnings')
+                      ? 'Earnings & Payouts'
+                      : pathname.startsWith('/driver/profile')
+                        ? 'Chauffeur Profile & Vehicle'
+                        : 'Captain Cockpit'}
+                </span>
+              </div>
             ) : isCustomerPortal ? (
               <div className="hidden lg:flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium shadow-xs">
                 <span className="inline-flex items-center gap-1.5 text-emerald-800 font-bold">
@@ -745,7 +884,7 @@ export default function Navbar() {
               )}
 
               {/* Mobile Menu Button for Public Pages */}
-              {!isCustomerPortal && !isAdminPortal && (
+              {!isCustomerPortal && !isAdminPortal && !isDispatcherPortal && (
                 <button
                   ref={mobileMenuBtnRef}
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -763,7 +902,7 @@ export default function Navbar() {
         {/* ─────────────────────────────────────────────────────────────
             3. LUXURY RESPONSIVE MOBILE MENU (Smooth, Reliable, Elegant)
         ───────────────────────────────────────────────────────────── */}
-        {!isCustomerPortal && !isAdminPortal && isMobileMenuOpen && (
+        {!isCustomerPortal && !isAdminPortal && !isDispatcherPortal && isMobileMenuOpen && (
           <div
             ref={mobileMenuRef}
           className="lg:hidden bg-white/98 backdrop-blur-2xl border-t border-slate-200/70 shadow-2xl max-h-[calc(100vh-80px)] overflow-y-auto animate-in slide-in-from-top-2 fade-in-50 duration-200"
@@ -1020,11 +1159,27 @@ export default function Navbar() {
         />
       )}
 
+      {/* Dispatcher Portal Mobile Sidebar Drawer */}
+      {isDispatcherPortal && (
+        <DispatcherMobileSidebar
+          isOpen={isDispatcherSidebarOpen}
+          onClose={handleCloseDispatcherSidebar}
+        />
+      )}
+
       {/* Admin Portal Mobile Sidebar Drawer */}
       {isAdminPortal && (
         <AdminMobileSidebar
           isOpen={isAdminSidebarOpen}
           onClose={handleCloseAdminSidebar}
+        />
+      )}
+
+      {/* Driver Portal Mobile Sidebar Drawer */}
+      {isDriverPortal && (
+        <DriverMobileSidebar
+          isOpen={isDriverSidebarOpen}
+          onClose={handleCloseDriverSidebar}
         />
       )}
 

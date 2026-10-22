@@ -741,6 +741,11 @@ export default function CustomerHomePage() {
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (currentUser.status === 'deactivated' || currentUser.status === 'suspended') {
+      toast.error('Your customer account is currently deactivated. You cannot make new bookings. Please contact dispatch.');
+      return;
+    }
+
     if (!selectedService || !selectedVehicle) {
       toast.error('Booking is incomplete. Please restart the booking process.');
       return;
@@ -934,6 +939,11 @@ export default function CustomerHomePage() {
   };
 
   const handleSubmitCustomBooking = async () => {
+    if (currentUser.status === 'deactivated' || currentUser.status === 'suspended') {
+      toast.error('Your customer account is currently deactivated. You cannot make new bookings. Please contact dispatch.');
+      return;
+    }
+
     if (!customPickup) {
       toast.error('Please enter your pickup location.');
       return;
@@ -1069,6 +1079,23 @@ export default function CustomerHomePage() {
           )}
         </div>
       </div>
+
+      {/* ── Deactivated Account Alert ────────────────────────────────────────── */}
+      {(currentUser.status === 'deactivated' || currentUser.status === 'suspended') && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 flex items-start gap-3 shadow-sm">
+          <AlertCircle className="w-5 h-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+          <div className="text-xs space-y-1">
+            <p className="font-bold text-sm text-amber-800 dark:text-amber-200">
+              {isRTL ? 'الحساب غير مفعّل' : 'Customer Account Deactivated'}
+            </p>
+            <p className="opacity-90 leading-relaxed">
+              {isRTL
+                ? 'تم تعطيل حسابك مؤقتًا من قِبل إدارة الرحلات. لا يمكنك إجراء حجوزات جديدة حالياً. يُرجى التواصل مع فريق التنسيق والترحيل لإعادة تفعيل الحساب.'
+                : 'Your customer account has been temporarily disabled by dispatch operations. New bookings cannot be submitted at this time. Please contact dispatch support to restore account privileges.'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Booking Mode Switcher ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-card/60 p-1.5 rounded-xl border border-base shadow-sm">

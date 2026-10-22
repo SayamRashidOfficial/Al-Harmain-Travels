@@ -18,58 +18,59 @@
 }
 
 /* ─────────────────────────────────────────────────
-   PREMIUM LIGHT DESIGN TOKENS  —  Only light theme
+   PREMIUM LIGHT DESIGN TOKENS  —  Strictly Light Theme Only
 ───────────────────────────────────────────────── */
 :root,
 html,
-html.light {
+html.light,
+html.dark {
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --background: #faf8f4;
-  --foreground: #0b0f1a;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 
-  --bg-page: #faf8f4;
+  --bg-page: #f8fafc;
   --bg-card: #ffffff;
-  --bg-elevated: #f3efe8;
-  --bg-surface: #ece7de;
+  --bg-elevated: #f1f5f9;
+  --bg-surface: #f8fafc;
   --bg-input: #ffffff;
 
-  --text-primary: #0b0f1a;
-  --text-secondary: #1e293b;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
   --text-muted: #64748b;
 
-  --border-base: #e2ddd5;
-  --border-strong: #b8b2a8;
-  --border-subtle: #ede9e2;
+  --border-base: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --border-subtle: #f1f5f9;
 
-  /* Saudi Gold — rich, deep, never garish */
-  --gold-primary: #b8922a;
-  --gold-light: #d4af37;
-  --gold-hover: #9c7b20;
-  --gold-pale: #f5edd9;
-  --gold-muted: rgba(184, 146, 42, 0.12);
-  --gold-glow: 0 16px 40px -8px rgba(184, 146, 42, 0.22);
+  /* Saudi Gold — rich, deep, elegant gold accents */
+  --gold-primary: #b45309;
+  --gold-light: #d97706;
+  --gold-hover: #92400e;
+  --gold-pale: #fef3c7;
+  --gold-muted: rgba(180, 83, 9, 0.12);
+  --gold-glow: 0 16px 40px -8px rgba(180, 83, 9, 0.2);
 
   /* Saudi Green — the flag's sacred colour */
-  --green-primary: #0b4736;
-  --green-accent: #0d5c45;
-  --green-light: #059669;
+  --green-primary: #059669;
+  --green-accent: #047857;
+  --green-light: #10b981;
   --green-pale: #ecfdf5;
-  --green-muted: rgba(11, 71, 54, 0.08);
-  --green-glow: 0 16px 40px -8px rgba(11, 71, 54, 0.16);
+  --green-muted: rgba(5, 150, 105, 0.1);
+  --green-glow: 0 16px 40px -8px rgba(5, 150, 105, 0.18);
 
   /* Premium Navy for headings & deep contrast */
-  --navy: #06101e;
-  --navy-mid: #0f2035;
-  --navy-soft: #1e3a5f;
+  --navy: #0f172a;
+  --navy-mid: #1e293b;
+  --navy-soft: #334155;
 
-  /* Shadows — layered, premium */
-  --shadow-xs: 0 1px 3px rgba(11, 15, 26, 0.06), 0 1px 2px rgba(11, 15, 26, 0.04);
-  --shadow-sm: 0 4px 12px rgba(11, 15, 26, 0.06), 0 2px 6px rgba(11, 15, 26, 0.04);
-  --shadow-soft: 0 8px 30px rgba(11, 15, 26, 0.08), 0 4px 12px rgba(11, 15, 26, 0.04);
-  --shadow-card: 0 16px 40px rgba(11, 15, 26, 0.1), 0 8px 16px rgba(11, 15, 26, 0.05);
-  --shadow-card-hover: 0 24px 60px rgba(11, 15, 26, 0.14), 0 12px 24px rgba(11, 15, 26, 0.08);
-  --shadow-gold: 0 12px 36px rgba(184, 146, 42, 0.25), 0 4px 12px rgba(184, 146, 42, 0.15);
+  /* Shadows — clean, layered, premium light */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.08);
+  --shadow-soft: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.07);
+  --shadow-card: 0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -4px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  --shadow-gold: 0 12px 36px rgba(180, 83, 9, 0.2);
 
   /* Premium easing curves */
   --ease-luxury: cubic-bezier(0.22, 1, 0.36, 1);
@@ -78,7 +79,7 @@ html.light {
   --ease-reveal: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Ring */
-  --ring-brand: rgba(184, 146, 42, 0.4);
+  --ring-brand: rgba(5, 150, 105, 0.35);
 
   /* Typography tokens */
   --leading-body: 1.65;
@@ -86,7 +87,78 @@ html.light {
   --tracking-heading: -0.025em;
   --tracking-display: -0.035em;
   --tracking-label: 0.08em;
+
+  color-scheme: light;
 }
+
+/* ─────────────────────────────────────────────────
+   GLOBAL BOOK REGISTRY PAGINATION TOKENS
+   Light Theme Only
+───────────────────────────────────────────────── */
+.bg-neutral-secondary-medium {
+  background-color: #ffffff;
+}
+
+.bg-neutral-tertiary-medium {
+  background-color: #f1f5f9;
+}
+
+.border-default-medium {
+  border-color: #e2e8f0;
+}
+
+.text-body {
+  color: #475569;
+}
+
+.text-heading {
+  color: #0f172a;
+}
+
+.text-fg-brand {
+  color: #059669;
+}
+
+.hover\:bg-neutral-tertiary-medium:hover {
+  background-color: #f1f5f9;
+}
+
+.hover\:text-heading:hover {
+  color: #0f172a;
+}
+
+.hover\:text-fg-brand:hover {
+  color: #047857;
+}
+
+.rounded-s-base {
+  border-start-start-radius: 0.5rem;
+  border-end-start-radius: 0.5rem;
+}
+
+.rounded-e-base {
+  border-start-end-radius: 0.5rem;
+  border-end-end-radius: 0.5rem;
+}
+
+.rounded-base {
+  border-radius: 0.5rem;
+}
+
+.shadow-xs {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.focus\:ring-brand:focus {
+  --tw-ring-color: #059669;
+  outline: none;
+}
+
+.focus\:border-brand:focus {
+  border-color: #059669;
+  outline: none;
+}
+
 
 /* ─────────────────────────────────────────────────
    BASE TYPOGRAPHY & RESPONSIVE FOUNDATION
@@ -435,8 +507,11 @@ textarea {
     @apply w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 sm:py-8;
   }
 
-  /* Scoped Customer Portal Shell: compact, balanced proportions at 100% zoom */
-  .customer-portal .page-shell {
+  /* Scoped Customer, Dispatcher, Driver & Admin Portal Shell: compact, balanced proportions at 100% zoom */
+  .customer-portal .page-shell,
+  .dispatcher-portal .page-shell,
+  .driver-portal .page-shell,
+  .admin-portal .page-shell {
     @apply max-w-7xl px-3 sm:px-4 lg:px-6 py-4 sm:py-5;
   }
 

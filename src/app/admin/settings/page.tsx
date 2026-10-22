@@ -141,7 +141,7 @@ export default function AdminSettingsPage() {
           <div className="bg-card border border-base rounded-3xl p-6 sm:p-7 shadow-xl space-y-5">
             <div className="flex items-center justify-between border-b border-base pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/20">
                   <Building className="w-5 h-5" />
                 </div>
                 <div>
@@ -300,7 +300,7 @@ export default function AdminSettingsPage() {
           <div className="bg-card border border-base rounded-3xl p-6 sm:p-7 shadow-xl space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-base pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/20">
                   <SlidersHorizontal className="w-5 h-5" />
                 </div>
                 <div>
@@ -332,14 +332,14 @@ export default function AdminSettingsPage() {
                   >
                     <div className="flex items-center justify-between border-b border-base/50 pb-2.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-xs">
                           <Car className="w-4 h-4" />
                         </div>
                         <span className="font-bold text-sm uppercase text-primary tracking-wide">
                           {vKey.replace(/_/g, ' ')}
                         </span>
                       </div>
-                      <span className="text-xs font-mono font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-md border border-amber-500/25">
+                      <span className="text-xs font-mono font-medium text-amber-600 bg-amber-500/10 px-2.5 py-0.5 rounded-md border border-amber-500/25">
                         Denominated in {currency}
                       </span>
                     </div>

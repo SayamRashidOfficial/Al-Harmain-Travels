@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { Booking } from '@/types';
+import { supabase } from '@/lib/supabase/client';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import {
   DollarSign,
@@ -32,6 +33,9 @@ import {
   Calendar,
   Star,
   Sparkles,
+  ArrowRight,
+  Compass,
+  Building,
 } from 'lucide-react';
 import {
   AdminPageHeader,
@@ -45,14 +49,32 @@ import { TableSkeletonRows } from '@/components/ui/DataStateSkeletons';
 import { toast } from 'sonner';
 
 export default function AdminDashboardPage() {
-  const { bookings, drivers, vehicles, usersList, settings, ratings, isDataLoading, refreshData } = useApp();
+  const {
+    bookings,
+    drivers,
+    vehicles,
+    usersList,
+    settings,
+    ratings,
+    isDataLoading,
+    refreshData,
+  } = useApp();
 
+  // Search, Filter & Sort state for Bookings Table
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'fare_high' | 'fare_low'>('newest');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Metrics
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [paginatedBookings, setPaginatedBookings] = useState<Booking[]>([]);
+  const [totalFilteredCount, setTotalFilteredCount] = useState<number>(0);
+  const [isTableLoading, setIsTableLoading] = useState<boolean>(false);
+
+  // ── Executive Metrics (Derived from global state) ─────────────────────────
   const totalBookings = bookings.length;
   const pendingBookings = bookings.filter((b) => b.status === 'pending').length;
   const confirmedBookings = bookings.filter((b) => b.status === 'confirmed').length;
@@ -66,80 +88,224 @@ export default function AdminDashboardPage() {
       b.status === 'ride_started'
   ).length;
   const completedTrips = bookings.filter(
-    (b) => b.status === 'trip_completed' || b.status === 'ride_completed' || b.status === 'payment_completed'
+    (b) =>
+      b.status === 'trip_completed' ||
+      b.status === 'ride_completed' ||
+      b.status === 'payment_completed'
   ).length;
   const cancelledBookings = bookings.filter((b) => b.status === 'cancelled').length;
 
   const totalCustomers = usersList.filter((u) => u.role === 'customer').length;
   const totalStaff = usersList.filter((u) => u.role === 'dispatcher').length;
   const totalDrivers = drivers.length;
-
-  const totalRevenue = bookings
-    .filter((b) => b.status === 'trip_completed' || b.status === 'ride_completed' || b.status === 'payment_completed')
-    .reduce((sum, b) => sum + (b.final_fare || b.estimated_fare || 0), 0);
-
   const availableDrivers = drivers.filter((d) => d.status === 'available').length;
 
-  const validRatings = ratings.filter(
-    (r) => r.rating !== null && r.rating !== undefined && !isNaN(Number(r.rating))
-  );
-  const fleetAvgRating =
-    validRatings.length > 0
-      ? (validRatings.reduce((sum, r) => sum + Number(r.rating), 0) / validRatings.length).toFixed(1)
-      : '5.0';
+  const totalRevenue = bookings
+    .filter(
+      (b) =>
+        b.status === 'trip_completed' ||
+        b.status === 'ride_completed' ||
+        b.status === 'payment_completed'
+    )
+    .reduce((sum, b) => sum + (b.final_fare || b.estimated_fare || 0), 0);
 
-  // Filtered Bookings for the overview table
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((b) => {
+  // Vehicle class distribution
+  const vehicleStats = useMemo(() => {
+    const stats: Record<string, { count: number; name: string }> = {
+      vip_gmc: { count: 0, name: 'VIP GMC Yukon' },
+      sedan: { count: 0, name: 'Luxury Sedan' },
+      suv: { count: 0, name: 'Family SUV' },
+      van: { count: 0, name: 'Family Van' },
+      bus: { count: 0, name: 'VIP Coach / Bus' },
+    };
+
+    bookings.forEach((b) => {
+      const type = b.vehicle_type || 'sedan';
+      if (stats[type]) {
+        stats[type].count += 1;
+      }
+    });
+
+    return stats;
+  }, [bookings]);
+
+  // ── Server-Side Bookings Pagination with Resilient Fallback ───────────────
+  const fetchBookingsPage = useCallback(async () => {
+    setIsTableLoading(true);
+    try {
+      let query = supabase.from('bookings').select(
+        `
+        *,
+        driver:drivers(*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*), location:driver_locations(*)),
+        payments(*)
+      `,
+        { count: 'exact' }
+      );
+
       // Status filter
       if (statusFilter !== 'all') {
         if (statusFilter === 'active_trips') {
-          const isActive =
-            b.status === 'driver_assigned' ||
-            b.status === 'driver_accepted' ||
-            b.status === 'driver_arriving' ||
-            b.status === 'driver_arrived' ||
-            b.status === 'trip_started' ||
-            b.status === 'ride_started';
-          if (!isActive) return false;
+          query = query.in('status', [
+            'driver_assigned',
+            'driver_accepted',
+            'driver_arriving',
+            'driver_arrived',
+            'trip_started',
+            'ride_started',
+          ]);
         } else if (statusFilter === 'completed') {
-          const isDone =
-            b.status === 'trip_completed' ||
-            b.status === 'ride_completed' ||
-            b.status === 'payment_completed';
-          if (!isDone) return false;
-        } else if (b.status !== statusFilter) {
-          return false;
+          query = query.in('status', ['trip_completed', 'ride_completed', 'payment_completed']);
+        } else {
+          query = query.eq('status', statusFilter);
         }
       }
 
       // Search query
       if (searchQuery.trim()) {
-        const q = searchQuery.trim().toLowerCase();
-        const matchRef = b.booking_reference?.toLowerCase().includes(q);
-        const matchName = b.passenger_name?.toLowerCase().includes(q);
-        const matchPhone = b.passenger_phone?.includes(q);
-        const matchPickup = b.pickup_address?.toLowerCase().includes(q);
-        const matchDest = b.destination_address?.toLowerCase().includes(q);
-        const matchVeh = b.vehicle_type?.toLowerCase().includes(q);
-        return matchRef || matchName || matchPhone || matchPickup || matchDest || matchVeh;
+        const term = `%${searchQuery.trim()}%`;
+        query = query.or(
+          `booking_reference.ilike.${term},passenger_name.ilike.${term},passenger_phone.ilike.${term},pickup_address.ilike.${term},destination_address.ilike.${term},vehicle_type.ilike.${term}`
+        );
       }
 
-      return true;
-    });
-  }, [bookings, statusFilter, searchQuery]);
+      // Sort
+      if (sortBy === 'oldest') {
+        query = query.order('created_at', { ascending: true });
+      } else if (sortBy === 'fare_high') {
+        query = query.order('final_fare', { ascending: false });
+      } else if (sortBy === 'fare_low') {
+        query = query.order('final_fare', { ascending: true });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
 
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+      if (error) throw error;
+
+      setPaginatedBookings((data as Booking[]) || []);
+      setTotalFilteredCount(count ?? 0);
+    } catch (err) {
+      console.warn('Server-side query notice, falling back to cached local state:', err);
+
+      // Resilient local fallback from AppContext
+      const filtered = bookings.filter((b) => {
+        if (statusFilter !== 'all') {
+          if (statusFilter === 'active_trips') {
+            const isActive =
+              b.status === 'driver_assigned' ||
+              b.status === 'driver_accepted' ||
+              b.status === 'driver_arriving' ||
+              b.status === 'driver_arrived' ||
+              b.status === 'trip_started' ||
+              b.status === 'ride_started';
+            if (!isActive) return false;
+          } else if (statusFilter === 'completed') {
+            const isDone =
+              b.status === 'trip_completed' ||
+              b.status === 'ride_completed' ||
+              b.status === 'payment_completed';
+            if (!isDone) return false;
+          } else if (b.status !== statusFilter) {
+            return false;
+          }
+        }
+
+        if (searchQuery.trim()) {
+          const q = searchQuery.trim().toLowerCase();
+          return (
+            b.booking_reference?.toLowerCase().includes(q) ||
+            b.passenger_name?.toLowerCase().includes(q) ||
+            b.passenger_phone?.includes(q) ||
+            b.pickup_address?.toLowerCase().includes(q) ||
+            b.destination_address?.toLowerCase().includes(q) ||
+            b.vehicle_type?.toLowerCase().includes(q)
+          );
+        }
+
+        return true;
+      });
+
+      // Sort locally
+      filtered.sort((a, b) => {
+        if (sortBy === 'oldest') {
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        }
+        if (sortBy === 'fare_high') {
+          return (b.final_fare || b.estimated_fare || 0) - (a.final_fare || a.estimated_fare || 0);
+        }
+        if (sortBy === 'fare_low') {
+          return (a.final_fare || a.estimated_fare || 0) - (b.final_fare || b.estimated_fare || 0);
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+
+      setTotalFilteredCount(filtered.length);
+      const from = (currentPage - 1) * pageSize;
+      setPaginatedBookings(filtered.slice(from, from + pageSize));
+    } finally {
+      setIsTableLoading(false);
+    }
+  }, [currentPage, pageSize, statusFilter, searchQuery, sortBy, bookings]);
+
+  // Trigger fetch whenever page, page size, filter, or search changes
+  useEffect(() => {
+    fetchBookingsPage();
+  }, [fetchBookingsPage]);
+
+  // Reset page to 1 when filters or search change
+  const handleFilterChange = (newStatus: string) => {
+    setStatusFilter(newStatus);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+  };
+
+  // ── Sync Live Data ────────────────────────────────────────────────────────
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refreshData();
-      toast.success('Admin headquarters data synchronized.');
+      await Promise.all([refreshData(), fetchBookingsPage()]);
+      toast.success('Admin headquarters synchronized.');
     } catch {
       toast.error('Failed to sync live data.');
     } finally {
       setIsRefreshing(false);
     }
   };
+
+  // ── Pagination Math ───────────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
+  const startRecord = totalFilteredCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endRecord = Math.min(currentPage * pageSize, totalFilteredCount);
+
+  // Dynamic visible page numbers (sliding window of up to 5 pages)
+  const visiblePageNumbers = useMemo(() => {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }, [currentPage, totalPages]);
 
   if (isDataLoading) {
     return (
@@ -161,13 +327,13 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="page-shell space-y-8">
+    <div className="page-shell space-y-6">
       {/* ── 1. Top Executive Banner ────────────────────────────────────────── */}
       <AdminPageHeader
         eyebrow="Executive Headquarters"
-        badge="Single Authority Admin"
+        badge="Single Authority Command"
         title="Al Harmain Management Dashboard"
-        description="Comprehensive real-time oversight of verified pilgrims, chauffeur operations, staff dispatchers, and sacred journey finances."
+        description="Comprehensive real-time command of verified pilgrims, chauffeur fleet operations, staff dispatchers, and sacred journey finances."
       >
         <button
           onClick={handleRefresh}
@@ -186,312 +352,360 @@ export default function AdminDashboardPage() {
           <Users className="w-4 h-4" />
           <span>Manage Users</span>
         </Link>
+
+        <Link
+          href="/admin/reviews"
+          className="px-4 py-2.5 rounded-xl bg-card hover:bg-elevated border border-base text-primary font-bold text-xs shadow-xs flex items-center gap-2 transition-all cursor-pointer"
+        >
+          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+          <span>Reviews &amp; Ratings ({ratings.length})</span>
+        </Link>
       </AdminPageHeader>
 
-      {/* ── 2. Primary 8 KPI Metric Cards ──────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Customers */}
-        <AdminStatCard
-          title="Total Customers"
-          value={totalCustomers}
-          subtitle="Verified Pilgrims"
-          icon={<Users className="w-4.5 h-4.5" />}
-          tone="green"
-        />
-
-        {/* Total Drivers */}
-        <AdminStatCard
-          title="Active Drivers"
-          value={totalDrivers}
-          subtitle={`${availableDrivers} Available Now`}
-          icon={<Car className="w-4.5 h-4.5" />}
-          tone="amber"
-        />
-
-        {/* Total Staff */}
-        <AdminStatCard
-          title="Staff Dispatchers"
-          value={totalStaff}
-          subtitle="Active Control Room"
-          icon={<ShieldCheck className="w-4.5 h-4.5" />}
-          tone="blue"
-        />
-
-        {/* Pending Bookings */}
-        <AdminStatCard
-          title="Pending Bookings"
-          value={pendingBookings}
-          subtitle="Awaiting Confirmation"
-          icon={<Clock className="w-4.5 h-4.5" />}
-          tone="amber"
-        />
-
-        {/* Confirmed Bookings */}
-        <AdminStatCard
-          title="Confirmed Bookings"
-          value={confirmedBookings}
-          subtitle="Ready for Driver Match"
-          icon={<CheckCircle2 className="w-4.5 h-4.5" />}
-          tone="blue"
-        />
-
-        {/* Active Trips */}
-        <AdminStatCard
-          title="Active Trips"
-          value={activeTrips}
-          subtitle="En Route on Saudi Roads"
-          icon={<TrendingUp className="w-4.5 h-4.5" />}
-          tone="purple"
-        />
-
-        {/* Completed Trips */}
-        <AdminStatCard
-          title="Completed Trips"
-          value={completedTrips}
-          subtitle="Safely Arrived"
-          icon={<CheckCircle2 className="w-4.5 h-4.5" />}
-          tone="green"
-        />
-
-        {/* Cancelled Bookings */}
-        <AdminStatCard
-          title="Cancelled Bookings"
-          value={cancelledBookings}
-          subtitle="Discontinued Trips"
-          icon={<XCircle className="w-4.5 h-4.5" />}
-          tone="red"
-        />
-      </div>
-
-      {/* ── 3. Revenue & Fleet Operational Overview ────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="p-6 sm:p-7 rounded-3xl bg-card border border-base shadow-sm hover:shadow-md transition-all space-y-3">
+      {/* ── 2. Primary 4 High-Level Summary Cards ──────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Gross Revenue */}
+        <div className="p-5 sm:p-6 rounded-2xl bg-card border border-base shadow-xs hover:border-emerald-500/40 hover:shadow-sm transition-all space-y-2">
           <div className="flex items-center justify-between">
-            <span className="type-eyebrow text-emerald-600 dark:text-emerald-400 font-bold">Financial Gross</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
-              <DollarSign className="w-4 h-4" />
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Gross Pilgrimage Revenue</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/25">
+              <DollarSign className="w-4.5 h-4.5" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-primary font-sans tracking-tight">
+          <div className="text-2xl sm:text-3xl font-extrabold text-primary font-sans tracking-tight">
             {formatCurrency(totalRevenue, settings.currency)}
           </div>
-          <p className="text-xs text-muted leading-relaxed">
-            Total settled pilgrimage fares including base tariffs, highway distance, and 15% KSA VAT reconciliation.
+          <p className="text-[11.5px] text-muted">
+            Settled journey fares including 15% KSA VAT &amp; airport tolls.
           </p>
-          <div className="pt-2">
+          <div className="pt-1">
             <Link
               href="/admin/reports"
-              className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+              className="text-xs font-bold text-emerald-600 hover:underline inline-flex items-center gap-1"
             >
-              <span>View Full Financial Ledger</span>
+              <span>Inspect Financial Ledger</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
 
-        <div className="p-6 sm:p-7 rounded-3xl bg-card border border-base shadow-sm hover:shadow-md transition-all space-y-3">
+        {/* Chauffeur Fleet Readiness */}
+        <div className="p-5 sm:p-6 rounded-2xl bg-card border border-base shadow-xs hover:border-amber-500/40 hover:shadow-sm transition-all space-y-2">
           <div className="flex items-center justify-between">
-            <span className="type-eyebrow text-amber-600 dark:text-amber-400 font-bold">Chauffeur Availability</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20">
-              <Car className="w-4 h-4" />
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Chauffeur Fleet</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/25">
+              <Car className="w-4.5 h-4.5" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-primary font-sans tracking-tight">
+          <div className="text-2xl sm:text-3xl font-extrabold text-primary font-sans tracking-tight">
             {availableDrivers} / {totalDrivers} Ready
           </div>
-          <p className="text-xs text-muted leading-relaxed">
-            Licensed chauffeurs available for instant dispatch in Makkah, Madinah, and King Abdulaziz Airport (Jeddah).
+          <p className="text-[11.5px] text-muted">
+            Licensed chauffeurs available for dispatch in Makkah, Madinah &amp; Jeddah.
           </p>
-          <div className="pt-2">
+          <div className="pt-1">
             <Link
               href="/admin/users"
-              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline inline-flex items-center gap-1"
+              className="text-xs font-bold text-amber-600 hover:underline inline-flex items-center gap-1"
             >
-              <span>Inspect Chauffeur Roster</span>
+              <span>View Captain Roster</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
 
-        <div className="p-6 sm:p-7 rounded-3xl bg-card border border-base shadow-sm hover:shadow-md transition-all space-y-3">
+        {/* Global Reservations Volume */}
+        <div className="p-5 sm:p-6 rounded-2xl bg-card border border-base shadow-xs hover:border-sky-500/40 hover:shadow-sm transition-all space-y-2">
           <div className="flex items-center justify-between">
-            <span className="type-eyebrow text-sky-600 dark:text-sky-400 font-bold">Licensed Vehicles</span>
-            <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20">
-              <ShieldCheck className="w-4 h-4" />
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Total Reservations</span>
+            <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 flex items-center justify-center border border-sky-500/25">
+              <Receipt className="w-4.5 h-4.5" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-primary font-sans tracking-tight">
-            {vehicles.length} Licensed Vehicles
+          <div className="text-2xl sm:text-3xl font-extrabold text-primary font-sans tracking-tight">
+            {totalBookings} Total
           </div>
-          <p className="text-xs text-muted leading-relaxed">
-            VIP GMC Yukon Denalis, Mercedes sedans, family SUVs, and HiAce commercial vans under MOT regulation.
+          <p className="text-[11.5px] text-muted">
+            {activeTrips} active trips en route &bull; {completedTrips} safely arrived.
           </p>
-          <div className="pt-2">
+          <div className="pt-1">
             <Link
-              href="/admin/rates"
-              className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-1"
+              href="/dispatcher/queue"
+              className="text-xs font-bold text-sky-600 hover:underline inline-flex items-center gap-1"
             >
-              <span>Manage Tariff &amp; Vehicle Rates</span>
+              <span>Open Live Queue</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Verified Pilgrims & Dispatch Staff */}
+        <div className="p-5 sm:p-6 rounded-2xl bg-card border border-base shadow-xs hover:border-purple-500/40 hover:shadow-sm transition-all space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Registered Accounts</span>
+            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center border border-purple-500/25">
+              <Users className="w-4.5 h-4.5" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-primary font-sans tracking-tight">
+            {totalCustomers + totalStaff} Users
+          </div>
+          <p className="text-[11.5px] text-muted">
+            {totalCustomers} verified pilgrims &bull; {totalStaff} control room dispatchers.
+          </p>
+          <div className="pt-1">
+            <Link
+              href="/admin/users"
+              className="text-xs font-bold text-purple-600 hover:underline inline-flex items-center gap-1"
+            >
+              <span>Manage User Access</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
       </div>
 
-      {/* ── 3.5 Chauffeur Quality & Customer Reviews Section ──────────────── */}
-      <div className="p-6 sm:p-7 rounded-3xl bg-card border border-base shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-base pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20 font-bold">
-              <Sparkles className="w-5 h-5 text-amber-500" />
-            </div>
+      {/* ── 3. Operational Quick Filter Status Strip ───────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* Pending Card */}
+        <button
+          onClick={() => handleFilterChange('pending')}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            statusFilter === 'pending'
+              ? 'bg-amber-500/15 border-amber-500 shadow-xs'
+              : 'bg-card border-base hover:bg-elevated hover:border-amber-500/30'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs text-amber-700 font-bold">
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" /> Pending
+            </span>
+            <span className="font-mono text-sm">{pendingBookings}</span>
+          </div>
+          <p className="text-[11px] text-muted mt-1">Awaiting confirmation</p>
+        </button>
+
+        {/* Confirmed Card */}
+        <button
+          onClick={() => handleFilterChange('confirmed')}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            statusFilter === 'confirmed'
+              ? 'bg-sky-500/15 border-sky-500 shadow-xs'
+              : 'bg-card border-base hover:bg-elevated hover:border-sky-500/30'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs text-sky-700 font-bold">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Confirmed
+            </span>
+            <span className="font-mono text-sm">{confirmedBookings}</span>
+          </div>
+          <p className="text-[11px] text-muted mt-1">Ready for match</p>
+        </button>
+
+        {/* Active Trips Card */}
+        <button
+          onClick={() => handleFilterChange('active_trips')}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            statusFilter === 'active_trips'
+              ? 'bg-purple-500/15 border-purple-500 shadow-xs'
+              : 'bg-card border-base hover:bg-elevated hover:border-purple-500/30'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs text-purple-700 font-bold">
+            <span className="flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5" /> Active En Route
+            </span>
+            <span className="font-mono text-sm">{activeTrips}</span>
+          </div>
+          <p className="text-[11px] text-muted mt-1">On Saudi highways</p>
+        </button>
+
+        {/* Completed Card */}
+        <button
+          onClick={() => handleFilterChange('completed')}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            statusFilter === 'completed'
+              ? 'bg-emerald-500/15 border-emerald-500 shadow-xs'
+              : 'bg-card border-base hover:bg-elevated hover:border-emerald-500/30'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+            </span>
+            <span className="font-mono text-sm">{completedTrips}</span>
+          </div>
+          <p className="text-[11px] text-muted mt-1">Safely concluded</p>
+        </button>
+
+        {/* Cancelled Card */}
+        <button
+          onClick={() => handleFilterChange('cancelled')}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer col-span-2 sm:col-span-1 ${
+            statusFilter === 'cancelled'
+              ? 'bg-rose-500/15 border-rose-500 shadow-xs'
+              : 'bg-card border-base hover:bg-elevated hover:border-rose-500/30'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs text-rose-700 font-bold">
+            <span className="flex items-center gap-1.5">
+              <XCircle className="w-3.5 h-3.5" /> Cancelled
+            </span>
+            <span className="font-mono text-sm">{cancelledBookings}</span>
+          </div>
+          <p className="text-[11px] text-muted mt-1">Discontinued</p>
+        </button>
+      </div>
+
+      {/* ── 4. Operational Breakdown: Fleet Utilization & Sacred Corridors ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Vehicle Class Utilization Card */}
+        <div className="p-5 sm:p-6 rounded-2xl bg-card border border-base shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-base pb-3">
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base text-primary">Chauffeur Service Ratings &amp; Passenger Feedback</h3>
-                <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 rounded-full border border-amber-500/20 font-mono">
-                  {ratings.length} Reviews Recorded
-                </span>
-              </div>
-              <p className="text-xs text-secondary mt-0.5">
-                Real-time quality intelligence from verified Umrah &amp; City transfers.
+              <h3 className="font-bold text-sm sm:text-base text-primary flex items-center gap-2">
+                <Car className="w-4 h-4 text-emerald-500" />
+                <span>Vehicle Fleet Distribution</span>
+              </h3>
+              <p className="text-xs text-muted mt-0.5">
+                Active booking distribution across MOT licensed vehicle categories.
               </p>
             </div>
+            <Link
+              href="/admin/rates"
+              className="text-xs font-semibold text-emerald-600 hover:underline inline-flex items-center gap-1"
+            >
+              <span>Rates</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
 
-          <div className="flex items-center gap-4 bg-surface px-4 py-2 rounded-2xl border border-base text-xs">
-            <div>
-              <span className="text-[10px] text-muted block uppercase font-bold">Fleet Average</span>
-              <span className="font-bold text-amber-500 text-sm flex items-center gap-1 mt-0.5">
-                <Star className="w-3.5 h-3.5 fill-amber-500" />
-                {fleetAvgRating} / 5.0
-              </span>
-            </div>
-            <div className="h-6 w-px bg-base" />
-            <div>
-              <span className="text-[10px] text-muted block uppercase font-bold">Total Reviews</span>
-              <span className="font-bold text-primary text-sm mt-0.5 block">{ratings.length}</span>
-            </div>
-          </div>
-        </div>
-
-        {ratings.length === 0 ? (
-          <div className="p-8 text-center bg-surface/50 rounded-2xl border border-base space-y-1.5">
-            <Star className="w-7 h-7 text-muted mx-auto" />
-            <h4 className="text-xs sm:text-sm font-bold text-primary">No Passenger Reviews Yet</h4>
-            <p className="text-xs text-muted max-w-sm mx-auto">
-              Reviews will stream here in real time as passengers rate their completed trips.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {ratings.slice(0, 6).map((rev) => {
-              const matchedBooking = bookings.find((b) => b.id === rev.booking_id);
-              const matchedDriver = drivers.find((d) => d.id === rev.driver_id);
-              const driverName = matchedDriver?.profile?.full_name || matchedDriver?.full_name || 'Captain';
-              const passengerName =
-                rev.booking?.passenger_name ||
-                matchedBooking?.passenger_name ||
-                rev.customer?.full_name ||
-                'Verified Passenger';
-
+          <div className="space-y-3">
+            {Object.entries(vehicleStats).map(([key, item]) => {
+              const pct = totalBookings > 0 ? Math.round((item.count / totalBookings) * 100) : 0;
               return (
-                <div
-                  key={rev.id}
-                  className="p-4 rounded-2xl bg-surface border border-base hover:border-amber-500/40 transition-colors space-y-2.5 text-xs shadow-xs"
-                >
+                <div key={key} className="space-y-1 text-xs">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-primary">{passengerName}</div>
-                      <div className="text-[10.5px] text-muted">Chauffeur: {driverName}</div>
-                    </div>
-                    <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
-                      <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                      <span className="font-bold text-amber-600 dark:text-amber-400 text-xs">
-                        {rev.rating}.0
-                      </span>
-                    </div>
+                    <span className="font-semibold text-secondary">{item.name}</span>
+                    <span className="font-mono font-bold text-primary">
+                      {item.count} trips ({pct}%)
+                    </span>
                   </div>
-
-                  {(matchedBooking || rev.booking) && (
-                    <div className="text-[10.5px] text-muted truncate">
-                      <span className="font-mono text-amber-600 dark:text-amber-400 font-semibold mr-1">
-                        {matchedBooking?.booking_reference || (rev.booking as any)?.booking_reference}
-                      </span>
-                      &bull; {matchedBooking?.destination_address || (rev.booking as any)?.destination_address}
-                    </div>
-                  )}
-
-                  {rev.feedback ? (
-                    <p className="text-xs text-primary italic bg-card/60 p-2 rounded-xl border border-base line-clamp-2">
-                      &ldquo;{rev.feedback}&rdquo;
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-muted italic">5-star rating without written notes.</p>
-                  )}
-
-                  <div className="text-[9.5px] text-muted border-t border-base/50 pt-1.5 flex items-center justify-between">
-                    <span>{formatDateTime(rev.created_at)}</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Verified Ride</span>
+                  <div className="w-full h-2 rounded-full bg-base overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-600 rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
+        </div>
+
+        {/* Sacred Journey Hubs Card */}
+        <div className="p-5 sm:p-6 rounded-2xl bg-card border border-base shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-base pb-3">
+            <div>
+              <h3 className="font-bold text-sm sm:text-base text-primary flex items-center gap-2">
+                <Compass className="w-4 h-4 text-amber-500" />
+                <span>Primary Sacred Transfer Corridors</span>
+              </h3>
+              <p className="text-xs text-muted mt-0.5">
+                High-volume corridors serving Umrah pilgrims and international delegations.
+              </p>
+            </div>
+            <Link
+              href="/dispatcher/radar"
+              className="text-xs font-semibold text-amber-600 hover:underline inline-flex items-center gap-1"
+            >
+              <span>Fleet Radar</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="space-y-2.5 text-xs">
+            <div className="p-3 rounded-xl bg-surface/50 border border-base flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-600 flex items-center justify-center shrink-0">
+                  <Plane className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="font-bold text-primary">Jeddah Airport (JED) &rarr; Makkah Haram</div>
+                  <div className="text-[10.5px] text-muted">98 km express highway transfer</div>
+                </div>
+              </div>
+              <span className="text-[10.5px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                High Priority
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-surface/50 border border-base flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                  <Building className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="font-bold text-primary">Makkah Al-Mukarramah &rarr; Madinah Al-Munawwarah</div>
+                  <div className="text-[10.5px] text-muted">442 km intercity VIP pilgrimage</div>
+                </div>
+              </div>
+              <span className="text-[10.5px] font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                Intercity
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-surface/50 border border-base flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                  <Compass className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="font-bold text-primary">Holy Sites Ziyarat (Mina, Arafat, Taif)</div>
+                  <div className="text-[10.5px] text-muted">Multi-point historical sacred tours</div>
+                </div>
+              </div>
+              <span className="text-[10.5px] font-bold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                Full Day
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* ── 4. Global Bookings Management Section ──────────────────────────── */}
+      {/* ── 5. Global Bookings Management Section with Server-Side Pagination ── */}
       <AdminTableCard
         title="Global Bookings Registry"
         subtitle="Complete cross-role reservation log with live status tracking and passenger details"
-        badge={`${filteredBookings.length} Bookings`}
+        badge={`${totalFilteredCount} Bookings`}
         headerAction={
-          <Link
-            href="/dispatcher/queue"
-            className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-colors"
-          >
-            <span>Dispatcher Live Queue</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
-        }
-        footer={
-          <>
-            <div>
-              Showing <span className="font-bold text-primary">{filteredBookings.length}</span> of{' '}
-              <span className="font-bold text-primary">{bookings.length}</span> total reservations
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-500" /> Pending ({pendingBookings})
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-sky-500" /> Confirmed ({confirmedBookings})
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-purple-500" /> Active ({activeTrips})
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" /> Completed ({completedTrips})
-              </span>
-            </div>
-          </>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dispatcher/queue"
+              className="text-xs font-bold text-amber-700 hover:underline flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-colors"
+            >
+              <span>Dispatcher Live Queue</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         }
       >
-        {/* Search & Filter Pills Toolbar */}
-        <div className="p-4 border-b border-base bg-surface/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        {/* Search, Status Tabs & Sort Toolbar */}
+        <div className="p-4 border-b border-base bg-surface/20 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Status Tabs */}
           <div className="flex flex-wrap items-center gap-1.5">
             {[
-              { id: 'all', label: `All (${bookings.length})` },
+              { id: 'all', label: `All (${totalBookings})` },
               { id: 'pending', label: `Pending (${pendingBookings})` },
               { id: 'confirmed', label: `Confirmed (${confirmedBookings})` },
-              { id: 'active_trips', label: `Active Trips (${activeTrips})` },
+              { id: 'active_trips', label: `Active (${activeTrips})` },
               { id: 'completed', label: `Completed (${completedTrips})` },
               { id: 'cancelled', label: `Cancelled (${cancelledBookings})` },
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setStatusFilter(tab.id)}
+                onClick={() => handleFilterChange(tab.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === tab.id
                     ? 'bg-emerald-600 text-white shadow-xs'
@@ -503,134 +717,241 @@ export default function AdminDashboardPage() {
             ))}
           </div>
 
-          {/* Search Box */}
-          <div className="relative sm:w-72 shrink-0">
-            <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search reference, passenger, route..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-input border border-base rounded-xl pl-10 pr-8 py-2 text-xs text-primary placeholder:text-muted focus:outline-none focus:border-emerald-500"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-primary"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+          {/* Search Box & Sort */}
+          <div className="flex items-center gap-2">
+            <div className="relative md:w-64 shrink-0">
+              <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search reference, passenger, route..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full bg-input border border-default-medium rounded-xl pl-10 pr-8 py-2 text-xs text-heading placeholder:text-body focus:outline-none focus:border-brand"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => handleSearchChange('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-primary"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-2.5 py-2 bg-neutral-secondary-medium border border-default-medium text-heading text-xs rounded-xl focus:ring-brand focus:border-brand shadow-xs"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="fare_high">Fare: High to Low</option>
+              <option value="fare_low">Fare: Low to High</option>
+            </select>
           </div>
         </div>
 
         {/* Bookings Table */}
-        <table className="w-full text-left text-xs text-secondary">
-          <thead className="bg-surface/80 text-muted uppercase font-bold text-[10.5px] tracking-wider border-b border-base">
-            <tr>
-              <th className="py-3.5 px-4">Booking Ref</th>
-              <th className="py-3.5 px-4">Passenger</th>
-              <th className="py-3.5 px-4">Journey Route</th>
-              <th className="py-3.5 px-4">Vehicle</th>
-              <th className="py-3.5 px-4">Status</th>
-              <th className="py-3.5 px-4 text-right">Fare</th>
-              <th className="py-3.5 px-4 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-base">
-            {filteredBookings.length === 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-secondary">
+            <thead className="bg-surface/80 text-muted uppercase font-bold text-[10.5px] tracking-wider border-b border-base">
               <tr>
-                <td colSpan={7} className="py-12 text-center text-muted">
-                  <div className="flex flex-col items-center justify-center space-y-2">
-                    <Receipt className="w-8 h-8 text-muted/50" />
-                    <p className="text-sm font-semibold text-primary">No bookings found</p>
-                    <p className="text-xs text-muted">
-                      {searchQuery || statusFilter !== 'all'
-                        ? 'Try clearing search filters to see all reservations.'
-                        : 'No reservations have been recorded in the system yet.'}
-                    </p>
-                  </div>
-                </td>
+                <th className="py-3.5 px-4">Booking Ref</th>
+                <th className="py-3.5 px-4">Passenger</th>
+                <th className="py-3.5 px-4">Journey Route</th>
+                <th className="py-3.5 px-4">Vehicle</th>
+                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4 text-right">Fare</th>
+                <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
-            ) : (
-              filteredBookings.map((b) => (
-                <tr key={b.id} className="hover:bg-elevated/50 transition-colors group">
-                  {/* Reference */}
-                  <td className="py-3.5 px-4 font-mono">
-                    <span className="font-extrabold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/25">
-                      {b.booking_reference}
-                    </span>
-                  </td>
-
-                  {/* Passenger */}
-                  <td className="py-3.5 px-4">
-                    <div className="font-bold text-primary">{b.passenger_name}</div>
-                    <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
-                      <Phone className="w-3 h-3 text-muted" />
-                      <span>{b.passenger_phone || 'N/A'}</span>
+            </thead>
+            <tbody className="divide-y divide-base">
+              {isTableLoading ? (
+                <TableSkeletonRows cols={7} rows={pageSize > 10 ? 10 : pageSize} />
+              ) : paginatedBookings.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-muted">
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <Receipt className="w-8 h-8 text-muted/50" />
+                      <p className="text-sm font-semibold text-primary">No bookings found</p>
+                      <p className="text-xs text-muted">
+                        {searchQuery || statusFilter !== 'all'
+                          ? 'Try clearing search filters to see all reservations.'
+                          : 'No reservations have been recorded in the system yet.'}
+                      </p>
                     </div>
-                  </td>
-
-                  {/* Route */}
-                  <td className="py-3.5 px-4 max-w-xs">
-                    <div className="flex items-center gap-1.5 text-primary font-medium truncate" title={b.pickup_address}>
-                      <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <span className="truncate">{b.pickup_address}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-muted truncate text-[11px] mt-0.5" title={b.destination_address}>
-                      <span className="text-amber-500 shrink-0">&rarr;</span>
-                      <span className="truncate">{b.destination_address}</span>
-                    </div>
-                  </td>
-
-                  {/* Vehicle */}
-                  <td className="py-3.5 px-4">
-                    <span className="inline-flex items-center gap-1 font-bold uppercase text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25">
-                      <Car className="w-3 h-3 text-emerald-500" />
-                      {b.vehicle_type?.replace(/_/g, ' ')}
-                    </span>
-                  </td>
-
-                  {/* Status */}
-                  <td className="py-3.5 px-4">
-                    <AdminStatusBadge status={b.status} />
-                  </td>
-
-                  {/* Fare */}
-                  <td className="py-3.5 px-4 text-right font-extrabold tabular-nums text-primary font-sans text-sm">
-                    {formatCurrency(b.final_fare || b.estimated_fare, settings.currency)}
-                  </td>
-
-                  {/* Action Buttons: View -> More (Pattern: View -> Edit -> Delete -> More) */}
-                  <td className="py-3.5 px-4 text-center">
-                    <AdminActionGroup>
-                      <AdminActionButton
-                        variant="view"
-                        tooltip="Inspect complete booking dossier"
-                        onClick={() => setSelectedBooking(b)}
-                      />
-                      <Link href="/dispatcher/queue" title="Open Dispatcher Queue">
-                        <AdminActionButton
-                          variant="more"
-                          tooltip="Manage in Live Dispatcher Queue"
-                        />
-                      </Link>
-                    </AdminActionGroup>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                paginatedBookings.map((b) => (
+                  <tr key={b.id} className="hover:bg-elevated/50 transition-colors group">
+                    {/* Reference */}
+                    <td className="py-3.5 px-4 font-mono">
+                      <span className="font-extrabold text-amber-700 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/25">
+                        {b.booking_reference}
+                      </span>
+                    </td>
+
+                    {/* Passenger */}
+                    <td className="py-3.5 px-4">
+                      <div className="font-bold text-primary">{b.passenger_name}</div>
+                      <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
+                        <Phone className="w-3 h-3 text-muted" />
+                        <span>{b.passenger_phone || 'N/A'}</span>
+                      </div>
+                    </td>
+
+                    {/* Route */}
+                    <td className="py-3.5 px-4 max-w-xs">
+                      <div
+                        className="flex items-center gap-1.5 text-primary font-medium truncate"
+                        title={b.pickup_address}
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span className="truncate">{b.pickup_address}</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-1.5 text-muted truncate text-[11px] mt-0.5"
+                        title={b.destination_address}
+                      >
+                        <span className="text-amber-500 shrink-0">&rarr;</span>
+                        <span className="truncate">{b.destination_address}</span>
+                      </div>
+                    </td>
+
+                    {/* Vehicle */}
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center gap-1 font-bold uppercase text-[11px] text-emerald-800 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25">
+                        <Car className="w-3 h-3 text-emerald-500" />
+                        {b.vehicle_type?.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+
+                    {/* Status */}
+                    <td className="py-3.5 px-4">
+                      <AdminStatusBadge status={b.status} />
+                    </td>
+
+                    {/* Fare */}
+                    <td className="py-3.5 px-4 text-right font-extrabold tabular-nums text-primary font-sans text-sm">
+                      {formatCurrency(b.final_fare || b.estimated_fare, settings.currency)}
+                    </td>
+
+                    {/* Action Buttons: View -> More (Dispatcher queue) */}
+                    <td className="py-3.5 px-4 text-center">
+                      <AdminActionGroup>
+                        <AdminActionButton
+                          variant="view"
+                          tooltip="Inspect complete booking dossier"
+                          onClick={() => setSelectedBooking(b)}
+                        />
+                        <Link href="/dispatcher/queue" title="Open Dispatcher Queue">
+                          <AdminActionButton
+                            variant="more"
+                            tooltip="Manage in Live Dispatcher Queue"
+                          />
+                        </Link>
+                      </AdminActionGroup>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── 6. Pagination Navigation (Matches User Code Specification) ─────── */}
+        <div className="p-4 border-t border-base bg-surface/30 flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Record Counter */}
+          <div className="text-xs text-muted">
+            Showing <span className="font-bold text-heading">{startRecord}</span>–
+            <span className="font-bold text-heading">{endRecord}</span> of{' '}
+            <span className="font-bold text-heading">{totalFilteredCount}</span> bookings
+          </div>
+
+          {/* Navigation Controls */}
+          <nav aria-label="Page navigation example" className="flex items-center space-x-4">
+            <ul className="flex -space-x-px text-sm">
+              {/* Previous Button */}
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || isTableLoading}
+                  className={`flex items-center justify-center text-body bg-neutral-secondary-medium border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading shadow-xs font-medium leading-5 rounded-s-base text-sm px-3 h-9 focus:outline-none cursor-pointer ${
+                    currentPage === 1 ? 'opacity-40 cursor-not-allowed' : ''
+                  }`}
+                >
+                  Previous
+                </button>
+              </li>
+
+              {/* Dynamic Page Numbers */}
+              {visiblePageNumbers.map((num) => {
+                const isActive = num === currentPage;
+                return (
+                  <li key={num}>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(num)}
+                      disabled={isTableLoading}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={
+                        isActive
+                          ? 'flex items-center justify-center text-fg-brand bg-neutral-tertiary-medium box-border border border-default-medium hover:text-fg-brand font-medium text-sm w-9 h-9 focus:outline-none cursor-pointer font-bold'
+                          : 'flex items-center justify-center text-body bg-neutral-secondary-medium border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading shadow-xs font-medium leading-5 text-sm w-9 h-9 focus:outline-none cursor-pointer'
+                      }
+                    >
+                      {num}
+                    </button>
+                  </li>
+                );
+              })}
+
+              {/* Next Button */}
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages || totalPages === 0 || isTableLoading}
+                  className={`flex items-center justify-center text-body bg-neutral-secondary-medium border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading shadow-xs font-medium leading-5 rounded-e-base text-sm px-3 h-9 focus:outline-none cursor-pointer ${
+                    currentPage === totalPages || totalPages === 0 ? 'opacity-40 cursor-not-allowed' : ''
+                  }`}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+
+            {/* Per-Page Selector Form matching User Code */}
+            <form className="w-32 mx-auto" onSubmit={(e) => e.preventDefault()}>
+              <label htmlFor="countries" className="sr-only">
+                Select an option
+              </label>
+              <select
+                id="countries"
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="block w-full px-3 py-2.5 bg-neutral-secondary-medium border border-default-medium text-heading text-sm leading-4 rounded-base focus:ring-brand focus:border-brand shadow-xs placeholder:text-body cursor-pointer"
+              >
+                <option value="10">10 per page</option>
+                <option value="25">25 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
+              </select>
+            </form>
+          </nav>
+        </div>
       </AdminTableCard>
 
-      {/* ── 5. Detailed Booking Dossier Modal ──────────────────────────────── */}
+      {/* ── 7. Detailed Booking Dossier Modal ──────────────────────────────── */}
       {selectedBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-card border border-base rounded-3xl p-6 sm:p-7 max-w-xl w-full space-y-5 shadow-2xl my-8">
             <div className="flex items-center justify-between border-b border-base pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/30">
                   <Receipt className="w-5 h-5" />
                 </div>
                 <div>
@@ -680,20 +1001,23 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="p-3.5 rounded-xl bg-card border border-base space-y-1">
                   <span className="text-[10.5px] font-semibold text-muted block">Contact Phone</span>
-                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400 text-xs">
+                  <span className="font-mono font-bold text-amber-700 text-xs">
                     {selectedBooking.passenger_phone || 'N/A'}
                   </span>
                 </div>
                 <div className="p-3.5 rounded-xl bg-card border border-base space-y-1">
                   <span className="text-[10.5px] font-semibold text-muted block">Vehicle Class</span>
-                  <span className="font-bold uppercase text-emerald-600 dark:text-emerald-400 text-xs">
+                  <span className="font-bold uppercase text-emerald-800 text-xs">
                     {selectedBooking.vehicle_type?.replace(/_/g, ' ')}
                   </span>
                 </div>
                 <div className="p-3.5 rounded-xl bg-card border border-base space-y-1">
                   <span className="text-[10.5px] font-semibold text-muted block">Total Settled Fare</span>
                   <span className="font-bold text-primary font-sans text-sm">
-                    {formatCurrency(selectedBooking.final_fare || selectedBooking.estimated_fare, settings.currency)}
+                    {formatCurrency(
+                      selectedBooking.final_fare || selectedBooking.estimated_fare,
+                      settings.currency
+                    )}
                   </span>
                 </div>
               </div>
@@ -706,55 +1030,13 @@ export default function AdminDashboardPage() {
                   <div>Assigned Driver ID: {selectedBooking.assigned_driver_id}</div>
                 )}
               </div>
-
-              {/* Passenger Review (if rated) */}
-              {(() => {
-                const bRating = ratings.find((r) => r.booking_id === selectedBooking.id);
-                if (!bRating) return null;
-
-                return (
-                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
-                        <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                        <span>Passenger Rating &amp; Review</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star
-                            key={s}
-                            className={`w-3.5 h-3.5 ${
-                              s <= bRating.rating
-                                ? 'text-amber-500 fill-amber-500'
-                                : 'text-slate-300 dark:text-slate-600'
-                            }`}
-                          />
-                        ))}
-                        <span className="font-bold text-amber-600 dark:text-amber-400 ml-1 text-xs">
-                          {bRating.rating}.0
-                        </span>
-                      </div>
-                    </div>
-                    {bRating.feedback ? (
-                      <p className="text-xs text-primary italic bg-card/60 p-2.5 rounded-xl border border-base">
-                        &ldquo;{bRating.feedback}&rdquo;
-                      </p>
-                    ) : (
-                      <p className="text-[11px] text-muted italic">No written comment left by passenger.</p>
-                    )}
-                    <div className="text-[10px] text-muted">
-                      Recorded on {formatDateTime(bRating.created_at)}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
 
             <div className="pt-2 flex items-center justify-between border-t border-base">
               <Link
                 href="/dispatcher/queue"
                 onClick={() => setSelectedBooking(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-colors flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-amber-700 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-colors flex items-center gap-1.5"
               >
                 <span>Open in Dispatcher Queue</span>
                 <ExternalLink className="w-3.5 h-3.5" />

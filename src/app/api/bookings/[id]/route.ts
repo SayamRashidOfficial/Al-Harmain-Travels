@@ -111,3 +111,94 @@ export async function GET(
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Booking ID is required.' }, { status: 400 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const { status, notes } = body;
+
+    if (!status) {
+      return NextResponse.json({ success: false, error: 'Target status is required.' }, { status: 400 });
+    }
+
+    // Resolve booking
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let query = supabase.from('bookings').select('*, payment:payments(*)');
+    if (isUuid) {
+      query = query.eq('id', id);
+    } else {
+      query = query.eq('booking_reference', id);
+    }
+    const { data: booking, error: fetchErr } = await query.maybeSingle();
+
+    if (fetchErr || !booking) {
+      return NextResponse.json({ success: false, error: 'Booking not found.' }, { status: 404 });
+    }
+
+    // Server-side validation: if completing ride, verify cash confirmation for Cash on Pickup
+    const isTargetingCompletion = status === 'completed' || status === 'trip_completed' || status === 'ride_completed';
+    if (isTargetingCompletion) {
+      const isExplicitlyOnlineOrCard =
+        booking.payment_method === 'online' ||
+        booking.payment_method === 'card' ||
+        Boolean(booking.payment_screenshot_url);
+
+      const isCashRide = booking.payment_method === 'cash' || !isExplicitlyOnlineOrCard;
+
+      if (isCashRide) {
+        const isCashConfirmed =
+          booking.payment_status === 'paid' ||
+          booking.payment_status === 'confirmed' ||
+          (Array.isArray(booking.payment)
+            ? booking.payment.some((p: any) => p.status === 'paid' || p.status === 'confirmed')
+            : (booking.payment?.status === 'paid' || booking.payment?.status === 'confirmed'));
+
+        if (!isCashConfirmed) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Cannot complete ride: Full cash payment must be confirmed received before completing Cash on Pickup rides.',
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    const now = new Date().toISOString();
+    const updatePayload: Record<string, any> = {
+      status,
+      updated_at: now,
+    };
+    if (notes) {
+      updatePayload.notes = booking.notes ? `${booking.notes} | ${notes}` : notes;
+    }
+
+    const { error: updateErr } = await supabase
+      .from('bookings')
+      .update(updatePayload)
+      .eq('id', booking.id);
+
+    if (updateErr) {
+      return NextResponse.json({ success: false, error: updateErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      booking_id: booking.id,
+      status,
+      updated_at: now,
+    });
+  } catch (err: any) {
+    console.error('Booking update error:', err);
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
