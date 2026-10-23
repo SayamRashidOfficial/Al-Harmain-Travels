@@ -23,10 +23,6 @@ export default {
         secondary: "var(--text-secondary)",
         muted: "var(--text-muted)",
 
-        base: "var(--border-base)",
-        strong: "var(--border-strong)",
-        subtle: "var(--border-subtle)",
-
         brand: {
           50: "#ecfdf5",
           100: "#d1fae5",
@@ -69,6 +65,21 @@ export default {
           light: "#374151",
           dark: "#111827",
         },
+      },
+      borderColor: {
+        base: "var(--border-base)",
+        strong: "var(--border-strong)",
+        subtle: "var(--border-subtle)",
+      },
+      backgroundColor: {
+        base: "var(--border-base)",
+        strong: "var(--border-strong)",
+        subtle: "var(--border-subtle)",
+      },
+      divideColor: {
+        base: "var(--border-base)",
+        strong: "var(--border-strong)",
+        subtle: "var(--border-subtle)",
       },
       fontFamily: {
         sans: ["var(--font-body)", "Plus Jakarta Sans", "sans-serif"],

@@ -47,25 +47,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className="dark">
+    <html lang="en" data-scroll-behavior="smooth" className="light">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body suppressHydrationWarning className="min-h-screen flex flex-col antialiased selection:bg-emerald-500 selection:text-white bg-[var(--background)] text-[var(--foreground)] font-sans text-body">
         <AppProvider>
-          <LanguageProvider>
-            <AuthRecoveryListener />
-            <a href="#main-content" className="skip-link">
-              Skip to main content
-            </a>
-            <Navbar />
-            <main id="main-content" className="flex-1 w-full pt-16 sm:pt-20">
-              {children}
-            </main>
-            <Footer />
-            <Toaster position="top-right" richColors theme="system" closeButton />
-          </LanguageProvider>
+          <ThemeProvider>
+            <LanguageProvider>
+              <AuthRecoveryListener />
+              <a href="#main-content" className="skip-link">
+                Skip to main content
+              </a>
+              <Navbar />
+              <main id="main-content" className="flex-1 w-full pt-16 sm:pt-20">
+                {children}
+              </main>
+              <Footer />
+              <Toaster position="top-right" richColors theme="system" closeButton />
+            </LanguageProvider>
+          </ThemeProvider>
         </AppProvider>
       </body>
     </html>
