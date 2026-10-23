@@ -475,11 +475,11 @@ export default function FixedFareBookingPanel({
           {/* Current Active Step Banner with percentage and back button */}
           <div className="pt-1.5 border-t border-base/50 flex items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200/80 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
                 Step {currentStepIndex + 1} of 5
               </span>
-              <span className="font-bold text-primary truncate text-xs">
+              <span className="font-bold text-slate-900 font-sans truncate text-xs">
                 {STEPS_CONFIG[currentStepIndex].fullTitle}
               </span>
             </div>
@@ -502,11 +502,12 @@ export default function FixedFareBookingPanel({
         <div className="p-3.5 sm:p-4 space-y-3 animate-fade-in">
           <div className="flex items-start justify-between gap-2.5">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.2 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 mb-1">
-                <Sparkles className="w-2.5 h-2.5 text-amber-500" /> Guaranteed Fixed Pricing
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200/90 mb-1 shadow-2xs">
+                <Sparkles className="w-3 h-3 text-amber-600 shrink-0" />
+                <span>Guaranteed Fixed Pricing</span>
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-primary">Select Your Service</h2>
-              <p className="text-[11px] text-muted mt-0.5">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 font-sans">Select Your Service</h2>
+              <p className="text-[11.5px] text-slate-600 mt-0.5">
                 Choose a predefined VIP route or sacred holy tour with all-inclusive rates.
               </p>
             </div>
@@ -606,8 +607,8 @@ export default function FixedFareBookingPanel({
 
                 {/* Heading & description */}
                 <div>
-                  <h2 className="text-sm sm:text-base font-bold text-primary leading-tight">Specify Pickup &amp; Route</h2>
-                  <p className="text-[11px] text-muted mt-0.5">
+                  <h2 className="text-sm sm:text-base font-bold text-slate-900 font-sans leading-tight">Specify Pickup &amp; Route</h2>
+                  <p className="text-[11.5px] text-slate-600 mt-0.5">
                     {isZiyarat
                       ? 'Enter your hotel or accommodation for sacred tour pickup.'
                       : 'Enter pickup and destination details for this VIP transfer.'}
@@ -851,12 +852,12 @@ export default function FixedFareBookingPanel({
           {/* Header */}
           <div className="flex items-start justify-between gap-2.5">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.2 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 mb-1">
-                <Car className="w-2.5 h-2.5 text-emerald-500" />
-                Fleet &amp; Fixed Fares
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200/90 mb-1 shadow-2xs">
+                <Car className="w-3 h-3 text-emerald-700 shrink-0" />
+                <span>Fleet &amp; Fixed Fares</span>
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-primary">Choose Your Vehicle</h2>
-              <p className="text-[11px] text-muted mt-0.5">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 font-sans">Choose Your Vehicle</h2>
+              <p className="text-[11.5px] text-slate-600 mt-0.5">
                 Exact fixed fares verified by Al Harmain operations. No meter, no surge.
               </p>
             </div>
@@ -1009,12 +1010,12 @@ export default function FixedFareBookingPanel({
           {/* Header */}
           <div className="flex items-start justify-between gap-2.5">
             <div>
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 mb-0.5">
-                <User className="w-2.5 h-2.5 text-emerald-500" />
-                Step 4 of 5
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200/90 mb-1 shadow-2xs">
+                <User className="w-3 h-3 text-emerald-700 shrink-0" />
+                <span>Step 4 of 5</span>
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-primary">Passenger &amp; Schedule</h2>
-              <p className="text-[11px] text-muted">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 font-sans">Passenger &amp; Schedule</h2>
+              <p className="text-[11.5px] text-slate-600 mt-0.5">
                 Provide passenger details and exact pickup timing for your VIP chauffeur.
               </p>
             </div>
@@ -1172,12 +1173,12 @@ export default function FixedFareBookingPanel({
           {/* Header */}
           <div className="flex items-start justify-between gap-2.5">
             <div>
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mb-0.5">
-                <Receipt className="w-2.5 h-2.5 text-amber-500" />
-                Final Step 5 of 5
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-200/90 mb-1 shadow-2xs">
+                <Receipt className="w-3 h-3 text-amber-700 shrink-0" />
+                <span>Final Step 5 of 5</span>
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-primary">Summary &amp; Payment Proof</h2>
-              <p className="text-[11px] text-muted">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 font-sans">Summary &amp; Payment Proof</h2>
+              <p className="text-[11.5px] text-slate-600 mt-0.5">
                 Review your VIP itinerary and upload transfer confirmation screenshot.
               </p>
             </div>

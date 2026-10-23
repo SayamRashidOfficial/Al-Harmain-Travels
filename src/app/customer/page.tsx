@@ -1118,11 +1118,11 @@ export default function CustomerHomePage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs">{isRTL ? 'حجز بأسعار ثابتة' : 'Fixed Fare Booking'}</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[9.5px] font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200/90 shadow-2xs">
                 {isRTL ? 'أسعار محددة' : 'Predefined Rates'}
               </span>
             </div>
-            <p className="text-[10.5px] text-muted mt-0.5 leading-snug">
+            <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
               {isRTL ? 'مسارات مسبقة التحديد (جدة، مكة، المدينة، المزارات) بأسعار ثابتة ومضمونة.' : 'Predefined routes (Jeddah, Makkah, Madinah, Ziyarat) with guaranteed fixed prices.'}
             </p>
           </div>
@@ -1147,11 +1147,11 @@ export default function CustomerHomePage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs">{isRTL ? 'حجز مسار مخصص' : 'Custom Route Booking'}</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[9.5px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-amber-50 text-amber-900 border border-amber-200/90 shadow-2xs">
                 {isRTL ? 'بتأكيد الترحيل' : 'Dispatcher Confirmed'}
               </span>
             </div>
-            <p className="text-[10.5px] text-muted mt-0.5 leading-snug">
+            <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
               {isRTL ? 'حدد نقطة الانطلاق والوجهة مع توقفات اختيارية. يتم تأكيد السعر من قبل المشرف.' : 'Choose your own pickup & destination with optional stops. Fare confirmed by dispatcher.'}
             </p>
           </div>

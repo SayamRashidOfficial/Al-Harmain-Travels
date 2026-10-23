@@ -358,11 +358,11 @@ export default function CustomRouteBookingPanel({
           {/* Current Active Step Banner with percentage and back button */}
           <div className="pt-1.5 border-t border-base/50 flex items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-200/90 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
                 Step {currentStepIndex + 1} of 4
               </span>
-              <span className="font-bold text-primary truncate text-xs">
+              <span className="font-bold text-slate-900 font-sans truncate text-xs">
                 {STEPS_CONFIG[currentStepIndex].fullTitle}
               </span>
             </div>
@@ -490,11 +490,12 @@ export default function CustomRouteBookingPanel({
               {/* Header Info */}
               <div className="flex items-start justify-between gap-2.5">
                 <div>
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mb-0.5">
-                    <Navigation className="w-2.5 h-2.5 text-amber-500" /> Dispatcher Confirmed Route
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-200/90 mb-1 shadow-2xs">
+                    <Navigation className="w-3 h-3 text-amber-700 shrink-0" />
+                    <span>Dispatcher Confirmed Route</span>
                   </div>
-                  <h2 className="text-sm sm:text-base font-bold text-primary">Define Your Custom Route</h2>
-                  <p className="text-[11px] text-muted">
+                  <h2 className="text-sm sm:text-base font-bold text-slate-900 font-sans">Define Your Custom Route</h2>
+                  <p className="text-[11.5px] text-slate-600 mt-0.5">
                     Specify any pickup, destination, and intermediate stops. Our operations desk will quote you directly.
                   </p>
                 </div>
@@ -730,11 +731,12 @@ export default function CustomRouteBookingPanel({
             <div className="p-3.5 sm:p-4 space-y-3 animate-fade-in">
               <div className="flex items-start justify-between gap-2.5">
                 <div>
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mb-0.5">
-                    <Car className="w-2.5 h-2.5 text-amber-500" /> VIP Fleet Selection
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-200/90 mb-1 shadow-2xs">
+                    <Car className="w-3 h-3 text-amber-700 shrink-0" />
+                    <span>VIP Fleet Selection</span>
                   </div>
-                  <h2 className="text-sm sm:text-base font-bold text-primary">Choose Preferred Vehicle</h2>
-                  <p className="text-[11px] text-muted">
+                  <h2 className="text-sm sm:text-base font-bold text-slate-900 font-sans">Choose Preferred Vehicle</h2>
+                  <p className="text-[11.5px] text-slate-600 mt-0.5">
                     Select the ideal VIP vehicle category for your custom route itinerary.
                   </p>
                 </div>
@@ -849,11 +851,12 @@ export default function CustomRouteBookingPanel({
             <form onSubmit={handleProceedToReview} className="p-3.5 sm:p-4 space-y-3 animate-fade-in text-xs">
               <div className="flex items-start justify-between gap-2.5">
                 <div>
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mb-0.5">
-                    <Calendar className="w-2.5 h-2.5 text-amber-500" /> Schedule &amp; Contact
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-200/90 mb-1 shadow-2xs">
+                    <Calendar className="w-3 h-3 text-amber-700 shrink-0" />
+                    <span>Schedule &amp; Contact</span>
                   </div>
-                  <h2 className="text-sm sm:text-base font-bold text-primary">Schedule &amp; Passenger Information</h2>
-                  <p className="text-[11px] text-muted">
+                  <h2 className="text-sm sm:text-base font-bold text-slate-900 font-sans">Schedule &amp; Passenger Information</h2>
+                  <p className="text-[11.5px] text-slate-600 mt-0.5">
                     Provide your travel details so our operations desk can coordinate vehicle dispatch and contact you.
                   </p>
                 </div>
@@ -1000,11 +1003,12 @@ export default function CustomRouteBookingPanel({
             <div className="p-3.5 sm:p-4 space-y-3 animate-fade-in text-xs">
               <div className="flex items-start justify-between gap-2.5">
                 <div>
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mb-0.5">
-                    <ShieldCheck className="w-2.5 h-2.5 text-amber-500" /> Dispatcher Itinerary Review
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-200/90 mb-1 shadow-2xs">
+                    <ShieldCheck className="w-3 h-3 text-amber-700 shrink-0" />
+                    <span>Dispatcher Itinerary Review</span>
                   </div>
-                  <h2 className="text-sm sm:text-base font-bold text-primary">Review Journey &amp; Submit</h2>
-                  <p className="text-[11px] text-muted">
+                  <h2 className="text-sm sm:text-base font-bold text-slate-900 font-sans">Review Journey &amp; Submit</h2>
+                  <p className="text-[11.5px] text-slate-600 mt-0.5">
                     Verify your custom route specifications. Our dispatch desk will confirm the best direct fare.
                   </p>
                 </div>
