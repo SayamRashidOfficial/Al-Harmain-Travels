@@ -11,10 +11,8 @@ import {
   ShieldCheck,
   ChevronRight,
   ChevronLeft,
-  Globe,
   LogOut,
   Sliders,
-  ExternalLink,
 } from 'lucide-react';
 import { ADMIN_NAV_SECTIONS } from './AdminDashboardShell';
 
@@ -294,21 +292,6 @@ export default function AdminMobileSidebar({ isOpen, onClose }: AdminMobileSideb
 
         {/* SIGN OUT & FOOTER */}
         <div className="p-3 border-t border-slate-200/90 shrink-0 bg-slate-50/80 space-y-2">
-          <Link
-            href="/"
-            onClick={onClose}
-            className="flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-950 hover:bg-white border border-slate-200/90 transition-colors group"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                <Globe className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-xs font-bold text-slate-900">
-                {isRTL ? 'الموقع العام' : 'Public Website'}
-              </span>
-            </div>
-            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-          </Link>
 
           <button
             type="button"

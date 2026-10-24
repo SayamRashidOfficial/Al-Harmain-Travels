@@ -6,21 +6,28 @@ import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { useLanguage } from '@/context/LanguageContext';
 import {
+  Compass,
   LayoutDashboard,
+  CalendarCheck,
+  CreditCard,
+  UserCheck,
+  Truck,
   Users,
-  Sparkles,
+  UserCog,
   Receipt,
-  DollarSign,
+  Route,
+  Wallet,
+  Star,
+  Bell,
+  BarChart3,
   FileText,
-  Sliders,
-  Globe,
+  Settings,
   LogOut,
   Shield,
   ShieldCheck,
-  ExternalLink,
-  Star,
+  Sparkles,
+  UserCircle,
 } from 'lucide-react';
-import { BrandEmblem } from '@/components/ui/BrandLogo';
 
 export interface AdminNavItem {
   href: string;
@@ -54,22 +61,52 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     title: 'Operations',
     items: [
       {
+        href: '/admin/bookings',
+        label: 'Bookings',
+        subtitle: 'Global Book Registry',
+        icon: CalendarCheck,
+      },
+      {
+        href: '/admin/dispatch',
+        label: 'Live Dispatch',
+        subtitle: 'Telemetry & Assignments',
+        icon: Compass,
+      },
+      {
+        href: '/admin/payments',
+        label: 'Payments',
+        subtitle: 'Verification & History',
+        icon: CreditCard,
+      },
+      {
+        href: '/admin/drivers',
+        label: 'Drivers',
+        subtitle: 'Chauffeur Management',
+        icon: UserCheck,
+      },
+      {
+        href: '/admin/fleet',
+        label: 'Fleet & Vehicles',
+        subtitle: 'Vehicle Registry',
+        icon: Truck,
+      },
+      {
         href: '/admin/users',
-        label: 'Users & Access',
-        subtitle: 'Staff, Drivers & Pilgrims',
+        label: 'Users & Roles',
+        subtitle: 'Global Accounts & RBAC',
         icon: Users,
       },
       {
-        href: '/admin/reviews',
-        label: 'Reviews & Ratings',
-        subtitle: 'Chauffeur & Ride Quality',
-        icon: Star,
+        href: '/admin/customers',
+        label: 'Customers',
+        subtitle: 'Pilgrim Profiles',
+        icon: Users,
       },
       {
-        href: '/admin/services',
-        label: 'Services CMS',
-        subtitle: 'Marketing & Packages',
-        icon: Sparkles,
+        href: '/admin/staff',
+        label: 'Dispatchers & Staff',
+        subtitle: 'Role & Access Control',
+        icon: UserCog,
       },
     ],
   },
@@ -78,15 +115,21 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     items: [
       {
         href: '/admin/rates',
-        label: 'Rates & Tariff',
-        subtitle: 'Fixed Fare Master',
+        label: 'Fixed Fares',
+        subtitle: 'Rate Master',
         icon: Receipt,
       },
       {
-        href: '/admin/reports',
-        label: 'Reports & Ledger',
-        subtitle: 'Reconciliation & Tax',
-        icon: DollarSign,
+        href: '/admin/routes',
+        label: 'Routes & Areas',
+        subtitle: 'Service Zones',
+        icon: Route,
+      },
+      {
+        href: '/admin/earnings',
+        label: 'Driver Earnings',
+        subtitle: 'Payroll & Settlement',
+        icon: Wallet,
       },
     ],
   },
@@ -94,16 +137,51 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     title: 'Governance',
     items: [
       {
+        href: '/admin/reviews',
+        label: 'Reviews & Ratings',
+        subtitle: 'Ride Quality',
+        icon: Star,
+      },
+      {
+        href: '/admin/notifications',
+        label: 'Notifications',
+        subtitle: 'System Alerts',
+        icon: Bell,
+      },
+      {
+        href: '/admin/analytics',
+        label: 'Reports & Analytics',
+        subtitle: 'Business Intelligence',
+        icon: BarChart3,
+      },
+      {
         href: '/admin/audit-logs',
         label: 'Audit Logs',
         subtitle: 'Security & Activities',
         icon: FileText,
       },
+    ],
+  },
+  {
+    title: 'System',
+    items: [
       {
         href: '/admin/settings',
-        label: 'System Settings',
-        subtitle: 'Company & Dynamic Fare',
-        icon: Sliders,
+        label: 'Settings',
+        subtitle: 'Company & Policies',
+        icon: Settings,
+      },
+      {
+        href: '/admin/services',
+        label: 'Services CMS',
+        subtitle: 'Marketing Packages',
+        icon: Sparkles,
+      },
+      {
+        href: '/admin/profile',
+        label: 'Admin Profile',
+        subtitle: 'Account & Security',
+        icon: UserCircle,
       },
     ],
   },
@@ -155,6 +233,13 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
     return bookings.filter((b) => b.status === 'pending').length;
   }, [bookings]);
 
+  // Unread notifications count for Notifications badge
+  const pendingPaymentsCount = useMemo(() => {
+    return bookings.filter(
+      (b) => b.payment_status === 'pending' && b.payment_screenshot_url
+    ).length;
+  }, [bookings]);
+
   // Mobile Bottom Navigation Bar Links (5 primary modules)
   const mobileNavLinks = [
     {
@@ -165,30 +250,30 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
       badge: pendingCount > 0 ? pendingCount : null,
     },
     {
-      href: '/admin/users',
-      label: isRTL ? 'المستخدمين' : 'Users',
-      icon: Users,
+      href: '/admin/bookings',
+      label: isRTL ? 'الحجوزات' : 'Bookings',
+      icon: CalendarCheck,
       exact: false,
       badge: null,
     },
     {
-      href: '/admin/rates',
-      label: isRTL ? 'الأسعار' : 'Tariff',
-      icon: Receipt,
+      href: '/admin/drivers',
+      label: isRTL ? 'السائقون' : 'Drivers',
+      icon: UserCheck,
       exact: false,
       badge: null,
     },
     {
-      href: '/admin/reports',
-      label: isRTL ? 'التقارير' : 'Reports',
-      icon: DollarSign,
+      href: '/admin/earnings',
+      label: isRTL ? 'الأرباح' : 'Earnings',
+      icon: Wallet,
       exact: false,
       badge: null,
     },
     {
       href: '/admin/settings',
       label: isRTL ? 'الإعدادات' : 'Settings',
-      icon: Sliders,
+      icon: Settings,
       exact: false,
       badge: null,
     },
@@ -202,36 +287,16 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
       case 'Operations': return isRTL ? 'العمليات' : 'Operations';
       case 'Tariff & Finance': return isRTL ? 'التعريفات والمالية' : 'Tariff & Finance';
       case 'Governance': return isRTL ? 'الحوكمة والأمان' : 'Governance';
+      case 'System': return isRTL ? 'النظام' : 'System';
       default: return title;
     }
   };
 
-  const getItemLabel = (item: AdminNavItem) => {
-    switch (item.href) {
-      case '/admin': return t('nav.overview', item.label);
-      case '/admin/users': return t('nav.users', item.label);
-      case '/admin/reviews': return t('nav.reviews', item.label);
-      case '/admin/services': return t('nav.services', item.label);
-      case '/admin/rates': return t('nav.rates', item.label);
-      case '/admin/reports': return t('nav.reports', item.label);
-      case '/admin/audit-logs': return t('nav.auditLogs', item.label);
-      case '/admin/settings': return t('nav.settings', item.label);
-      default: return item.label;
-    }
-  };
-
-  const getItemSubtitle = (item: AdminNavItem) => {
-    switch (item.href) {
-      case '/admin': return t('nav.overviewSub', item.subtitle);
-      case '/admin/users': return t('nav.usersSub', item.subtitle);
-      case '/admin/reviews': return t('nav.reviewsSub', item.subtitle);
-      case '/admin/services': return t('nav.servicesSub', item.subtitle);
-      case '/admin/rates': return t('nav.ratesSub', item.subtitle);
-      case '/admin/reports': return t('nav.reportsSub', item.subtitle);
-      case '/admin/audit-logs': return t('nav.auditLogsSub', item.subtitle);
-      case '/admin/settings': return t('nav.settingsSub', item.subtitle);
-      default: return item.subtitle;
-    }
+  // Determine badge for nav items
+  const getItemBadge = (item: AdminNavItem): number | string | null | undefined => {
+    if (item.href === '/admin' && pendingCount > 0) return pendingCount;
+    if (item.href === '/admin/payments' && pendingPaymentsCount > 0) return pendingPaymentsCount;
+    return item.badge;
   };
 
   return (
@@ -310,7 +375,7 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
           aria-label="Executive Admin Navigation Links"
         >
           {ADMIN_NAV_SECTIONS.map((section, sIdx) => (
-            <div key={section.title} className="space-y-1">
+            <div key={section.title} className="space-y-0.5">
               {/* Section Divider / Label */}
               {sIdx > 0 && (
                 <div className="py-0.5">
@@ -339,7 +404,7 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
                   ? pathname === item.href
                   : pathname === item.href || pathname.startsWith(item.href + '/');
 
-                const itemBadge = item.href === '/admin' && pendingCount > 0 ? pendingCount : item.badge;
+                const itemBadge = getItemBadge(item);
 
                 return (
                   <Link
@@ -349,7 +414,7 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
                       e.currentTarget.blur();
                       setIsHovered(false);
                     }}
-                    className={`flex items-center rounded-xl font-medium text-xs transition-all duration-200 relative group/item h-11 w-full ${
+                    className={`flex items-center rounded-xl font-medium text-xs transition-all duration-200 relative group/item h-10 w-full ${
                       isActive
                         ? 'bg-emerald-600 text-white font-bold shadow-sm shadow-emerald-900/20'
                         : 'text-secondary hover:text-primary hover:bg-elevated border border-transparent hover:border-base'
@@ -382,7 +447,7 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1.5">
-                        <span className="truncate text-xs font-semibold">{getItemLabel(item)}</span>
+                        <span className="truncate text-xs font-semibold">{item.label}</span>
                         {itemBadge && (
                           <span
                             className={`shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
@@ -400,7 +465,7 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
                           isActive ? 'text-emerald-100' : 'text-slate-500'
                         }`}
                       >
-                        {getItemSubtitle(item)}
+                        {item.subtitle}
                       </span>
                     </div>
                   </Link>
@@ -410,37 +475,8 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
           ))}
         </nav>
 
-        {/* Sidebar Footer: Public Website & Sign Out */}
-        <div className="p-2 border-t border-slate-200 bg-white mt-auto shrink-0 space-y-1">
-          {/* Public Live Website */}
-          <Link
-            href="/"
-            onClick={(e) => {
-              e.currentTarget.blur();
-              setIsHovered(false);
-            }}
-            className="flex items-center rounded-xl text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer h-11 w-full border border-transparent hover:border-slate-200 group/item"
-            title={isRTL ? 'الموقع العام' : 'Public Website'}
-          >
-            <div className="w-12 h-10 flex items-center justify-center shrink-0">
-              <Globe className="w-4 h-4 text-amber-500 shrink-0 transition-transform group-hover/item:rotate-12" />
-            </div>
-            <div
-              className={`flex-1 min-w-0 ${
-                isRTL ? 'pr-1.5 pl-2 text-right' : 'pl-1.5 pr-2 text-left'
-              } overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
-                isHovered
-                  ? 'opacity-100 max-w-[170px] translate-x-0 pointer-events-auto'
-                  : `opacity-0 max-w-0 pointer-events-none ${slideHiddenClass} group-hover/sidebar:opacity-100 group-hover/sidebar:max-w-[170px] group-hover/sidebar:translate-x-0 group-hover/sidebar:pointer-events-auto`
-              }`}
-            >
-              <div className="flex items-center justify-between gap-1.5">
-                <span className="truncate font-semibold">{isRTL ? 'الموقع العام' : 'Public Website'}</span>
-                <ExternalLink className="w-3 h-3 text-slate-400 shrink-0" />
-              </div>
-            </div>
-          </Link>
-
+        {/* Sidebar Footer: Sign Out */}
+        <div className="p-2 border-t border-slate-200 bg-white mt-auto shrink-0">
           {/* Sign Out */}
           <button
             type="button"
@@ -449,7 +485,7 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
               setIsHovered(false);
               signOut();
             }}
-            className="w-full flex items-center rounded-xl text-xs font-semibold text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer h-11"
+            className="w-full flex items-center rounded-xl text-xs font-semibold text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer h-10"
             aria-label={t('signOut', 'Sign Out')}
           >
             <div className="w-12 h-10 flex items-center justify-center shrink-0">
@@ -467,29 +503,6 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
               <span className="truncate font-semibold">{t('signOut', 'Sign Out')} HQ</span>
             </div>
           </button>
-
-          {/* Official Brand Stamp */}
-          <div className="pt-1.5 border-t border-base/60">
-            <div className="flex items-center h-7 px-1">
-              <div className="w-12 h-7 flex items-center justify-center shrink-0">
-                <BrandEmblem size="xs" className="scale-75" />
-              </div>
-              <div
-                className={`flex-1 min-w-0 ${
-                  isRTL ? 'pr-1 pl-1 text-right' : 'pl-1 pr-1 text-left'
-                } overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
-                  isHovered
-                    ? 'opacity-100 max-w-[170px] pointer-events-auto'
-                    : `opacity-0 max-w-0 pointer-events-none group-hover/sidebar:opacity-100 group-hover/sidebar:max-w-[170px] group-hover/sidebar:pointer-events-auto`
-                }`}
-              >
-                <div className="flex items-center justify-between text-[10px] text-muted">
-                  <span className="font-semibold text-primary truncate">Al Harmain Travels</span>
-                  <span className="shrink-0 text-amber-500 font-bold ml-1">HQ</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </aside>
 

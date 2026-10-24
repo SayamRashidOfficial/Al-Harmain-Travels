@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Profile, Driver, Vehicle, UserRole, UserStatus } from '@/types';
+import { supabase } from '@/lib/supabase/client';
 import {
   Users,
   UserPlus,
@@ -36,6 +37,14 @@ import {
   Info,
   Star,
   MessageSquare,
+  RotateCcw,
+  Download,
+  CheckSquare,
+  Square,
+  MinusSquare,
+  MessageCircle,
+  Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TableSkeletonRows, StatCardSkeleton } from '@/components/ui/DataStateSkeletons';
@@ -45,6 +54,8 @@ import {
   AdminStatusBadge,
   AdminActionButton,
   AdminActionGroup,
+  AdminTableCard,
+  AdminPagination,
 } from '@/components/admin/AdminUIComponents';
 
 // Helper: Normalize phone numbers for duplicate checking
@@ -126,6 +137,13 @@ export default function AdminUsersPage() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'role'>('newest');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Pagination state (Matches Global Book Registry specification)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [paginatedUsers, setPaginatedUsers] = useState<Profile[]>([]);
+  const [totalFilteredCount, setTotalFilteredCount] = useState<number>(0);
+  const [isTableLoading, setIsTableLoading] = useState<boolean>(false);
+
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -175,17 +193,192 @@ export default function AdminUsersPage() {
   // Copy state
   const [hasCopiedCredentials, setHasCopiedCredentials] = useState(false);
 
+  // Batch Multi-Selection & Clipboard state
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [isBulkOperating, setIsBulkOperating] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [lastSyncedTime, setLastSyncedTime] = useState<Date>(new Date());
+
+  // Copy helper with feedback
+  const copyToClipboard = (text: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(`${label}-${text}`);
+    toast.success(`Copied ${label} to clipboard`);
+    setTimeout(() => {
+      setCopiedField(null);
+    }, 1500);
+  };
+
   // Refresh handler
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refreshData();
-      toast.success('User and driver records refreshed');
+      await Promise.all([refreshData(), fetchUsersPage()]);
+      setLastSyncedTime(new Date());
+      toast.success('User and chauffeur directory synchronized');
     } catch {
-      toast.error('Failed to refresh data');
+      toast.error('Failed to sync live data');
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  // Export current filtered / paginated roster to CSV
+  const handleExportCSV = () => {
+    if (paginatedUsers.length === 0) {
+      toast.error('No users available to export in current view');
+      return;
+    }
+    const headers = ['ID', 'Full Name', 'Email', 'Phone', 'Role', 'Status', 'Email Verified', 'Assigned Vehicle', 'Registered Date'];
+    const rows = paginatedUsers.map((u) => {
+      const d = getUserDriver(u.id);
+      const v = getDriverVehicle(d);
+      return [
+        `"${u.id}"`,
+        `"${(u.full_name || '').replace(/"/g, '""')}"`,
+        `"${(u.email || '').replace(/"/g, '""')}"`,
+        `"${(u.phone || '').replace(/"/g, '""')}"`,
+        `"${u.role}"`,
+        `"${u.status}"`,
+        `"${u.email_verified ? 'Yes' : 'No'}"`,
+        `"${v ? `${v.plate_number} - ${v.make} ${v.model}`.replace(/"/g, '""') : 'None'}"`,
+        `"${u.created_at || ''}"`,
+      ];
+    });
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `al_harmain_directory_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${paginatedUsers.length} user records to CSV`);
+  };
+
+  // Multi-select toggle helpers
+  const isAllSelected = paginatedUsers.length > 0 && paginatedUsers.every((u) => selectedUserIds.has(u.id));
+  const isSomeSelected = paginatedUsers.some((u) => selectedUserIds.has(u.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedUserIds(new Set());
+    } else {
+      setSelectedUserIds(new Set(paginatedUsers.map((u) => u.id)));
+    }
+  };
+
+  const toggleSelectUser = (id: string) => {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Bulk Operations Handlers
+  const handleBulkVerify = async () => {
+    if (selectedUserIds.size === 0) return;
+    setIsBulkOperating(true);
+    try {
+      const ids = Array.from(selectedUserIds);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ email_verified: true, updated_at: new Date().toISOString() })
+        .in('id', ids);
+      if (error) throw error;
+      toast.success(`Marked ${ids.length} account${ids.length === 1 ? '' : 's'} as verified`);
+      setSelectedUserIds(new Set());
+      await fetchUsersPage();
+    } catch {
+      toast.error('Failed to update email verification for selected users');
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkActivate = async () => {
+    if (selectedUserIds.size === 0) return;
+    setIsBulkOperating(true);
+    try {
+      const ids = Array.from(selectedUserIds);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .in('id', ids);
+      if (error) throw error;
+      toast.success(`Activated ${ids.length} account${ids.length === 1 ? '' : 's'}`);
+      setSelectedUserIds(new Set());
+      await fetchUsersPage();
+    } catch {
+      toast.error('Failed to activate selected users');
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkDeactivate = async () => {
+    if (selectedUserIds.size === 0) return;
+    const ids = Array.from(selectedUserIds).filter((id) => id !== currentUser?.id);
+    if (ids.length === 0) {
+      toast.error('You cannot deactivate your own administrative session account.');
+      return;
+    }
+    setIsBulkOperating(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: 'deactivated', updated_at: new Date().toISOString() })
+        .in('id', ids);
+      if (error) throw error;
+      toast.success(`Deactivated ${ids.length} account${ids.length === 1 ? '' : 's'}`);
+      setSelectedUserIds(new Set());
+      await fetchUsersPage();
+    } catch {
+      toast.error('Failed to deactivate selected users');
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  // Customer Bookings lookup helper
+  const getCustomerBookings = (userId: string, email?: string | null, phone?: string | null) => {
+    if (!bookings || bookings.length === 0) return [];
+    const cleanP = phone ? normalizePhone(phone) : '';
+    const cleanE = email ? email.trim().toLowerCase() : '';
+    return bookings.filter((b) => {
+      if (b.customer_id === userId) return true;
+      if (cleanE && b.customer?.email?.toLowerCase() === cleanE) return true;
+      if (cleanP && b.passenger_phone && normalizePhone(b.passenger_phone) === cleanP) return true;
+      return false;
+    });
+  };
+
+  // Driver Ratings calculation helper
+  const getDriverRatingStats = (userId: string) => {
+    const driver = getUserDriver(userId);
+    if (!driver) return null;
+    const driverReviews = ratings.filter((r) => r.driver_id === driver.id || r.driver_id === userId);
+    const totalReviews = driverReviews.length;
+    if (totalReviews === 0) {
+      return {
+        average: driver.rating ? Number(driver.rating).toFixed(1) : 'New',
+        count: 0,
+        rides: driver.total_rides || 0,
+      };
+    }
+    const sum = driverReviews.reduce((acc, r) => acc + (r.rating || 5), 0);
+    const average = (sum / totalReviews).toFixed(1);
+    return {
+      average,
+      count: totalReviews,
+      rides: driver.total_rides || totalReviews,
+    };
   };
 
   // Dynamically load active vehicles from Rates module ONLY (deduplicated & active)
@@ -289,21 +482,104 @@ export default function AdminUsersPage() {
     };
   }, [usersList, drivers, activeRateVehicles]);
 
-  // Filtered Users List
-  const filteredUsers = useMemo(() => {
-    return usersList
-      .filter((u) => {
-        // Role tab filter
+  // ── Server-Side Profiles Pagination with Resilient Fallback ──────────────
+  const fetchUsersPage = useCallback(async () => {
+    setIsTableLoading(true);
+    try {
+      let query = supabase.from('profiles').select('*', { count: 'exact' });
+
+      // 1. Role Filter
+      if (activeRoleTab !== 'all') {
+        query = query.eq('role', activeRoleTab);
+      }
+
+      // 2. Status Filter
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+
+      // 3. Verification Filter
+      if (verificationFilter === 'verified') {
+        query = query.eq('email_verified', true);
+      } else if (verificationFilter === 'unverified') {
+        query = query.or('email_verified.is.null,email_verified.eq.false');
+      }
+
+      // 4. Vehicle Assignment Filter
+      if (vehicleFilter !== 'all') {
+        const assignedDriverUserIds = drivers
+          .filter((d) => Boolean(d.assigned_vehicle_id))
+          .map((d) => d.id);
+
+        if (vehicleFilter === 'assigned') {
+          if (assignedDriverUserIds.length > 0) {
+            query = query.in('id', assignedDriverUserIds);
+          } else {
+            query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+          }
+        } else if (vehicleFilter === 'unassigned') {
+          if (assignedDriverUserIds.length > 0) {
+            query = query.not('id', 'in', `(${assignedDriverUserIds.join(',')})`);
+          }
+        }
+      }
+
+      // 5. Search
+      if (search.trim()) {
+        const q = search.trim();
+        const term = `%${q}%`;
+
+        // Check if search matches any driver plate, license, or make
+        const matchingDriverUserIds = drivers
+          .filter((d) => {
+            const veh = getDriverVehicle(d);
+            const licenseMatch = d.license_number?.toLowerCase().includes(q.toLowerCase());
+            const plateMatch = veh?.plate_number?.toLowerCase().includes(q.toLowerCase());
+            const modelMatch = `${veh?.make} ${veh?.model}`.toLowerCase().includes(q.toLowerCase());
+            return licenseMatch || plateMatch || modelMatch;
+          })
+          .map((d) => d.id);
+
+        if (matchingDriverUserIds.length > 0) {
+          query = query.or(
+            `full_name.ilike.${term},email.ilike.${term},phone.ilike.${term},id.in.(${matchingDriverUserIds.join(',')})`
+          );
+        } else {
+          query = query.or(`full_name.ilike.${term},email.ilike.${term},phone.ilike.${term}`);
+        }
+      }
+
+      // 6. Sorting
+      if (sortBy === 'oldest') {
+        query = query.order('created_at', { ascending: true });
+      } else if (sortBy === 'name') {
+        query = query.order('full_name', { ascending: true });
+      } else if (sortBy === 'role') {
+        query = query.order('role', { ascending: true });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      // 7. Pagination Range
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+      if (error) throw error;
+
+      setPaginatedUsers((data as Profile[]) || []);
+      setTotalFilteredCount(count ?? 0);
+    } catch (err) {
+      console.warn('Supabase profiles query notice, falling back to cached local state:', err);
+
+      // Resilient local fallback from AppContext usersList
+      const filtered = usersList.filter((u) => {
         if (activeRoleTab !== 'all' && u.role !== activeRoleTab) return false;
-
-        // Status filter
         if (statusFilter !== 'all' && u.status !== statusFilter) return false;
-
-        // Email Verification filter
         if (verificationFilter === 'verified' && !u.email_verified) return false;
         if (verificationFilter === 'unverified' && u.email_verified) return false;
 
-        // Vehicle assignment filter (for drivers or all)
         if (vehicleFilter !== 'all') {
           const d = getUserDriver(u.id);
           const hasVehicle = Boolean(d?.assigned_vehicle_id);
@@ -311,7 +587,6 @@ export default function AdminUsersPage() {
           if (vehicleFilter === 'unassigned' && d && hasVehicle) return false;
         }
 
-        // Live Search query
         if (search.trim()) {
           const q = search.trim().toLowerCase();
           const d = getUserDriver(u.id);
@@ -325,29 +600,102 @@ export default function AdminUsersPage() {
           const matchesPlate = veh?.plate_number?.toLowerCase().includes(q);
           const matchesModel = `${veh?.make} ${veh?.model}`.toLowerCase().includes(q);
 
-          return (
-            matchesName ||
-            matchesEmail ||
-            matchesPhone ||
-            matchesId ||
-            matchesLicense ||
-            matchesPlate ||
-            matchesModel
-          );
+          return matchesName || matchesEmail || matchesPhone || matchesId || matchesLicense || matchesPlate || matchesModel;
         }
 
         return true;
-      })
-      .sort((a, b) => {
+      });
+
+      filtered.sort((a, b) => {
         if (sortBy === 'name') return a.full_name.localeCompare(b.full_name);
         if (sortBy === 'role') return a.role.localeCompare(b.role);
         if (sortBy === 'oldest') {
           return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
         }
-        // Default newest
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
-  }, [usersList, activeRoleTab, statusFilter, verificationFilter, vehicleFilter, search, sortBy, drivers, vehicles, rateVehicles]);
+
+      setTotalFilteredCount(filtered.length);
+      const from = (currentPage - 1) * pageSize;
+      setPaginatedUsers(filtered.slice(from, from + pageSize));
+    } finally {
+      setIsTableLoading(false);
+    }
+  }, [
+    currentPage,
+    pageSize,
+    activeRoleTab,
+    statusFilter,
+    verificationFilter,
+    vehicleFilter,
+    search,
+    sortBy,
+    usersList,
+    drivers,
+    rateVehicles,
+  ]);
+
+  // Trigger fetch when pagination, search, or filters change
+  useEffect(() => {
+    fetchUsersPage();
+  }, [fetchUsersPage]);
+
+  // Reset page to 1 when search, filters, or page size change
+  const handleRoleTabChange = (tab: 'all' | 'customer' | 'dispatcher' | 'driver' | 'admin') => {
+    setActiveRoleTab(tab);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (status: 'all' | 'active' | 'suspended' | 'deactivated') => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  };
+
+  const handleVerificationFilterChange = (ver: 'all' | 'verified' | 'unverified') => {
+    setVerificationFilter(ver);
+    setCurrentPage(1);
+  };
+
+  const handleVehicleFilterChange = (veh: 'all' | 'assigned' | 'unassigned') => {
+    setVehicleFilter(veh);
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (sort: 'newest' | 'oldest' | 'name' | 'role') => {
+    setSortBy(sort);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setActiveRoleTab('all');
+    setSearch('');
+    setStatusFilter('all');
+    setVerificationFilter('all');
+    setVehicleFilter('all');
+    setSortBy('newest');
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      activeRoleTab !== 'all' ||
+      Boolean(search.trim()) ||
+      statusFilter !== 'all' ||
+      verificationFilter !== 'all' ||
+      vehicleFilter !== 'all' ||
+      sortBy !== 'newest'
+    );
+  }, [activeRoleTab, search, statusFilter, verificationFilter, vehicleFilter, sortBy]);
 
   // Duplicate checks in real time for Add User
   const addEmailDuplicateWarning = useMemo(() => {
@@ -512,6 +860,7 @@ export default function AdminUsersPage() {
         setAddLicenseNumber('');
         setAddNationalId('');
         setAddAssignedVehicleId('');
+        await fetchUsersPage();
       }
     } finally {
       setIsSubmittingAdd(false);
@@ -577,6 +926,7 @@ export default function AdminUsersPage() {
 
       if (res.success) {
         setIsEditModalOpen(false);
+        await fetchUsersPage();
       }
     } finally {
       setIsSubmittingEdit(false);
@@ -593,6 +943,7 @@ export default function AdminUsersPage() {
       const res = await adminAssignVehicle(vehicleModalDriver.id, targetVehicleId);
       if (res.success) {
         setIsVehicleModalOpen(false);
+        await fetchUsersPage();
       }
     } finally {
       setIsSubmittingVehicle(false);
@@ -613,6 +964,7 @@ export default function AdminUsersPage() {
       if (ok) {
         setIsDeleteModalOpen(false);
         setIsDetailsModalOpen(false);
+        await fetchUsersPage();
       }
     } finally {
       setIsDeleting(false);
@@ -622,7 +974,20 @@ export default function AdminUsersPage() {
   // Toggle Verification 1-click
   const handleToggleVerification = async (user: Profile) => {
     const newVerifiedState = !user.email_verified;
-    await adminUpdateUser(user.id, { email_verified: newVerifiedState });
+    const res = await adminUpdateUser(user.id, { email_verified: newVerifiedState });
+    if (res?.success) {
+      await fetchUsersPage();
+    }
+  };
+
+  // Toggle Status 1-click
+  const handleToggleStatus = async (userId: string) => {
+    try {
+      await toggleUserStatus(userId);
+      await fetchUsersPage();
+    } catch {
+      toast.error('Failed to update user status');
+    }
   };
 
   // Role Badge Component
@@ -691,173 +1056,222 @@ export default function AdminUsersPage() {
       {/* ── Top Executive Banner ────────────────────────────────────────── */}
       <AdminPageHeader
         eyebrow="Administration & Access Control"
-        badge="v2.8 Enterprise"
+        badge="v2.8 Enterprise • Live Supabase"
         title="User & Chauffeur Directory"
-        description="Manage authenticated pilgrims, onboarding staff dispatchers, and licensed VIP captains. Configure vehicle assignments, enforce identity verification, and safeguard account statuses."
+        description="Centralized directory of pilgrims, customer accounts, control desk staff, and licensed VIP captains. Seamlessly manage vehicle assignments, verify identities, and safeguard account access."
       >
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          title="Refresh database records"
-          className="px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-surface border border-base text-secondary hover:text-primary hover:bg-elevated transition-all flex items-center gap-2 cursor-pointer shadow-xs"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-500' : ''}`} />
-          <span>Sync Data</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setAddRole('dispatcher');
-            setCreatedCredentials(null);
-            setIsAddModalOpen(true);
-          }}
-          className="px-4 py-2.5 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-500 text-white shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>+ Add Staff</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setAddRole('driver');
-            setCreatedCredentials(null);
-            setIsAddModalOpen(true);
-          }}
-          className="px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
-        >
-          <Car className="w-4 h-4" />
-          <span>+ Add Driver</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setAddRole('customer');
-            setCreatedCredentials(null);
-            setIsAddModalOpen(true);
-          }}
-          className="px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>+ Add User</span>
-        </button>
-      </AdminPageHeader>
-
-      {/* ── Summary KPI Metric Cards ──────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-        <AdminStatCard
-          title="Total Directory"
-          value={metrics.total}
-          subtitle={`${metrics.active} active accounts`}
-          icon={<Users className="w-4.5 h-4.5" />}
-          tone="neutral"
-        />
-
-        <AdminStatCard
-          title="Pilgrims / Customers"
-          value={metrics.customers}
-          subtitle="Registered bookers"
-          icon={<Users className="w-4.5 h-4.5" />}
-          tone="green"
-        />
-
-        <AdminStatCard
-          title="Dispatch Officers"
-          value={metrics.dispatchers}
-          subtitle="Active control desk"
-          icon={<ShieldCheck className="w-4.5 h-4.5" />}
-          tone="blue"
-        />
-
-        <AdminStatCard
-          title="Fleet Chauffeurs"
-          value={metrics.driverProfiles}
-          subtitle={`${metrics.driversWithCars} allocated cars`}
-          icon={<Car className="w-4.5 h-4.5" />}
-          tone="amber"
-        />
-
-        <AdminStatCard
-          title="Email Verified"
-          value={metrics.verified}
-          subtitle={`${metrics.total > 0 ? Math.round((metrics.verified / metrics.total) * 100) : 0}% verification`}
-          icon={<CheckCircle2 className="w-4.5 h-4.5" />}
-          tone="green"
-          className="col-span-2 sm:col-span-1"
-        />
-      </div>
-
-      {/* ── Filters & Search Toolbar ─────────────────────────────────────── */}
-      <div className="bg-card border border-base p-4 rounded-3xl shadow-lg space-y-4">
-        {/* Role Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-base pb-3">
+        {/* Live sync & status indicator */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setActiveRoleTab('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeRoleTab === 'all'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-secondary hover:text-primary hover:bg-surface'
-            }`}
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            title={`Refresh database records (Last synced: ${lastSyncedTime.toLocaleTimeString()})`}
+            className="px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
           >
-            All Accounts ({usersList.length})
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-600' : 'text-slate-500'}`} />
+            <span>{isRefreshing ? 'Syncing…' : 'Sync Live'}</span>
           </button>
+
           <button
-            onClick={() => setActiveRoleTab('customer')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeRoleTab === 'customer'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-secondary hover:text-primary hover:bg-surface'
-            }`}
+            onClick={handleExportCSV}
+            title="Download CSV export of current directory view"
+            className="px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
           >
-            Customers ({metrics.customers})
-          </button>
-          <button
-            onClick={() => setActiveRoleTab('dispatcher')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeRoleTab === 'dispatcher'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-secondary hover:text-primary hover:bg-surface'
-            }`}
-          >
-            Staff / Dispatchers ({metrics.dispatchers})
-          </button>
-          <button
-            onClick={() => setActiveRoleTab('driver')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeRoleTab === 'driver'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-secondary hover:text-primary hover:bg-surface'
-            }`}
-          >
-            Fleet Drivers ({metrics.driverProfiles})
-          </button>
-          <button
-            onClick={() => setActiveRoleTab('admin')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeRoleTab === 'admin'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-secondary hover:text-primary hover:bg-surface'
-            }`}
-          >
-            Administrators ({metrics.admins})
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>Export CSV</span>
           </button>
         </div>
 
-        {/* Search & Filter Dropdowns */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+        {/* Quick Onboarding Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => {
+              setAddRole('dispatcher');
+              setCreatedCredentials(null);
+              setIsAddModalOpen(true);
+            }}
+            className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200 hover:bg-sky-100 hover:border-sky-300 shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-sky-600" />
+            <span>+ Staff</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setAddRole('driver');
+              setCreatedCredentials(null);
+              setIsAddModalOpen(true);
+            }}
+            className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Car className="w-3.5 h-3.5 text-amber-600" />
+            <span>+ Captain</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setAddRole('customer');
+              setCreatedCredentials(null);
+              setIsAddModalOpen(true);
+            }}
+            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>+ Add User</span>
+          </button>
+        </div>
+      </AdminPageHeader>
+
+      {/* ── Summary KPI Metric Cards (Interactive Click-to-Filter) ──────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        <div
+          onClick={() => {
+            handleRoleTabChange('all');
+            setVerificationFilter('all');
+          }}
+          className={`transition-all duration-200 cursor-pointer rounded-2xl ${
+            activeRoleTab === 'all' && verificationFilter === 'all'
+              ? 'ring-2 ring-emerald-600/50 shadow-xs'
+              : 'hover:-translate-y-0.5'
+          }`}
+          title="Click to view all accounts"
+        >
+          <AdminStatCard
+            title="Total Directory"
+            value={metrics.total}
+            subtitle={`${metrics.active} active accounts`}
+            icon={<Users className="w-4.5 h-4.5" />}
+            tone="neutral"
+          />
+        </div>
+
+        <div
+          onClick={() => handleRoleTabChange('customer')}
+          className={`transition-all duration-200 cursor-pointer rounded-2xl ${
+            activeRoleTab === 'customer'
+              ? 'ring-2 ring-emerald-600 shadow-xs'
+              : 'hover:-translate-y-0.5'
+          }`}
+          title="Click to filter by Pilgrims & Customers"
+        >
+          <AdminStatCard
+            title="Pilgrims / Customers"
+            value={metrics.customers}
+            subtitle="Registered bookers"
+            icon={<Users className="w-4.5 h-4.5" />}
+            tone="green"
+          />
+        </div>
+
+        <div
+          onClick={() => handleRoleTabChange('dispatcher')}
+          className={`transition-all duration-200 cursor-pointer rounded-2xl ${
+            activeRoleTab === 'dispatcher'
+              ? 'ring-2 ring-sky-600 shadow-xs'
+              : 'hover:-translate-y-0.5'
+          }`}
+          title="Click to filter by Dispatch & Staff"
+        >
+          <AdminStatCard
+            title="Dispatch Officers"
+            value={metrics.dispatchers}
+            subtitle="Active control desk"
+            icon={<ShieldCheck className="w-4.5 h-4.5" />}
+            tone="blue"
+          />
+        </div>
+
+        <div
+          onClick={() => handleRoleTabChange('driver')}
+          className={`transition-all duration-200 cursor-pointer rounded-2xl ${
+            activeRoleTab === 'driver'
+              ? 'ring-2 ring-amber-600 shadow-xs'
+              : 'hover:-translate-y-0.5'
+          }`}
+          title="Click to filter by Fleet Captains"
+        >
+          <AdminStatCard
+            title="Fleet Chauffeurs"
+            value={metrics.driverProfiles}
+            subtitle={`${metrics.driversWithCars} allocated cars`}
+            icon={<Car className="w-4.5 h-4.5" />}
+            tone="amber"
+          />
+        </div>
+
+        <div
+          onClick={() => handleVerificationFilterChange(verificationFilter === 'verified' ? 'all' : 'verified')}
+          className={`transition-all duration-200 cursor-pointer rounded-2xl col-span-2 sm:col-span-1 ${
+            verificationFilter === 'verified'
+              ? 'ring-2 ring-emerald-600 shadow-xs'
+              : 'hover:-translate-y-0.5'
+          }`}
+          title="Click to filter by Email Verified accounts"
+        >
+          <AdminStatCard
+            title="Email Verified"
+            value={metrics.verified}
+            subtitle={`${metrics.total > 0 ? Math.round((metrics.verified / metrics.total) * 100) : 0}% verified`}
+            icon={<CheckCircle2 className="w-4.5 h-4.5" />}
+            tone="green"
+          />
+        </div>
+      </div>
+
+      {/* ── Filters & Search Toolbar ─────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-xs space-y-4">
+        {/* Role Segment Tabs with counts */}
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-100 pb-3">
+          {[
+            { id: 'all', label: 'All Accounts', count: metrics.total },
+            { id: 'customer', label: 'Customers', count: metrics.customers },
+            { id: 'dispatcher', label: 'Staff / Dispatchers', count: metrics.dispatchers },
+            { id: 'driver', label: 'Fleet Drivers', count: metrics.driverProfiles },
+            { id: 'admin', label: 'Administrators', count: metrics.admins },
+          ].map((tab) => {
+            const isActive = activeRoleTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleRoleTabChange(tab.id as any)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  isActive
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent hover:border-slate-200'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200/60'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search & Filter Controls */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 text-xs">
           {/* Live Search */}
-          <div className="relative lg:col-span-2">
-            <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <div className="relative sm:col-span-2 lg:col-span-4">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by name, email, phone, plate, license..."
+              placeholder="Search name, email, phone, plate, license..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-input border border-base rounded-xl pl-10 pr-8 py-2.5 text-xs text-primary placeholder:text-muted focus:outline-none focus:border-emerald-500"
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-full bg-slate-50/70 border border-slate-200 rounded-xl pl-10 pr-8 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs transition-all"
             />
             {search && (
               <button
-                onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary"
+                type="button"
+                onClick={() => handleSearchChange('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer p-0.5"
+                title="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -865,11 +1279,11 @@ export default function AdminUsersPage() {
           </div>
 
           {/* Status Filter */}
-          <div>
+          <div className="lg:col-span-2">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full bg-input border border-base rounded-xl px-3 py-2.5 text-xs text-primary focus:outline-none focus:border-emerald-500"
+              onChange={(e) => handleStatusFilterChange(e.target.value as any)}
+              className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs cursor-pointer transition-all"
             >
               <option value="all">All Statuses</option>
               <option value="active">Active Only</option>
@@ -879,135 +1293,394 @@ export default function AdminUsersPage() {
           </div>
 
           {/* Verification Filter */}
-          <div>
+          <div className="lg:col-span-2">
             <select
               value={verificationFilter}
-              onChange={(e) => setVerificationFilter(e.target.value as any)}
-              className="w-full bg-input border border-base rounded-xl px-3 py-2.5 text-xs text-primary focus:outline-none focus:border-emerald-500"
+              onChange={(e) => handleVerificationFilterChange(e.target.value as any)}
+              className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs cursor-pointer transition-all"
             >
-              <option value="all">All Email Verifications</option>
+              <option value="all">All Verifications</option>
               <option value="verified">Verified Only (✓)</option>
               <option value="unverified">Unverified Only (⚠️)</option>
             </select>
           </div>
 
-          {/* Vehicle Assignment Filter (or Sort) */}
-          {activeRoleTab === 'driver' || activeRoleTab === 'all' ? (
-            <div>
-              <select
-                value={vehicleFilter}
-                onChange={(e) => setVehicleFilter(e.target.value as any)}
-                className="w-full bg-input border border-base rounded-xl px-3 py-2.5 text-xs text-primary focus:outline-none focus:border-emerald-500"
-              >
-                <option value="all">All Vehicle States</option>
-                <option value="assigned">Vehicle Assigned</option>
-                <option value="unassigned">No Car Assigned</option>
-              </select>
-            </div>
-          ) : (
-            <div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full bg-input border border-base rounded-xl px-3 py-2.5 text-xs text-primary focus:outline-none focus:border-emerald-500"
-              >
-                <option value="newest">Sort: Newest First</option>
-                <option value="oldest">Sort: Oldest First</option>
-                <option value="name">Sort: Name (A - Z)</option>
-                <option value="role">Sort: Role</option>
-              </select>
-            </div>
-          )}
+          {/* Vehicle Assignment Filter */}
+          <div className="lg:col-span-2">
+            <select
+              value={vehicleFilter}
+              onChange={(e) => handleVehicleFilterChange(e.target.value as any)}
+              className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs cursor-pointer transition-all"
+            >
+              <option value="all">All Vehicle States</option>
+              <option value="assigned">Vehicle Assigned</option>
+              <option value="unassigned">No Car Assigned</option>
+            </select>
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="lg:col-span-2">
+            <select
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value as any)}
+              className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs cursor-pointer transition-all"
+            >
+              <option value="newest">Sort: Newest First</option>
+              <option value="oldest">Sort: Oldest First</option>
+              <option value="name">Sort: Name (A - Z)</option>
+              <option value="role">Sort: Role</option>
+            </select>
+          </div>
         </div>
+
+        {/* Active Filters Pill Bar (if filters are active) */}
+        {hasActiveFilters && (
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500 flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-slate-700">Active Filters:</span>
+              {activeRoleTab !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-bold border border-emerald-200 text-[11px] capitalize">
+                  Role: {activeRoleTab}
+                  <button
+                    type="button"
+                    onClick={() => handleRoleTabChange('all')}
+                    className="hover:text-emerald-950 cursor-pointer ml-0.5"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {search && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-800 font-bold border border-sky-200 text-[11px]">
+                  &ldquo;{search}&rdquo;
+                  <button
+                    type="button"
+                    onClick={() => handleSearchChange('')}
+                    className="hover:text-sky-950 cursor-pointer ml-0.5"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {statusFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 font-bold border border-purple-200 text-[11px] capitalize">
+                  Status: {statusFilter}
+                  <button
+                    type="button"
+                    onClick={() => handleStatusFilterChange('all')}
+                    className="hover:text-purple-950 cursor-pointer ml-0.5"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {verificationFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 font-bold border border-amber-200 text-[11px] capitalize">
+                  {verificationFilter}
+                  <button
+                    type="button"
+                    onClick={() => handleVerificationFilterChange('all')}
+                    className="hover:text-amber-950 cursor-pointer ml-0.5"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {vehicleFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 font-bold border border-slate-200 text-[11px] capitalize">
+                  Vehicle: {vehicleFilter}
+                  <button
+                    type="button"
+                    onClick={() => handleVehicleFilterChange('all')}
+                    className="hover:text-slate-950 cursor-pointer ml-0.5"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {sortBy !== 'newest' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 font-bold border border-slate-200 text-[11px]">
+                  Sort: {sortBy}
+                  <button
+                    type="button"
+                    onClick={() => handleSortChange('newest')}
+                    className="hover:text-slate-950 cursor-pointer ml-0.5"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="text-xs font-semibold text-amber-800 hover:text-amber-900 hover:underline flex items-center gap-1 cursor-pointer shrink-0"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Clear All</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* ── Users Data Table ────────────────────────────────────────────── */}
-      <div className="bg-card border border-base rounded-3xl shadow-xl overflow-hidden">
+      {/* ── Batch Multi-Select Bulk Actions Bar ──────────────────────────── */}
+      {selectedUserIds.size > 0 && (
+        <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl flex items-center justify-between text-xs animate-fade-in shadow-xs flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-emerald-900 font-bold">
+            <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              {selectedUserIds.size} user account{selectedUserIds.size === 1 ? '' : 's'} selected
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={handleBulkVerify}
+              disabled={isBulkOperating}
+              className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Mark Verified</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleBulkActivate}
+              disabled={isBulkOperating}
+              className="px-3 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-800 hover:bg-slate-50 font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Activate</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleBulkDeactivate}
+              disabled={isBulkOperating}
+              className="px-3 py-1.5 rounded-xl bg-white border border-rose-300 text-rose-700 hover:bg-rose-50 font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span>Deactivate</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedUserIds(new Set())}
+              className="px-2.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 text-xs font-semibold hover:bg-emerald-100/60 transition-colors cursor-pointer"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Users Data Table with Global Book Registry Pagination ───────── */}
+      <AdminTableCard
+        title="User Directory & Authorization Roster"
+        subtitle="Centralized profile registry, credential verification, and chauffeur allocation"
+        badge={`${totalFilteredCount} Users`}
+        headerAction={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing || isTableLoading}
+              title="Refresh database records"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing || isTableLoading ? 'animate-spin text-emerald-600' : 'text-slate-500'}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
+        }
+      >
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-secondary">
-            <thead className="bg-surface/80 text-muted uppercase font-bold text-[10px] tracking-wider border-b border-base">
+          <table className="w-full text-left text-xs text-slate-700">
+            <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200">
               <tr>
-                <th className="p-4">User Identity</th>
-                <th className="p-4">Email &amp; Verification</th>
-                <th className="p-4">Phone Number</th>
-                <th className="p-4">Role</th>
-                <th className="p-4">Assigned Vehicle</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Registration</th>
-                <th className="p-4 text-center">Actions</th>
+                <th className="p-3.5 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = isSomeSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    title="Select all users on current page"
+                    className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                </th>
+                <th className="p-3.5">User Identity</th>
+                <th className="p-3.5">Email &amp; Verification</th>
+                <th className="p-3.5">Phone &amp; WhatsApp</th>
+                <th className="p-3.5">Role</th>
+                <th className="p-3.5">Fleet / Booking Activity</th>
+                <th className="p-3.5">Status</th>
+                <th className="p-3.5">Registration</th>
+                <th className="p-3.5 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-base">
-              {isDataLoading ? (
-                <TableSkeletonRows rows={6} cols={8} />
-              ) : filteredUsers.length === 0 ? (
+            <tbody className="divide-y divide-slate-100">
+              {isTableLoading || isDataLoading ? (
+                <TableSkeletonRows rows={Math.min(pageSize, 8)} cols={9} />
+              ) : paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-12 text-center text-muted">
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                      <Users className="w-8 h-8 text-muted/50" />
-                      <p className="text-sm font-semibold text-primary">No matching users found</p>
-                      <p className="text-xs text-muted max-w-sm">
-                        Adjust your search filters or click "+ Add User" to register a new account.
-                      </p>
+                  <td colSpan={9} className="p-12 text-center text-slate-500">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/20">
+                        <Users className="w-6 h-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-slate-900">No matching users found</p>
+                        <p className="text-xs text-slate-500 max-w-sm">
+                          {hasActiveFilters
+                            ? 'Adjust or clear your search and filter criteria to inspect records.'
+                            : 'No user accounts found. Click "+ Add User" above to onboard a user.'}
+                        </p>
+                      </div>
+                      {hasActiveFilters && (
+                        <button
+                          type="button"
+                          onClick={handleResetFilters}
+                          className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Reset All Filters</span>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => {
+                paginatedUsers.map((u) => {
                   const driver = getUserDriver(u.id);
                   const assignedVehicle = getDriverVehicle(driver);
                   const regDetails = formatRegistrationDate(u.created_at);
                   const isCurrentAccount = currentUser?.id === u.id;
+                  const isSelected = selectedUserIds.has(u.id);
+                  const customerBookingsCount = getCustomerBookings(u.id, u.email, u.phone).length;
+                  const driverRatingStats = getDriverRatingStats(u.id);
+                  const cleanPhone = u.phone ? normalizePhone(u.phone) : '';
+
+                  // Dynamic gradient for avatar by role
+                  const roleGradients: Record<UserRole, string> = {
+                    admin: 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white',
+                    dispatcher: 'bg-gradient-to-br from-sky-500 to-blue-600 text-white',
+                    driver: 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white',
+                    customer: 'bg-gradient-to-br from-amber-500 to-yellow-600 text-white',
+                  };
 
                   return (
-                    <tr key={u.id} className="hover:bg-surface/50 transition-colors group">
+                    <tr
+                      key={u.id}
+                      className={`transition-colors group ${
+                        isSelected ? 'bg-emerald-50/50 hover:bg-emerald-50/80' : 'hover:bg-slate-50/70'
+                      }`}
+                    >
+                      {/* 0. Row Checkbox */}
+                      <td className="p-3.5 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectUser(u.id)}
+                          title={`Select ${u.full_name}`}
+                          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                        />
+                      </td>
+
                       {/* 1. User Identity */}
-                      <td className="p-4">
+                      <td className="p-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-2xl bg-surface border border-base flex items-center justify-center text-sm font-black text-amber-500 shadow-sm shrink-0">
-                            {u.full_name?.slice(0, 1).toUpperCase() || 'U'}
-                          </div>
+                          {u.avatar_url ? (
+                            <img
+                              src={u.avatar_url}
+                              alt={u.full_name}
+                              className="w-9 h-9 rounded-2xl object-cover border border-slate-200 shadow-2xs shrink-0"
+                            />
+                          ) : (
+                            <div
+                              className={`w-9 h-9 rounded-2xl flex items-center justify-center text-xs font-black shadow-2xs shrink-0 ${
+                                roleGradients[u.role] || 'bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {u.full_name?.slice(0, 1).toUpperCase() || 'U'}
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-bold text-primary truncate">{u.full_name}</span>
+                              <span className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                                {u.full_name}
+                              </span>
                               {isCurrentAccount && (
-                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-700 font-bold border border-amber-500/30">
+                                <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 font-extrabold border border-amber-200">
                                   You
                                 </span>
                               )}
                             </div>
-                            <div className="text-[10px] text-muted font-mono truncate max-w-[140px]" title={u.id}>
-                              ID: {u.id.slice(0, 8)}...
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="text-[10px] text-slate-400 font-mono truncate max-w-[120px]" title={u.id}>
+                                ID: {u.id.slice(0, 8)}...
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(u.id, 'User ID')}
+                                title="Copy full User UUID"
+                                className="text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer"
+                              >
+                                {copiedField === `User ID-${u.id}` ? (
+                                  <Check className="w-2.5 h-2.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-2.5 h-2.5" />
+                                )}
+                              </button>
                             </div>
                           </div>
                         </div>
                       </td>
 
                       {/* 2. Email Address & Verification */}
-                      <td className="p-4">
+                      <td className="p-3.5">
                         <div className="space-y-1">
-                          <div className="text-primary font-medium flex items-center gap-1.5">
-                            <span className="truncate max-w-[190px]" title={u.email || ''}>
-                              {u.email || <span className="text-muted italic">No email</span>}
+                          <div className="text-slate-800 font-medium flex items-center gap-1">
+                            <span className="truncate max-w-[180px]" title={u.email || ''}>
+                              {u.email || <span className="text-slate-400 italic">No email</span>}
                             </span>
+                            {u.email && (
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(u.email || '', 'Email')}
+                                title="Copy email address"
+                                className="text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer shrink-0"
+                              >
+                                {copiedField === `Email-${u.email}` ? (
+                                  <Check className="w-2.5 h-2.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-2.5 h-2.5" />
+                                )}
+                              </button>
+                            )}
                           </div>
                           <div>
                             {u.email_verified ? (
                               <button
+                                type="button"
                                 onClick={() => handleToggleVerification(u)}
-                                title="Click to toggle email verification"
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                                title="Click to toggle email verification state"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
                               >
-                                <CheckCircle2 className="w-3 h-3" />
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                                 <span>Verified</span>
                               </button>
                             ) : (
                               <button
+                                type="button"
                                 onClick={() => handleToggleVerification(u)}
                                 title="Click to mark email as verified"
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
                               >
-                                <AlertTriangle className="w-3 h-3" />
+                                <AlertTriangle className="w-3 h-3 text-amber-600" />
                                 <span>Unverified</span>
                               </button>
                             )}
@@ -1015,46 +1688,78 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
 
-                      {/* 3. Phone Number */}
-                      <td className="p-4">
-                        <div className="font-mono text-amber-700 text-xs flex items-center gap-1.5">
-                          <Phone className="w-3 h-3 text-muted shrink-0" />
-                          <span>{u.phone || 'N/A'}</span>
+                      {/* 3. Phone Number & Direct WhatsApp */}
+                      <td className="p-3.5">
+                        <div className="space-y-1">
+                          <div className="font-mono text-slate-800 text-xs flex items-center gap-1 font-semibold">
+                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="truncate max-w-[130px]">{u.phone || 'N/A'}</span>
+                            {u.phone && (
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(u.phone || '', 'Phone')}
+                                title="Copy phone number"
+                                className="text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer shrink-0"
+                              >
+                                {copiedField === `Phone-${u.phone}` ? (
+                                  <Check className="w-2.5 h-2.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-2.5 h-2.5" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+
+                          {cleanPhone && cleanPhone.length >= 8 && (
+                            <a
+                              href={`https://wa.me/${cleanPhone.replace('+', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Chat with user directly on WhatsApp"
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                            >
+                              <MessageCircle className="w-3 h-3 text-emerald-600" />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
                         </div>
                       </td>
 
                       {/* 4. Role */}
-                      <td className="p-4">{renderRoleBadge(u.role)}</td>
+                      <td className="p-3.5">{renderRoleBadge(u.role)}</td>
 
-                      {/* 5. Assigned Vehicle (Specially for drivers) */}
-                      <td className="p-4">
+                      {/* 5. Fleet Allocation / Booking Activity */}
+                      <td className="p-3.5">
                         {u.role === 'driver' ? (
                           assignedVehicle ? (
                             <div className="space-y-1">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-mono font-bold text-[10px] text-primary px-1.5 py-0.5 rounded bg-surface border border-base">
+                                <span className="font-mono font-bold text-[10px] text-slate-900 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200">
                                   {assignedVehicle.plate_number}
                                 </span>
-                                <span className="text-xs font-semibold text-primary truncate max-w-[150px]" title={assignedVehicle.make}>
+                                <span
+                                  className="text-xs font-semibold text-slate-900 truncate max-w-[140px]"
+                                  title={assignedVehicle.make}
+                                >
                                   {assignedVehicle.make}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-1.5 text-[10px] text-muted">
+                              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
                                 <span>{assignedVehicle.seating_capacity || 4} Seats</span>
-                                {assignedVehicle.is_rate_vehicle && (
-                                  <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[9px]">
-                                    Rates Master
-                                  </span>
-                                )}
-                                {assignedVehicle.is_active === false && (
-                                  <span className="px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 font-bold border border-rose-200 text-[9px]">
-                                    Inactive in Rates
+                                {driverRatingStats && (
+                                  <span className="text-amber-600 font-bold flex items-center gap-0.5">
+                                    <Star className="w-2.5 h-2.5 fill-amber-500" />
+                                    <span>{driverRatingStats.average}</span>
+                                    <span className="text-[9px] font-normal text-slate-400">
+                                      ({driverRatingStats.count})
+                                    </span>
                                   </span>
                                 )}
                               </div>
                               <button
+                                type="button"
                                 onClick={() => openVehicleModal(u)}
-                                className="text-[10px] font-bold text-emerald-700 hover:underline flex items-center gap-1 mt-0.5"
+                                className="text-[10px] font-bold text-emerald-700 hover:underline flex items-center gap-1 mt-0.5 cursor-pointer"
                               >
                                 <CarFront className="w-3 h-3" />
                                 <span>Change Vehicle</span>
@@ -1062,13 +1767,14 @@ export default function AdminUsersPage() {
                             </div>
                           ) : (
                             <div className="space-y-1">
-                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
+                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-medium">
                                 Unassigned
                               </span>
                               <div>
                                 <button
+                                  type="button"
                                   onClick={() => openVehicleModal(u)}
-                                  className="text-[10px] font-bold text-sky-700 hover:underline flex items-center gap-1"
+                                  className="text-[10px] font-bold text-sky-700 hover:underline flex items-center gap-1 cursor-pointer"
                                 >
                                   <Plus className="w-3 h-3" />
                                   <span>Assign Vehicle</span>
@@ -1076,19 +1782,32 @@ export default function AdminUsersPage() {
                               </div>
                             </div>
                           )
+                        ) : u.role === 'customer' ? (
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-50/80 text-amber-900 text-[10px] font-bold border border-amber-200/80">
+                              <Calendar className="w-3 h-3 text-amber-600" />
+                              <span>{customerBookingsCount} Bookings</span>
+                            </span>
+                            <div className="text-[10px] text-slate-400">
+                              {customerBookingsCount > 0 ? 'Active Pilgrim' : 'No trips yet'}
+                            </div>
+                          </div>
                         ) : (
-                          <span className="text-muted text-[11px]">—</span>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                            Operations Desk
+                          </span>
                         )}
                       </td>
 
                       {/* 6. Status */}
-                      <td className="p-4">
+                      <td className="p-3.5">
                         <div className="space-y-1">
                           {renderStatusBadge(u.status)}
                           <div>
                             <button
-                              onClick={() => toggleUserStatus(u.id)}
-                              className="text-[10px] font-semibold text-muted hover:text-primary underline"
+                              type="button"
+                              onClick={() => handleToggleStatus(u.id)}
+                              className="text-[10px] font-semibold text-slate-500 hover:text-slate-800 underline cursor-pointer"
                             >
                               {u.status === 'active' ? 'Deactivate' : 'Activate'}
                             </button>
@@ -1097,18 +1816,18 @@ export default function AdminUsersPage() {
                       </td>
 
                       {/* 7. Registration Details */}
-                      <td className="p-4">
+                      <td className="p-3.5">
                         <div className="space-y-0.5 text-[11px]">
-                          <div className="text-primary font-medium">{regDetails.date}</div>
-                          <div className="text-muted flex items-center gap-1 text-[10px]">
-                            <Calendar className="w-3 h-3 text-muted shrink-0" />
+                          <div className="text-slate-800 font-medium">{regDetails.date}</div>
+                          <div className="text-slate-400 flex items-center gap-1 text-[10px]">
+                            <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
                             <span>{regDetails.relative || regDetails.time}</span>
                           </div>
                         </div>
                       </td>
 
                       {/* 8. Actions: View → Edit → Delete → More */}
-                      <td className="p-4 text-center">
+                      <td className="p-3.5 text-center">
                         <AdminActionGroup>
                           <AdminActionButton
                             variant="view"
@@ -1129,7 +1848,7 @@ export default function AdminUsersPage() {
                           {u.role === 'driver' && (
                             <AdminActionButton
                               variant="more"
-                              icon={<Car className="w-4 h-4" />}
+                              icon={<Car className="w-3.5 h-3.5" />}
                               tooltip="Assign or change fleet vehicle"
                               onClick={() => openVehicleModal(u)}
                             />
@@ -1144,25 +1863,18 @@ export default function AdminUsersPage() {
           </table>
         </div>
 
-        {/* Table Footer */}
-        <div className="p-4 border-t border-base bg-surface/40 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted">
-          <div>
-            Showing <span className="font-bold text-primary">{filteredUsers.length}</span> of{' '}
-            <span className="font-bold text-primary">{usersList.length}</span> total registered accounts
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" /> Active ({metrics.active})
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500" /> Drivers ({metrics.driverProfiles})
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-sky-500" /> Staff ({metrics.dispatchers})
-            </span>
-          </div>
-        </div>
-      </div>
+        {/* Global Book Registry-Style Pagination */}
+        <AdminPagination
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={totalFilteredCount}
+          onPageChange={(page) => setCurrentPage(page)}
+          onPageSizeChange={handlePageSizeChange}
+          isLoading={isTableLoading}
+          itemLabel="users"
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
+      </AdminTableCard>
 
       {/* ── Modal: Add New User ────────────────────────────────────────── */}
       {isAddModalOpen && (
@@ -1892,42 +2604,153 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              {/* Contact Information */}
+              {/* Contact Information & Quick Actions */}
               <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-input border border-base">
-                  <span className="text-muted flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5" /> Email Address:
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-500 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-slate-400" /> Email Address:
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-primary font-medium">{selectedUser.email || 'None'}</span>
+                    <span className="text-slate-900 font-medium">{selectedUser.email || 'None'}</span>
+                    {selectedUser.email && (
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(selectedUser.email || '', 'Email')}
+                        className="text-slate-400 hover:text-slate-700 p-0.5"
+                      >
+                        <Copy className="w-2.5 h-2.5" />
+                      </button>
+                    )}
                     {selectedUser.email_verified ? (
-                      <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-0.5">
-                        <CheckCircle2 className="w-3 mx-auto" /> Verified
+                      <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verified
                       </span>
                     ) : (
-                      <span className="text-[10px] text-amber-500 font-bold flex items-center gap-0.5">
-                        <AlertTriangle className="w-3 h-3" /> Unverified
+                      <span className="text-[10px] text-amber-800 font-bold flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                        <AlertTriangle className="w-3 h-3 text-amber-600" /> Unverified
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-input border border-base">
-                  <span className="text-muted flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5" /> Phone Number:
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-500 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-slate-400" /> Phone Number:
                   </span>
-                  <span className="text-primary font-mono font-bold">{selectedUser.phone || 'None'}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-900 font-mono font-bold">{selectedUser.phone || 'None'}</span>
+                    {selectedUser.phone && (
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(selectedUser.phone || '', 'Phone')}
+                        className="text-slate-400 hover:text-slate-700 p-0.5"
+                      >
+                        <Copy className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-input border border-base">
-                  <span className="text-muted flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" /> Date Registered:
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-500 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> Date Registered:
                   </span>
-                  <span className="text-primary font-medium">
+                  <span className="text-slate-900 font-medium">
                     {formatRegistrationDate(selectedUser.created_at).date} ({formatRegistrationDate(selectedUser.created_at).time})
                   </span>
                 </div>
+
+                {/* Direct Contact Links */}
+                <div className="flex items-center gap-2 pt-1">
+                  {selectedUser.email && (
+                    <a
+                      href={`mailto:${selectedUser.email}`}
+                      className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-[11px] font-bold text-center flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Email</span>
+                    </a>
+                  )}
+                  {selectedUser.phone && (
+                    <a
+                      href={`tel:${selectedUser.phone}`}
+                      className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-[11px] font-bold text-center flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>Call</span>
+                    </a>
+                  )}
+                  {selectedUser.phone && normalizePhone(selectedUser.phone).length >= 8 && (
+                    <a
+                      href={`https://wa.me/${normalizePhone(selectedUser.phone).replace('+', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-[11px] font-bold text-center flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>WhatsApp</span>
+                    </a>
+                  )}
+                </div>
               </div>
+
+              {/* Customer Specific Dossier (Travel & Booking History) */}
+              {selectedUser.role === 'customer' && (
+                <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4 text-amber-600" />
+                      <span>Pilgrim Travel History</span>
+                    </span>
+                    <span className="text-[10px] bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200 font-mono font-bold">
+                      {getCustomerBookings(selectedUser.id, selectedUser.email, selectedUser.phone).length} Journeys
+                    </span>
+                  </div>
+
+                  {(() => {
+                    const custBookings = getCustomerBookings(selectedUser.id, selectedUser.email, selectedUser.phone);
+                    if (custBookings.length === 0) {
+                      return (
+                        <div className="p-3 rounded-xl bg-white border border-slate-200 text-center text-xs text-slate-500">
+                          No previous bookings found for this customer profile.
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                        {custBookings.slice(0, 5).map((b) => (
+                          <div
+                            key={b.id}
+                            className="p-2.5 rounded-xl bg-white border border-slate-200 space-y-1 text-xs shadow-2xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-mono font-bold text-emerald-700">
+                                {b.booking_reference}
+                              </span>
+                              <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                                {b.status}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-800 truncate" title={`${b.pickup_address} → ${b.destination_address}`}>
+                              {b.pickup_address} → {b.destination_address}
+                            </div>
+                            <div className="text-[10px] text-slate-400 flex items-center justify-between pt-0.5">
+                              <span>
+                                {b.scheduled_at
+                                  ? new Date(b.scheduled_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                                  : new Date(b.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </span>
+                              <span className="font-semibold text-slate-700">
+                                {b.final_fare || b.estimated_fare ? `${b.final_fare || b.estimated_fare} SAR` : ''}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
 
               {/* Driver Specific Dossier */}
               {selectedUser.role === 'driver' && selectedDriver && (
