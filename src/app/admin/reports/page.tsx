@@ -194,13 +194,13 @@ export default function AdminReportsPage() {
                 ) : (
                   bookings.map((b) => (
                     <tr key={b.id} className="hover:bg-elevated/60 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-amber-600">
+                      <td className="py-3.5 px-4 font-mono font-black text-amber-950">
                         {b.booking_reference}
                       </td>
                       <td className="py-3.5 px-4 font-medium text-primary">
                         {b.passenger_name || 'Anonymous Passenger'}
                       </td>
-                      <td className="py-3.5 px-4 uppercase text-emerald-600 font-semibold tracking-wide">
+                      <td className="py-3.5 px-4 uppercase text-emerald-800 font-bold tracking-wide">
                         {b.vehicle_type?.replace(/_/g, ' ')}
                       </td>
                       <td className="py-3.5 px-4 text-muted text-[11px] whitespace-nowrap">
@@ -266,7 +266,7 @@ export default function AdminReportsPage() {
                 >
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-[10.5px] font-bold text-amber-700 bg-amber-500/10 px-2.5 py-0.5 rounded-lg border border-amber-500/25">
+                      <span className="font-mono text-[10.5px] font-bold text-amber-950 bg-amber-100 px-2.5 py-0.5 rounded-lg border border-amber-300">
                         {log.action}
                       </span>
                       <span className="font-semibold text-primary truncate max-w-xl">

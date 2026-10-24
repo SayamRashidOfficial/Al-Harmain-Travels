@@ -472,17 +472,17 @@ export default function AdminDashboardPage() {
           onClick={() => handleFilterChange('pending')}
           className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
             statusFilter === 'pending'
-              ? 'bg-amber-500/15 border-amber-500 shadow-xs'
-              : 'bg-card border-base hover:bg-elevated hover:border-amber-500/30'
+              ? 'bg-amber-100 border-amber-500 shadow-sm'
+              : 'bg-card border-base hover:bg-slate-50 hover:border-amber-400'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-amber-700 font-bold">
+          <div className="flex items-center justify-between text-xs text-amber-950 font-extrabold">
             <span className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" /> Pending
+              <Clock className="w-3.5 h-3.5 text-amber-700" /> Pending
             </span>
             <span className="font-mono text-sm">{pendingBookings}</span>
           </div>
-          <p className="text-[11px] text-muted mt-1">Awaiting confirmation</p>
+          <p className="text-[11px] text-slate-600 font-medium mt-1">Awaiting confirmation</p>
         </button>
 
         {/* Confirmed Card */}
@@ -490,17 +490,17 @@ export default function AdminDashboardPage() {
           onClick={() => handleFilterChange('confirmed')}
           className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
             statusFilter === 'confirmed'
-              ? 'bg-sky-500/15 border-sky-500 shadow-xs'
-              : 'bg-card border-base hover:bg-elevated hover:border-sky-500/30'
+              ? 'bg-sky-100 border-sky-500 shadow-sm'
+              : 'bg-card border-base hover:bg-slate-50 hover:border-sky-400'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-sky-700 font-bold">
+          <div className="flex items-center justify-between text-xs text-sky-950 font-extrabold">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Confirmed
+              <CheckCircle2 className="w-3.5 h-3.5 text-sky-700" /> Confirmed
             </span>
             <span className="font-mono text-sm">{confirmedBookings}</span>
           </div>
-          <p className="text-[11px] text-muted mt-1">Ready for match</p>
+          <p className="text-[11px] text-slate-600 font-medium mt-1">Ready for match</p>
         </button>
 
         {/* Active Trips Card */}
@@ -508,17 +508,17 @@ export default function AdminDashboardPage() {
           onClick={() => handleFilterChange('active_trips')}
           className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
             statusFilter === 'active_trips'
-              ? 'bg-purple-500/15 border-purple-500 shadow-xs'
-              : 'bg-card border-base hover:bg-elevated hover:border-purple-500/30'
+              ? 'bg-purple-100 border-purple-500 shadow-sm'
+              : 'bg-card border-base hover:bg-slate-50 hover:border-purple-400'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-purple-700 font-bold">
+          <div className="flex items-center justify-between text-xs text-purple-950 font-extrabold">
             <span className="flex items-center gap-1.5">
-              <TrendingUp className="w-3.5 h-3.5" /> Active En Route
+              <TrendingUp className="w-3.5 h-3.5 text-purple-700" /> Active En Route
             </span>
             <span className="font-mono text-sm">{activeTrips}</span>
           </div>
-          <p className="text-[11px] text-muted mt-1">On Saudi highways</p>
+          <p className="text-[11px] text-slate-600 font-medium mt-1">On Saudi highways</p>
         </button>
 
         {/* Completed Card */}
@@ -526,17 +526,17 @@ export default function AdminDashboardPage() {
           onClick={() => handleFilterChange('completed')}
           className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
             statusFilter === 'completed'
-              ? 'bg-emerald-500/15 border-emerald-500 shadow-xs'
-              : 'bg-card border-base hover:bg-elevated hover:border-emerald-500/30'
+              ? 'bg-emerald-100 border-emerald-500 shadow-sm'
+              : 'bg-card border-base hover:bg-slate-50 hover:border-emerald-400'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
+          <div className="flex items-center justify-between text-xs text-emerald-950 font-extrabold">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" /> Completed
             </span>
             <span className="font-mono text-sm">{completedTrips}</span>
           </div>
-          <p className="text-[11px] text-muted mt-1">Safely concluded</p>
+          <p className="text-[11px] text-slate-600 font-medium mt-1">Safely concluded</p>
         </button>
 
         {/* Cancelled Card */}
@@ -544,17 +544,17 @@ export default function AdminDashboardPage() {
           onClick={() => handleFilterChange('cancelled')}
           className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer col-span-2 sm:col-span-1 ${
             statusFilter === 'cancelled'
-              ? 'bg-rose-500/15 border-rose-500 shadow-xs'
-              : 'bg-card border-base hover:bg-elevated hover:border-rose-500/30'
+              ? 'bg-rose-100 border-rose-500 shadow-sm'
+              : 'bg-card border-base hover:bg-slate-50 hover:border-rose-400'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-rose-700 font-bold">
+          <div className="flex items-center justify-between text-xs text-rose-950 font-extrabold">
             <span className="flex items-center gap-1.5">
-              <XCircle className="w-3.5 h-3.5" /> Cancelled
+              <XCircle className="w-3.5 h-3.5 text-rose-700" /> Cancelled
             </span>
             <span className="font-mono text-sm">{cancelledBookings}</span>
           </div>
-          <p className="text-[11px] text-muted mt-1">Discontinued</p>
+          <p className="text-[11px] text-slate-600 font-medium mt-1">Discontinued</p>
         </button>
       </div>
 

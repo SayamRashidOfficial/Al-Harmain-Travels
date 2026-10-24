@@ -637,22 +637,22 @@ export default function AdminUsersPage() {
         );
       case 'dispatcher':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200">
-            <ShieldCheck className="w-3 h-3 text-sky-600" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-sky-100 text-sky-900 border border-sky-300">
+            <ShieldCheck className="w-3 h-3 text-sky-700" />
             Dispatcher
           </span>
         );
       case 'driver':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
-            <Car className="w-3 h-3 text-amber-600" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-950 border border-amber-300">
+            <Car className="w-3 h-3 text-amber-700" />
             Captain / Driver
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <Users className="w-3 h-3 text-emerald-600" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300">
+            <Users className="w-3 h-3 text-emerald-700" />
             Customer / Pilgrim
           </span>
         );
@@ -664,21 +664,21 @@ export default function AdminUsersPage() {
     switch (status) {
       case 'active':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
             Active
           </span>
         );
       case 'suspended':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-950 border border-amber-300">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
             Suspended
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-50 text-rose-700 border border-rose-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-100 text-rose-950 border border-rose-300">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
             Deactivated
           </span>
@@ -964,14 +964,14 @@ export default function AdminUsersPage() {
                       {/* 1. User Identity */}
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-2xl bg-surface border border-base flex items-center justify-center text-sm font-black text-amber-500 shadow-sm shrink-0">
+                          <div className="w-9 h-9 rounded-2xl bg-surface border border-base flex items-center justify-center text-sm font-black text-amber-950 shadow-sm shrink-0">
                             {u.full_name?.slice(0, 1).toUpperCase() || 'U'}
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-bold text-primary truncate">{u.full_name}</span>
                               {isCurrentAccount && (
-                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-700 font-bold border border-amber-500/30">
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-950 font-extrabold border border-amber-300">
                                   You
                                 </span>
                               )}
@@ -996,7 +996,7 @@ export default function AdminUsersPage() {
                               <button
                                 onClick={() => handleToggleVerification(u)}
                                 title="Click to toggle email verification"
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 hover:bg-emerald-200 transition-colors"
                               >
                                 <CheckCircle2 className="w-3 h-3" />
                                 <span>Verified</span>
@@ -1005,7 +1005,7 @@ export default function AdminUsersPage() {
                               <button
                                 onClick={() => handleToggleVerification(u)}
                                 title="Click to mark email as verified"
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-950 border border-amber-300 hover:bg-amber-200 transition-colors"
                               >
                                 <AlertTriangle className="w-3 h-3" />
                                 <span>Unverified</span>
@@ -1017,7 +1017,7 @@ export default function AdminUsersPage() {
 
                       {/* 3. Phone Number */}
                       <td className="p-4">
-                        <div className="font-mono text-amber-700 text-xs flex items-center gap-1.5">
+                        <div className="font-mono text-amber-950 font-bold text-xs flex items-center gap-1.5">
                           <Phone className="w-3 h-3 text-muted shrink-0" />
                           <span>{u.phone || 'N/A'}</span>
                         </div>
