@@ -703,7 +703,7 @@ export default function DispatcherCustomersPage() {
             <span>Inactive Accounts</span>
             <ShieldAlert className="w-4 h-4 text-amber-500" />
           </div>
-          <p className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
+          <p className="text-2xl font-black text-amber-950 font-mono">
             {inactiveAccountsCount}
           </p>
           <span className="text-[10px] text-secondary block">Suspended / Deactivated</span>
@@ -960,8 +960,8 @@ export default function DispatcherCustomersPage() {
                     <span
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${
                         isAccountActive
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-950 border border-amber-300'
                       }`}
                     >
                       <span
@@ -1179,8 +1179,8 @@ export default function DispatcherCustomersPage() {
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                           isAccountActive
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                            : 'bg-amber-100 text-amber-950 border border-amber-300'
                         }`}
                       >
                         <span
@@ -1494,8 +1494,8 @@ export default function DispatcherCustomersPage() {
                     <span
                       className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                         selectedCustomer.status === 'active'
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-950 border border-amber-300'
                       }`}
                     >
                       {selectedCustomer.status === 'active' ? 'Active Account' : 'Deactivated'}
@@ -1853,7 +1853,7 @@ export default function DispatcherCustomersPage() {
 
                               <div className="text-right">
                                 <span className="text-muted text-[10px] block">Fare:</span>
-                                <strong className="font-mono text-sm font-black text-amber-600 dark:text-amber-400">
+                                <strong className="font-mono text-sm font-black text-amber-950">
                                   {fare !== null && fare !== undefined ? formatCurrency(fare) : 'Pending Review'}
                                 </strong>
                               </div>

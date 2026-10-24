@@ -323,7 +323,7 @@ export default function CustomRouteBookingPanel({
                           ? 'bg-amber-500 text-slate-950 shadow-sm shadow-amber-500/25 group-hover:scale-110 ring-2 ring-amber-500/30'
                           : isActive
                             ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-500/25 shadow-md shadow-amber-900/40 scale-105'
-                            : 'bg-elevated border border-base text-muted/60'
+                            : 'bg-slate-100 border border-slate-300 text-slate-700 font-bold'
                         }`}
                     >
                       {isCompleted ? (
@@ -337,15 +337,15 @@ export default function CustomRouteBookingPanel({
                     <div className="mt-1 w-full">
                       <span
                         className={`block text-[9.5px] sm:text-[10px] font-bold tracking-tight truncate leading-tight transition-colors ${isActive
-                            ? 'text-amber-500 dark:text-amber-400 font-extrabold'
+                            ? 'text-amber-900 font-black'
                             : isCompleted
-                              ? 'text-primary group-hover:text-amber-500'
-                              : 'text-muted/60'
+                              ? 'text-slate-900 group-hover:text-amber-700'
+                              : 'text-slate-700 font-bold'
                           }`}
                       >
                         {s.label}
                       </span>
-                      <span className="hidden sm:block text-[8.5px] uppercase font-semibold text-muted/50 tracking-wider">
+                      <span className="hidden sm:block text-[8.5px] uppercase font-bold text-slate-600 tracking-wider">
                         Step {idx + 1}
                       </span>
                     </div>
@@ -371,7 +371,7 @@ export default function CustomRouteBookingPanel({
               <button
                 type="button"
                 onClick={() => handleStepJump(currentStepIndex - 1)}
-                className="text-[10px] font-semibold text-muted hover:text-primary px-2 py-0.5 rounded-lg bg-elevated hover:bg-surface border border-base hover:border-strong transition-all flex items-center gap-1 shrink-0 active:scale-95 cursor-pointer"
+                className="text-[10px] font-bold text-slate-700 hover:text-slate-950 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-all flex items-center gap-1 shrink-0 active:scale-95 cursor-pointer"
               >
                 <ArrowLeft className="w-3 h-3" />
                 <span>Back</span>
@@ -393,11 +393,11 @@ export default function CustomRouteBookingPanel({
 
           {/* Heading */}
           <div className="space-y-1">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-              <Sparkles className="w-3 h-3 text-amber-500" /> Request Dispatched
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+              <Sparkles className="w-3 h-3 text-amber-600" /> Request Dispatched
             </span>
-            <h2 className="text-base sm:text-lg font-bold text-primary">Custom Booking Submitted!</h2>
-            <p className="text-xs text-secondary max-w-md mx-auto">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">Custom Booking Submitted!</h2>
+            <p className="text-xs text-slate-700 max-w-md mx-auto font-medium">
               Your customized itinerary has reached our 24/7 Operations Desk for manual review and competitive quote calculation.
             </p>
           </div>
@@ -407,25 +407,25 @@ export default function CustomRouteBookingPanel({
             {/* Booking Reference Box */}
             <div className="flex items-center justify-between p-2.5 rounded-lg bg-elevated border border-base">
               <div>
-                <span className="text-[9.5px] text-muted uppercase font-bold tracking-wider block">Booking Reference</span>
-                <span className="font-mono text-sm sm:text-base font-black text-amber-600 dark:text-amber-400">
+                <span className="text-[9.5px] text-slate-700 uppercase font-bold tracking-wider block">Booking Reference</span>
+                <span className="font-mono text-sm sm:text-base font-black text-amber-950">
                   {confirmedBookingRef}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => handleCopyBookingRef(confirmedBookingRef)}
-                className="px-2.5 py-1 rounded-md bg-surface hover:bg-base text-primary font-semibold text-xs border border-base flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                className="px-2.5 py-1 rounded-md bg-surface hover:bg-base text-slate-800 font-bold text-xs border border-base flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
                 title="Copy reference code"
               >
                 {isCopiedRef ? (
                   <>
-                    <CheckCheck className="w-3 h-3 text-emerald-500" />
-                    <span className="text-emerald-500 text-[11px]">Copied</span>
+                    <CheckCheck className="w-3 h-3 text-emerald-600" />
+                    <span className="text-emerald-700 text-[11px] font-bold">Copied</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3 h-3 text-muted" />
+                    <Copy className="w-3 h-3 text-slate-600" />
                     <span className="text-[11px]">Copy</span>
                   </>
                 )}
@@ -433,28 +433,28 @@ export default function CustomRouteBookingPanel({
             </div>
 
             <div className="flex items-center justify-between py-0.5 border-b border-base/60">
-              <span className="text-muted">Booking Status:</span>
-              <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+              <span className="text-slate-700 font-medium">Booking Status:</span>
+              <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-bold bg-amber-100 text-amber-900 border border-amber-300">
                 Pending Dispatcher Review
               </span>
             </div>
 
             <div className="flex items-center justify-between py-0.5 border-b border-base/60">
-              <span className="text-muted">Quoted Fare:</span>
-              <span className="font-bold text-amber-500 italic text-[11px]">To be confirmed by Dispatcher (0 SAR Paid)</span>
+              <span className="text-slate-700 font-medium">Quoted Fare:</span>
+              <span className="font-bold text-amber-950 italic text-[11px]">To be confirmed by Dispatcher (0 SAR Paid)</span>
             </div>
 
             <div className="flex items-center justify-between py-0.5 border-b border-base/60">
-              <span className="text-muted">Assigned Fleet:</span>
-              <span className="font-semibold text-primary capitalize">{selectedVehicle?.replace('_', ' ')}</span>
+              <span className="text-slate-700 font-medium">Assigned Fleet:</span>
+              <span className="font-bold text-slate-900 capitalize">{selectedVehicle?.replace('_', ' ')}</span>
             </div>
 
-            <div className="p-2.5 bg-amber-500/10 rounded-lg border border-amber-500/25 text-xs text-amber-800 dark:text-amber-200 leading-relaxed flex items-start gap-2">
-              <Info className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="p-2.5 bg-amber-50/80 rounded-lg border border-amber-300 text-xs text-slate-800 leading-relaxed flex items-start gap-2">
+              <Info className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
               <div className="text-[11px]">
-                <strong className="block text-amber-700 dark:text-amber-300 font-bold mb-0.5">Next Steps from Our Dispatch Desk:</strong>
+                <strong className="block text-amber-950 font-black mb-0.5">Next Steps from Our Dispatch Desk:</strong>
                 Our operations team will review route stops, compute optimal pricing, and contact you via WhatsApp / call at{' '}
-                <strong className="text-primary font-bold">{passengerPhone}</strong> within minutes.
+                <strong className="text-slate-950 font-black">{passengerPhone}</strong> within minutes.
               </div>
             </div>
           </div>

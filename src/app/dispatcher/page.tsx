@@ -147,23 +147,23 @@ export default function DispatcherRadarPage() {
 
       {/* Pending Payment Verification Banner Alert */}
       {pendingVerificationBookings.length > 0 && (
-        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+        <div className="p-4 bg-amber-50 border-2 border-amber-400 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center shrink-0">
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-amber-300">
+              <h4 className="text-sm font-extrabold text-amber-950">
                 {pendingVerificationBookings.length} Booking{pendingVerificationBookings.length > 1 ? 's' : ''} Pending Payment Verification
               </h4>
-              <p className="text-xs text-amber-400/80">
+              <p className="text-xs text-amber-900 font-medium">
                 Payment receipts submitted by customers require staff audit before chauffeur assignment.
               </p>
             </div>
           </div>
           <Link
             href="/dispatcher/queue"
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-colors shadow self-end sm:self-auto shrink-0"
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-colors shadow self-end sm:self-auto shrink-0"
           >
             Review &amp; Verify in Queue &rarr;
           </Link>
@@ -213,8 +213,8 @@ export default function DispatcherRadarPage() {
                   className="bg-surface border border-base p-4 rounded-2xl space-y-3"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-amber-500">{b.booking_reference}</span>
-                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span className="font-mono text-xs font-bold text-amber-950">{b.booking_reference}</span>
+                    <span className="text-xs text-emerald-800 font-extrabold">
                       {formatCurrency(b.final_fare || b.estimated_fare, settings.currency)}
                     </span>
                   </div>
@@ -224,7 +224,7 @@ export default function DispatcherRadarPage() {
                     <p className="line-clamp-1"><strong>From:</strong> {b.pickup_address}</p>
                     <p className="line-clamp-1"><strong>To:</strong> {b.destination_address}</p>
                     <p className="text-[11px] text-muted">
-                      Vehicle Required: <strong className="text-amber-600 dark:text-amber-400 uppercase">{b.vehicle_type?.replace('_', ' ')}</strong> &bull; {b.passenger_count} Pax
+                      Vehicle Required: <strong className="text-amber-950 font-extrabold uppercase">{b.vehicle_type?.replace('_', ' ')}</strong> &bull; {b.passenger_count} Pax
                     </p>
                   </div>
 
@@ -276,8 +276,8 @@ export default function DispatcherRadarPage() {
                     className="bg-surface border border-base p-4 rounded-2xl space-y-2.5 text-xs"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono font-bold text-amber-500">{r.booking_reference}</span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[10px] uppercase font-bold">
+                      <span className="font-mono font-bold text-amber-950">{r.booking_reference}</span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-900 text-[10px] uppercase font-extrabold">
                         {r.status.replace(/_/g, ' ')}
                       </span>
                     </div>
@@ -291,7 +291,7 @@ export default function DispatcherRadarPage() {
                       </div>
                       <div className="text-right">
                         <span className="text-[10px] text-muted block uppercase">Vehicle</span>
-                        <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                        <span className="font-mono font-bold text-amber-950">
                           {driver?.vehicle?.plate_number || driver?.assigned_vehicle?.plate_number || 'VIP KSA'}
                         </span>
                       </div>
@@ -309,7 +309,7 @@ export default function DispatcherRadarPage() {
                           setIsReassignMode(true);
                           setSelectedDriverId(activeFleetDrivers[0]?.id || '');
                         }}
-                        className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                        className="text-[11px] text-amber-900 font-bold hover:underline flex items-center gap-1"
                       >
                         <RefreshCw className="w-3 h-3" /> Reassign Chauffeur
                       </button>
@@ -341,7 +341,7 @@ export default function DispatcherRadarPage() {
                 Select Fleet Chauffeur ({activeFleetDrivers.length} on duty)
               </label>
               {activeFleetDrivers.length === 0 ? (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300">
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-950 font-medium">
                   No drivers currently on duty in the fleet pool.
                 </div>
               ) : (
@@ -362,16 +362,16 @@ export default function DispatcherRadarPage() {
                         className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-xs ${
                           isSelected
                             ? conflict.hasOverlap
-                              ? 'bg-rose-500/10 border-rose-500 text-rose-300'
-                              : 'bg-emerald-50 dark:bg-emerald-950 border-emerald-500 text-primary'
+                              ? 'bg-rose-50 border-rose-500 text-rose-950 font-semibold'
+                              : 'bg-emerald-50 border-emerald-500 text-emerald-950 font-semibold'
                             : conflict.hasOverlap
-                            ? 'bg-surface/50 border-rose-500/30 text-rose-400/80 hover:border-rose-500/50'
+                            ? 'bg-surface/50 border-rose-300 text-rose-800 hover:border-rose-500'
                             : 'bg-surface border-base text-secondary hover:border-emerald-500/50'
                         }`}
                       >
                         <div>
                           <p className="font-bold text-primary flex items-center gap-1.5">
-                            {conflict.hasOverlap && <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}
+                            {conflict.hasOverlap && <AlertCircle className="w-3.5 h-3.5 text-rose-500" />}
                             {d.profile?.full_name || d.full_name || 'Captain'}
                           </p>
                           <p className="text-[10px] text-muted">
@@ -382,8 +382,8 @@ export default function DispatcherRadarPage() {
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
                             conflict.hasOverlap
-                              ? 'bg-rose-500/20 text-rose-400'
-                              : 'bg-emerald-500/20 text-emerald-400'
+                              ? 'bg-rose-100 text-rose-900 border border-rose-300'
+                              : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                           }`}
                         >
                           {conflict.hasOverlap ? 'Conflict' : d.status}
@@ -403,9 +403,9 @@ export default function DispatcherRadarPage() {
                 );
                 if (!conflict.hasOverlap) return null;
                 return (
-                  <div className="p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl text-xs text-rose-300 space-y-1">
-                    <p className="font-bold flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5" /> Schedule Collision Detected
+                  <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs text-rose-950 space-y-1 font-medium">
+                    <p className="font-bold flex items-center gap-1 text-rose-950">
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-600" /> Schedule Collision Detected
                     </p>
                     <p>{conflict.message}</p>
                   </div>

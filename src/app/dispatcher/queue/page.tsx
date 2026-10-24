@@ -377,61 +377,61 @@ export default function DispatcherQueuePage() {
     switch (status) {
       case 'pending_review':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center gap-1">
-            <Clock className="w-3 h-3" /> Awaiting Quote Review
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-purple-100 text-purple-900 border border-purple-300 flex items-center gap-1">
+            <Clock className="w-3 h-3 text-purple-700" /> Awaiting Quote Review
           </span>
         );
       case 'pending_verification':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1">
-            <Clock className="w-3 h-3" /> Awaiting Verification
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1">
+            <Clock className="w-3 h-3 text-amber-700" /> Awaiting Verification
           </span>
         );
       case 'payment_rejected':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center gap-1">
-            <XCircle className="w-3 h-3" /> Payment Rejected
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-rose-100 text-rose-900 border border-rose-300 flex items-center gap-1">
+            <XCircle className="w-3 h-3 text-rose-700" /> Payment Rejected
           </span>
         );
       case 'confirmed':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Confirmed / Ready
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-100 text-sky-900 border border-sky-300 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-sky-700" /> Confirmed / Ready
           </span>
         );
       case 'driver_assigned':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-teal-500/15 text-teal-400 border border-teal-500/30 flex items-center gap-1">
-            <UserCheck className="w-3 h-3" /> Driver Assigned
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-teal-100 text-teal-900 border border-teal-300 flex items-center gap-1">
+            <UserCheck className="w-3 h-3 text-teal-700" /> Driver Assigned
           </span>
         );
       case 'accepted':
       case 'driver_accepted':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Driver Accepted
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-indigo-100 text-indigo-900 border border-indigo-300 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-indigo-700" /> Driver Accepted
           </span>
         );
       case 'on_the_way':
       case 'driver_arriving':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-            <Car className="w-3 h-3" /> On The Way
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+            <Car className="w-3 h-3 text-emerald-700" /> On The Way
           </span>
         );
       case 'arrived':
       case 'driver_arrived':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 flex items-center gap-1">
-            <MapPin className="w-3 h-3" /> Arrived
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-cyan-100 text-cyan-900 border border-cyan-300 flex items-center gap-1">
+            <MapPin className="w-3 h-3 text-cyan-700" /> Arrived
           </span>
         );
       case 'started':
       case 'trip_started':
       case 'ride_started':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center gap-1">
-            <Car className="w-3 h-3" /> Trip In Progress
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-purple-100 text-purple-900 border border-purple-300 flex items-center gap-1">
+            <Car className="w-3 h-3 text-purple-700" /> Trip In Progress
           </span>
         );
       case 'completed':
@@ -439,15 +439,15 @@ export default function DispatcherQueuePage() {
       case 'ride_completed':
       case 'payment_completed':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Completed
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-emerald-700" /> Completed
           </span>
         );
       case 'cancelled':
       case 'rejected':
         return (
-          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center gap-1">
-            <XCircle className="w-3 h-3" /> Cancelled
+          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-rose-100 text-rose-900 border border-rose-300 flex items-center gap-1">
+            <XCircle className="w-3 h-3 text-rose-700" /> Cancelled
           </span>
         );
       default:
@@ -518,23 +518,23 @@ export default function DispatcherQueuePage() {
 
       {/* Pending Payment Verification Banner Alert */}
       {pendingVerificationCount > 0 && (
-        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+        <div className="p-4 bg-amber-50 border-2 border-amber-400 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center shrink-0">
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-amber-300">
+              <h4 className="text-sm font-extrabold text-amber-950">
                 {pendingVerificationCount} Booking{pendingVerificationCount > 1 ? 's' : ''} Awaiting Payment Proof Verification
               </h4>
-              <p className="text-xs text-amber-400/80">
+              <p className="text-xs text-amber-900 font-medium">
                 Customers have uploaded bank transfer receipts. Verify funds to release bookings for driver assignment.
               </p>
             </div>
           </div>
           <button
             onClick={() => setStatusFilter('pending_verification')}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-colors shadow self-end sm:self-auto shrink-0"
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-colors shadow self-end sm:self-auto shrink-0"
           >
             Review Pending &rarr;
           </button>
@@ -560,10 +560,10 @@ export default function DispatcherQueuePage() {
               label: 'Custom Route Review',
               count: counts.pending_review,
               icon: FileText,
-              color: 'text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30',
+              color: 'text-purple-900 hover:text-purple-950 bg-purple-100 hover:bg-purple-200 border-purple-300 font-bold',
               activeColor: 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md shadow-purple-950/20',
               badgeActiveColor: 'bg-white/20 text-white border-white/30',
-              badgeInactiveColor: counts.pending_review > 0 ? 'bg-purple-500/25 text-purple-300 border-purple-500/40 font-bold' : 'bg-surface text-muted border-base',
+              badgeInactiveColor: counts.pending_review > 0 ? 'bg-purple-100 text-purple-950 border-purple-300 font-bold' : 'bg-surface text-slate-700 border-base',
               highlight: counts.pending_review > 0,
             },
             {
@@ -571,10 +571,10 @@ export default function DispatcherQueuePage() {
               label: 'Pending Payment',
               count: counts.pending_verification,
               icon: CreditCard,
-              color: 'text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30',
+              color: 'text-amber-950 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 border-amber-300 font-bold',
               activeColor: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold shadow-md shadow-amber-950/20',
               badgeActiveColor: 'bg-slate-950/20 text-slate-950 border-slate-950/30 font-extrabold',
-              badgeInactiveColor: counts.pending_verification > 0 ? 'bg-amber-500/25 text-amber-300 border-amber-500/40 font-bold' : 'bg-surface text-muted border-base',
+              badgeInactiveColor: counts.pending_verification > 0 ? 'bg-amber-100 text-amber-950 border-amber-300 font-bold' : 'bg-surface text-slate-700 border-base',
               highlight: counts.pending_verification > 0,
             },
             {
@@ -809,12 +809,12 @@ export default function DispatcherQueuePage() {
                         <p className="text-[10px] text-muted italic line-clamp-1 mt-0.5">Note: {b.notes}</p>
                       )}
                       {b.dispatcher_notes && (
-                        <p className="text-[10px] text-amber-400/90 italic line-clamp-1 mt-0.5">
+                        <p className="text-[10px] text-amber-950 font-medium italic line-clamp-1 mt-0.5">
                           Dispatcher: {b.dispatcher_notes}
                         </p>
                       )}
                     </td>
-                    <td className="p-3 uppercase text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap">
+                    <td className="p-3 uppercase text-emerald-800 font-bold whitespace-nowrap">
                       {b.vehicle_type?.replace('_', ' ') || 'Sedan'}
                     </td>
                     <td className="p-3 whitespace-nowrap">{getStatusBadge(b.status)}</td>
@@ -823,9 +823,9 @@ export default function DispatcherQueuePage() {
                         <button
                           type="button"
                           onClick={() => setViewScreenshotUrl(b.payment_screenshot_url!)}
-                          className="px-2 py-1 bg-card hover:bg-card-hover border border-base rounded-lg text-[11px] text-amber-400 flex items-center gap-1 font-medium transition-colors"
+                          className="px-2 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg text-[11px] text-amber-950 flex items-center gap-1 font-bold transition-colors"
                         >
-                          <Eye className="w-3 h-3" /> View Proof
+                          <Eye className="w-3 h-3 text-amber-700" /> View Proof
                         </button>
                       ) : (
                         <span className="text-muted text-[11px] italic">No receipt</span>
@@ -835,7 +835,7 @@ export default function DispatcherQueuePage() {
                       {assignedDriver ? (
                         <div>
                           <span className="text-primary font-bold flex items-center gap-1">
-                            <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                            <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
                             {assignedDriver.profile?.full_name || assignedDriver.full_name || 'Assigned Driver'}
                           </span>
                           <span className="text-[10px] text-muted block">
@@ -850,7 +850,7 @@ export default function DispatcherQueuePage() {
                     <td className="p-3 text-right whitespace-nowrap">
                       {b.booking_method === 'custom' && !b.confirmed_fare && !b.final_fare ? (
                         <div className="space-y-0.5">
-                          <span className="text-amber-400 italic font-semibold text-xs block">Awaiting Quote</span>
+                          <span className="text-amber-950 italic font-bold text-xs block">Awaiting Quote</span>
                           <span className="text-[9px] text-muted block uppercase tracking-wider">custom route</span>
                         </div>
                       ) : b.confirmed_fare ? (
@@ -1020,7 +1020,7 @@ export default function DispatcherQueuePage() {
             <div className="bg-surface p-3.5 rounded-2xl border border-base space-y-1.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted">Booking Reference:</span>
-                <span className="font-mono font-bold text-amber-400">
+                <span className="font-mono font-bold text-amber-950">
                   {verifyModalBooking.booking_reference}
                 </span>
               </div>
@@ -1040,7 +1040,7 @@ export default function DispatcherQueuePage() {
                 <span className="text-muted font-semibold">
                   {verifyModalBooking.fixed_fare_amount ? 'Fixed Fare (verify exact amount):' : 'Expected Fare:'}
                 </span>
-                <span className="text-sm font-bold text-emerald-400">
+                <span className="text-sm font-extrabold text-emerald-800">
                   {verifyModalBooking.fixed_fare_amount
                     ? formatFareSAR(verifyModalBooking.fixed_fare_amount)
                     : formatCurrency(
@@ -1052,8 +1052,8 @@ export default function DispatcherQueuePage() {
               {verifyModalBooking.fixed_fare_amount && (
                 <div className="flex justify-between items-center">
                   <span className="text-muted">Pricing Type:</span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
-                    <ShieldCheck className="w-3 h-3" />
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-bold">
+                    <ShieldCheck className="w-3 h-3 text-emerald-700" />
                     Fixed Fare · No Hidden Charges
                   </span>
                 </div>
@@ -1064,7 +1064,7 @@ export default function DispatcherQueuePage() {
                   <span className="font-medium text-primary capitalize">
                     {(verifyModalBooking.service_type as string).replace(/_/g, ' ')}
                     {verifyModalBooking.terminal && (
-                      <span className="ml-1 text-amber-400">
+                      <span className="ml-1 text-amber-950 font-bold">
                         · {(verifyModalBooking.terminal as string).replace(/_/g, ' ').toUpperCase()}
                       </span>
                     )}
@@ -1231,7 +1231,7 @@ export default function DispatcherQueuePage() {
                 Select Fleet Chauffeur ({activeFleetDrivers.length} on duty)
               </label>
               {activeFleetDrivers.length === 0 ? (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300">
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-950 font-medium">
                   No chauffeurs are currently on duty in the fleet pool.
                 </div>
               ) : (
@@ -1526,7 +1526,7 @@ export default function DispatcherQueuePage() {
             <div className="bg-surface p-3.5 rounded-2xl border border-base space-y-2 text-xs">
               <div className="flex justify-between items-center">
                 <span className="text-muted">Booking Reference:</span>
-                <span className="font-mono font-bold text-amber-400">
+                <span className="font-mono font-bold text-amber-950">
                   {quoteModalBooking.booking_reference}
                 </span>
               </div>
@@ -1610,7 +1610,7 @@ export default function DispatcherQueuePage() {
                   placeholder="e.g. 450.00"
                   value={quoteFareAmount}
                   onChange={(e) => setQuoteFareAmount(e.target.value)}
-                  className="w-full bg-input border border-base rounded-xl pl-12 pr-4 py-2.5 text-sm font-bold text-amber-400 placeholder:text-muted focus:outline-none focus:border-purple-500"
+                  className="w-full bg-input border border-base rounded-xl pl-12 pr-4 py-2.5 text-sm font-bold text-amber-950 placeholder:text-muted focus:outline-none focus:border-purple-500"
                 />
               </div>
               <p className="text-[11px] text-muted">
@@ -1677,7 +1677,7 @@ export default function DispatcherQueuePage() {
             <div className="bg-surface p-3 rounded-xl border border-base text-xs space-y-1">
               <div>
                 <span className="text-muted">Booking Reference: </span>
-                <span className="font-mono font-bold text-amber-400">{rejectModalBooking.booking_reference}</span>
+                <span className="font-mono font-bold text-amber-950">{rejectModalBooking.booking_reference}</span>
               </div>
               <div>
                 <span className="text-muted">Passenger: </span>
@@ -1741,7 +1741,7 @@ export default function DispatcherQueuePage() {
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted">Booking Reference:</span>
-                <span className="font-mono font-bold text-amber-400">{detailModalBooking.booking_reference}</span>
+                <span className="font-mono font-bold text-amber-950">{detailModalBooking.booking_reference}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Passenger:</span>
@@ -1842,7 +1842,7 @@ export default function DispatcherQueuePage() {
               <div className="p-3.5 bg-surface rounded-2xl border border-base space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted">Booking Reference:</span>
-                  <span className="font-mono font-bold text-amber-400">{b.booking_reference}</span>
+                  <span className="font-mono font-bold text-amber-950">{b.booking_reference}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted">Passenger:</span>

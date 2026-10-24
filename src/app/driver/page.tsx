@@ -254,10 +254,10 @@ export default function DriverCockpitPage() {
 
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <span className="text-[11px] uppercase tracking-wider font-extrabold text-emerald-800 flex items-center gap-1">
                   <Sparkles className="w-3 h-3" /> VIP Executive Chauffeur
                 </span>
-                <span className="text-[11px] font-mono font-bold text-amber-900 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/70 px-2.5 py-0.5 rounded-md border border-amber-300 dark:border-amber-700/50 shadow-sm">
+                <span className="text-[11px] font-mono font-bold text-amber-950 bg-amber-100 px-2.5 py-0.5 rounded-md border border-amber-300 shadow-sm">
                   {currentDriver.vehicle?.plate_number || currentDriver.assigned_vehicle?.plate_number || 'VIP KSA 7788'}
                 </span>
               </div>
@@ -403,24 +403,24 @@ export default function DriverCockpitPage() {
               {/* Payment Method Badge */}
               {isCashBooking(activeAssignment) ? (
                 isCashPaid(activeAssignment) ? (
-                  <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1.5 shadow-sm">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1.5 shadow-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Cash Received &bull; Paid</span>
                   </span>
                 ) : (
-                  <span className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1.5 shadow-sm">
-                    <Coins className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                  <span className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1.5 shadow-sm">
+                    <Coins className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
                     <span>Cash on Pickup &bull; Collect Fare</span>
                   </span>
                 )
               ) : (
-                <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1.5 shadow-sm">
-                  <ShieldCheck className="w-3.5 h-3.5 text-sky-500" />
+                <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-100 text-sky-900 border border-sky-300 flex items-center gap-1.5 shadow-sm">
+                  <ShieldCheck className="w-3.5 h-3.5 text-sky-600" />
                   <span>Prepaid (Bank Transfer)</span>
                 </span>
               )}
 
-              <span className="px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/50 uppercase tracking-wider">
+              <span className="px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-100 text-emerald-950 border border-emerald-300 uppercase tracking-wider">
                 {getWorkflowStep(activeAssignment.status).label}
               </span>
               <span className="text-base sm:text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-surface px-3 py-1 rounded-xl border border-base shadow-sm">
@@ -450,10 +450,10 @@ export default function DriverCockpitPage() {
                   <div
                     key={step.num}
                     className={`p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${isCurrent
-                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-bold shadow-md shadow-emerald-950/20 ring-1 ring-emerald-500/50'
+                        ? 'bg-emerald-100 border-emerald-500 text-emerald-950 font-bold shadow-sm ring-1 ring-emerald-500'
                         : isPassed
-                          ? 'bg-surface border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-medium'
-                          : 'bg-card/40 border-base text-muted opacity-50'
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-medium'
+                          : 'bg-slate-100 border-slate-300 text-slate-700 font-semibold'
                       }`}
                   >
                     <div className="flex items-center justify-center gap-1 text-[11px]">
@@ -526,7 +526,7 @@ export default function DriverCockpitPage() {
 
               <button
                 onClick={() => setChargeModalOpen(true)}
-                className="py-2.5 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-2 border border-amber-500/30 transition-all"
+                className="py-2.5 px-4 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 text-xs font-bold flex items-center gap-2 border border-amber-300 transition-all"
               >
                 <PlusCircle className="w-4 h-4" /> Add Toll / Parking Fee
               </button>
@@ -538,23 +538,23 @@ export default function DriverCockpitPage() {
             <div
               className={`rounded-2xl p-4 sm:p-5 border transition-all ${
                 isCashPaid(activeAssignment)
-                  ? 'bg-emerald-950/20 border-emerald-500/40'
-                  : 'bg-amber-500/10 border-2 border-amber-500/50 shadow-lg shadow-amber-950/20'
+                  ? 'bg-emerald-50 border-emerald-300'
+                  : 'bg-amber-50 border-2 border-amber-400 shadow-md'
               }`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-3.5">
                   <div
-                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 shadow-md ${
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 shadow-sm ${
                       isCashPaid(activeAssignment)
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                        : 'bg-amber-100 text-amber-950 border border-amber-300'
                     }`}
                   >
                     {isCashPaid(activeAssignment) ? (
-                      <CheckCircle2 className="w-5 h-5" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-700" />
                     ) : (
-                      <Banknote className="w-5 h-5" />
+                      <Banknote className="w-5 h-5 text-amber-700" />
                     )}
                   </div>
                   <div className="space-y-1">
@@ -567,8 +567,8 @@ export default function DriverCockpitPage() {
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
                           isCashPaid(activeAssignment)
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-amber-500/25 text-amber-300 border border-amber-500/50'
+                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                            : 'bg-amber-200 text-amber-950 border border-amber-400'
                         }`}
                       >
                         {isCashPaid(activeAssignment) ? 'Paid / Confirmed' : 'Pending Cash Collection'}
@@ -586,7 +586,7 @@ export default function DriverCockpitPage() {
                       ) : (
                         <span>
                           Collect{' '}
-                          <strong className="text-amber-400 font-mono font-bold text-sm">
+                          <strong className="text-amber-950 font-mono font-black text-sm">
                             {formatCurrency(activeAssignment.final_fare || activeAssignment.estimated_fare, settings.currency)}
                           </strong>{' '}
                           directly from the passenger upon pickup or dropoff. Once full payment is received, click Confirm Cash Received below.
@@ -614,7 +614,7 @@ export default function DriverCockpitPage() {
           <div className="border-t border-base pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="text-xs text-secondary">
               Total Booking Fare:{' '}
-              <strong className="text-amber-500 dark:text-amber-400 text-base font-bold font-mono">
+              <strong className="text-amber-950 text-base font-extrabold font-mono">
                 {formatCurrency(activeAssignment.final_fare || activeAssignment.estimated_fare, settings.currency)}
               </strong>
             </div>
@@ -845,13 +845,13 @@ export default function DriverCockpitPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           {/* Assignment Status Pill */}
                           {isCurrentActive ? (
-                            <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                            <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
                               Active Mission
                             </span>
                           ) : isActionable ? (
-                            <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/40 flex items-center gap-1.5">
-                              <Bell className="w-3 h-3" /> Actionable &bull; Next In Line
+                            <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1.5">
+                              <Bell className="w-3 h-3 text-amber-700" /> Actionable &bull; Next In Line
                             </span>
                           ) : (
                             <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-surface text-muted border border-base flex items-center gap-1.5">
@@ -869,21 +869,21 @@ export default function DriverCockpitPage() {
                           {/* Payment Method Badge */}
                           {isCashBooking(assignment) ? (
                             isCashPaid(assignment) ? (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Cash Paid
+                              <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Cash Paid
                               </span>
                             ) : (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1 shadow-sm">
-                                <Coins className="w-3 h-3 text-amber-500" /> Cash on Pickup
+                              <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-extrabold bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1 shadow-sm">
+                                <Coins className="w-3 h-3 text-amber-700" /> Cash on Pickup
                               </span>
                             )
                           ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1">
-                              <ShieldCheck className="w-3 h-3 text-sky-500" /> Prepaid
+                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-100 text-sky-900 border border-sky-300 flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3 text-sky-600" /> Prepaid
                             </span>
                           )}
 
-                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-base ml-1">
+                          <span className="font-mono font-bold text-emerald-800 text-base ml-1">
                             {formatCurrency(
                               assignment.final_fare || assignment.estimated_fare,
                               settings.currency
@@ -1121,7 +1121,7 @@ export default function DriverCockpitPage() {
                           <div className="font-mono font-bold text-primary text-base">
                             {assignment.booking_reference}
                           </div>
-                          <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1.5 mt-0.5">
+                          <div className="text-xs text-amber-900 font-bold flex items-center gap-1.5 mt-0.5">
                             <Clock className="w-3.5 h-3.5" /> Scheduled Tomorrow at{' '}
                             {formatPickupClock(assignment.scheduled_at)}
                           </div>
@@ -1132,21 +1132,21 @@ export default function DriverCockpitPage() {
                         {/* Payment Method Badge */}
                         {isCashBooking(assignment) ? (
                           isCashPaid(assignment) ? (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Cash Paid
+                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Cash Paid
                             </span>
                           ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1">
-                              <Coins className="w-3 h-3 text-amber-500" /> Cash on Pickup
+                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-extrabold bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-amber-700" /> Cash on Pickup
                             </span>
                           )
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1">
-                            <ShieldCheck className="w-3 h-3 text-sky-500" /> Prepaid
+                          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-100 text-sky-900 border border-sky-300 flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3 text-sky-600" /> Prepaid
                           </span>
                         )}
 
-                        <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                        <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-100 text-sky-900 border border-sky-300">
                           Scheduled
                         </span>
                         <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-base">
@@ -1218,7 +1218,7 @@ export default function DriverCockpitPage() {
                           <div className="font-mono font-bold text-primary text-base">
                             {assignment.booking_reference}
                           </div>
-                          <div className="text-xs text-sky-400 font-semibold flex items-center gap-1.5 mt-0.5">
+                          <div className="text-xs text-sky-900 font-bold flex items-center gap-1.5 mt-0.5">
                             <Calendar className="w-3.5 h-3.5" /> {formatPickupFull(assignment.scheduled_at)}
                           </div>
                         </div>
@@ -1228,24 +1228,24 @@ export default function DriverCockpitPage() {
                         {/* Payment Method Badge */}
                         {isCashBooking(assignment) ? (
                           isCashPaid(assignment) ? (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Cash Paid
+                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Cash Paid
                             </span>
                           ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1">
-                              <Coins className="w-3 h-3 text-amber-500" /> Cash on Pickup
+                            <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-extrabold bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-amber-700" /> Cash on Pickup
                             </span>
                           )
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1">
-                            <ShieldCheck className="w-3 h-3 text-sky-500" /> Prepaid
+                          <span className="px-2.5 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-100 text-sky-900 border border-sky-300 flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3 text-sky-600" /> Prepaid
                           </span>
                         )}
 
-                        <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                        <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-sky-100 text-sky-900 border border-sky-300">
                           Upcoming Reservation
                         </span>
-                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-base">
+                        <span className="font-mono font-bold text-emerald-800 text-base">
                           {formatCurrency(
                             assignment.final_fare || assignment.estimated_fare,
                             settings.currency
@@ -1300,29 +1300,29 @@ export default function DriverCockpitPage() {
                     {/* Top Row: Ref, Passenger, Status & Fare */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-base/60 pb-3">
                       <div className="flex flex-wrap items-center gap-2.5">
-                        <span className="font-mono font-bold text-amber-500 dark:text-amber-400 text-sm">
+                        <span className="font-mono font-bold text-amber-950 text-sm">
                           {ride.booking_reference}
                         </span>
                         <span className="text-primary font-bold text-sm">
                           &bull; {ride.passenger_name}
                         </span>
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Completed
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Completed
                         </span>
 
                         {isCashBooking(ride) ? (
                           isCashPaid(ride) ? (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                              <Coins className="w-3 h-3 text-emerald-500" /> Cash Collected
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-emerald-600" /> Cash Collected
                             </span>
                           ) : (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1">
-                              <Coins className="w-3 h-3 text-amber-500" /> Cash Pending
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-extrabold bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-amber-700" /> Cash Pending
                             </span>
                           )
                         ) : (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1">
-                            <ShieldCheck className="w-3 h-3 text-sky-500" /> Prepaid
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-sky-100 text-sky-900 border border-sky-300 flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3 text-sky-600" /> Prepaid
                           </span>
                         )}
                       </div>
@@ -1498,7 +1498,7 @@ export default function DriverCockpitPage() {
             <div className="p-4 rounded-2xl bg-surface border border-base space-y-2">
               <div className="flex items-center justify-between text-xs text-muted">
                 <span>Total Cash Due to Collect:</span>
-                <span className="font-mono font-extrabold text-amber-500 text-base">
+                <span className="font-mono font-extrabold text-amber-950 text-base">
                   {formatCurrency(cashModalBooking.final_fare || cashModalBooking.estimated_fare, settings.currency)}
                 </span>
               </div>
@@ -1506,12 +1506,12 @@ export default function DriverCockpitPage() {
                 Payment Method: <strong className="text-primary font-semibold">Cash on Pickup</strong>
               </div>
               <div className="text-[11px] text-secondary">
-                Status: <span className="font-semibold text-amber-600 dark:text-amber-400">Pending Collection</span>
+                Status: <span className="font-bold text-amber-900">Pending Collection</span>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300">
-              <p className="font-semibold mb-0.5">Physical Cash Handover Verification:</p>
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-[11px] text-amber-950 font-medium">
+              <p className="font-bold mb-0.5 text-amber-950">Physical Cash Handover Verification:</p>
               Please verify that you have physically received the full cash amount in hand from the passenger before confirming. This will save payment status as paid/confirmed in Supabase and unlock the Complete Ride button.
             </div>
 

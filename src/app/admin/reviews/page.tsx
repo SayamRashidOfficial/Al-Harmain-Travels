@@ -606,9 +606,9 @@ export default function AdminReviewsPage() {
                       </div>
 
                       {/* Star Rating Badge */}
-                      <div className="flex items-center gap-1 bg-amber-500/10 px-2.5 py-1 rounded-xl border border-amber-500/25 shrink-0">
-                        <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                        <span className="font-bold text-amber-600 text-xs">
+                      <div className="flex items-center gap-1 bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-300 shrink-0">
+                        <Star className="w-3.5 h-3.5 fill-amber-600 text-amber-600" />
+                        <span className="font-black text-amber-950 text-xs">
                           {Number(rev.rating).toFixed(1)}
                         </span>
                       </div>
@@ -617,7 +617,7 @@ export default function AdminReviewsPage() {
                     {/* Associated Journey Route Pill */}
                     <div className="mt-3 p-2.5 rounded-xl bg-surface/60 border border-base space-y-1 text-xs">
                       <div className="flex items-center justify-between text-[10.5px]">
-                        <span className="font-mono font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                        <span className="font-mono font-bold text-amber-950 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
                           {rev.resolvedBookingRef}
                         </span>
                         <span className="text-muted uppercase font-bold text-[10px]">
@@ -680,9 +680,9 @@ export default function AdminReviewsPage() {
                   <tr key={rev.id} className="hover:bg-elevated/50 transition-colors">
                     {/* Stars */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/25 w-fit">
-                        <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                        <span className="font-bold text-amber-600 text-xs">
+                      <div className="flex items-center gap-1 bg-amber-100 px-2 py-1 rounded-lg border border-amber-300 w-fit">
+                        <Star className="w-3.5 h-3.5 fill-amber-600 text-amber-600" />
+                        <span className="font-black text-amber-950 text-xs">
                           {Number(rev.rating).toFixed(1)}
                         </span>
                       </div>
@@ -707,7 +707,7 @@ export default function AdminReviewsPage() {
 
                     {/* Booking & Route */}
                     <td className="py-3.5 px-4 max-w-xs">
-                      <div className="font-mono text-[11px] font-bold text-amber-600">
+                      <div className="font-mono text-[11px] font-black text-amber-950">
                         {rev.resolvedBookingRef}
                       </div>
                       <div className="text-[11px] text-muted truncate mt-0.5">
