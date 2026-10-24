@@ -383,7 +383,7 @@ export default function HomePage() {
               className={`flex items-center gap-2 mb-2.5 sm:mb-3 transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${isHeroMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                 }`}
             >
-              <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em] sm:tracking-[0.24em] uppercase text-[#55635c]">
+              <span className="text-[10px] sm:text-[11px] font-extrabold tracking-[0.2em] sm:tracking-[0.24em] uppercase text-[#12382c]">
                 PRIVATE CHAUFFEUR &bull; SAUDI ARABIA
               </span>
             </div>
@@ -409,7 +409,7 @@ export default function HomePage() {
                 transitionDelay: '200ms',
                 transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
               }}
-              className={`mt-3 sm:mt-4 text-[#4a5851] text-xs sm:text-sm lg:text-[15px] leading-relaxed max-w-md font-normal transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${isHeroMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
+              className={`mt-3 sm:mt-4 text-[#1a2d24] text-xs sm:text-sm lg:text-[15px] leading-relaxed max-w-md font-medium transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${isHeroMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
                 }`}
             >
               Thoughtful private transfers between Makkah, Madinah and Jeddah, with comfort and care throughout your journey.
@@ -506,15 +506,15 @@ export default function HomePage() {
           >
             {/* 1. Pickup Location */}
             <div className="lg:col-span-3 px-2 sm:px-3 py-2 lg:py-1.5 flex flex-col justify-center">
-              <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-1">
-                <MapPin className="w-3 h-3 text-[#0c392c] shrink-0" />
+              <label className="flex items-center gap-1.5 text-[10.5px] uppercase font-bold tracking-wider text-slate-800 mb-1">
+                <MapPin className="w-3.5 h-3.5 text-[#0c392c] shrink-0" />
                 <span>Pickup Location</span>
               </label>
               <div className="relative">
                 <select
                   value={pickup}
                   onChange={(e) => setPickup(e.target.value)}
-                  className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none appearance-none cursor-pointer pr-6 py-1 truncate"
+                  className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 focus:outline-none appearance-none cursor-pointer pr-6 py-1 truncate"
                 >
                   <option value="King Abdulaziz Airport (JED)">King Abdulaziz Airport (JED)</option>
                   <option value="Jeddah Islamic Port">Jeddah Islamic Port</option>
@@ -523,21 +523,21 @@ export default function HomePage() {
                   <option value="Madinah Prince Mohammad Airport (MED)">Madinah Airport (MED)</option>
                   <option value="Madinah Prophet's Mosque Gate 1">Madinah Prophet's Mosque Gate 1</option>
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-700 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
             {/* 2. Destination */}
             <div className="lg:col-span-3 px-2 sm:px-3 py-2 lg:py-1.5 flex flex-col justify-center pt-2.5 lg:pt-1.5">
-              <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-1">
-                <Navigation className="w-3 h-3 text-[#0c392c] shrink-0" />
+              <label className="flex items-center gap-1.5 text-[10.5px] uppercase font-bold tracking-wider text-slate-800 mb-1">
+                <Navigation className="w-3.5 h-3.5 text-[#0c392c] shrink-0" />
                 <span>Destination</span>
               </label>
               <div className="relative">
                 <select
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
-                  className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none appearance-none cursor-pointer pr-6 py-1 truncate"
+                  className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 focus:outline-none appearance-none cursor-pointer pr-6 py-1 truncate"
                 >
                   <option value="Makkah Clock Royal Tower">Makkah Clock Royal Tower</option>
                   <option value="Fairmont Makkah Clock Royal Tower">Fairmont Makkah Clock Royal Tower</option>
@@ -547,14 +547,14 @@ export default function HomePage() {
                   <option value="King Abdulaziz Airport (JED)">King Abdulaziz Airport (JED)</option>
                   <option value="Jeddah Corniche Luxury Hotel">Jeddah Corniche Luxury Hotel</option>
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-700 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
             {/* 3. Date */}
             <div className="lg:col-span-2 px-2 sm:px-3 py-2 lg:py-1.5 flex flex-col justify-center pt-2.5 lg:pt-1.5">
-              <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-1">
-                <Calendar className="w-3 h-3 text-[#0c392c] shrink-0" />
+              <label className="flex items-center gap-1.5 text-[10.5px] uppercase font-bold tracking-wider text-slate-800 mb-1">
+                <Calendar className="w-3.5 h-3.5 text-[#0c392c] shrink-0" />
                 <span>Date</span>
               </label>
               <input
@@ -562,21 +562,21 @@ export default function HomePage() {
                 value={journeyDate}
                 min={new Date().toISOString().split('T')[0]}
                 onChange={(e) => setJourneyDate(e.target.value)}
-                className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none cursor-pointer py-1"
+                className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 focus:outline-none cursor-pointer py-1"
               />
             </div>
 
             {/* 4. Passengers */}
             <div className="lg:col-span-1 px-2 sm:px-3 py-2 lg:py-1.5 flex flex-col justify-center pt-2.5 lg:pt-1.5">
-              <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-1">
-                <Users className="w-3 h-3 text-[#0c392c] shrink-0" />
+              <label className="flex items-center gap-1.5 text-[10.5px] uppercase font-bold tracking-wider text-slate-800 mb-1">
+                <Users className="w-3.5 h-3.5 text-[#0c392c] shrink-0" />
                 <span>Passengers</span>
               </label>
               <div className="relative">
                 <select
                   value={passengers}
                   onChange={(e) => setPassengers(e.target.value)}
-                  className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none appearance-none cursor-pointer pr-5 py-1"
+                  className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 focus:outline-none appearance-none cursor-pointer pr-5 py-1"
                 >
                   <option value="1 Passenger">1 Pax</option>
                   <option value="2 Passengers">2 Pax</option>
@@ -585,28 +585,28 @@ export default function HomePage() {
                   <option value="6 Passengers">6 Pax</option>
                   <option value="10+ Passengers">10+ Pax</option>
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-700 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
             {/* 5. Vehicle Type */}
             <div className="lg:col-span-1 px-2 sm:px-3 py-2 lg:py-1.5 flex flex-col justify-center pt-2.5 lg:pt-1.5">
-              <label className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-1">
-                <Car className="w-3 h-3 text-[#0c392c] shrink-0" />
+              <label className="flex items-center gap-1.5 text-[10.5px] uppercase font-bold tracking-wider text-slate-800 mb-1">
+                <Car className="w-3.5 h-3.5 text-[#0c392c] shrink-0" />
                 <span>Vehicle Type</span>
               </label>
               <div className="relative">
                 <select
                   value={selectedVehicle}
                   onChange={(e) => setSelectedVehicle(e.target.value as VehicleType)}
-                  className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none appearance-none cursor-pointer pr-5 py-1"
+                  className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 focus:outline-none appearance-none cursor-pointer pr-5 py-1"
                 >
                   <option value="vip_gmc">VIP GMC</option>
                   <option value="sedan">Sedan</option>
                   <option value="suv">SUV</option>
                   <option value="van">Van</option>
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-700 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
@@ -727,7 +727,7 @@ export default function HomePage() {
                             <h4 className="text-xs font-bold text-[#0d2e23] tracking-tight leading-tight truncate transition-colors duration-200 group-hover/item:text-[#0b4736]">
                               {item.title}
                             </h4>
-                            <p className="text-[10.5px] xs:text-[11px] text-[#55635c] mt-0.5 truncate font-normal transition-colors duration-200 group-hover/item:text-[#1e2e26]">
+                            <p className="text-[10.5px] xs:text-[11px] text-[#22362b] mt-0.5 truncate font-medium transition-colors duration-200 group-hover/item:text-[#0d2e23]">
                               {item.subtitle}
                             </p>
                           </div>
@@ -779,7 +779,7 @@ export default function HomePage() {
                 transitionDuration: '700ms',
                 transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
               }}
-              className={`text-[10px] sm:text-[11px] font-bold tracking-[0.2em] uppercase text-[#6f7e75] block transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${isFleetVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
+              className={`text-[10px] sm:text-[11px] font-extrabold tracking-[0.2em] uppercase text-[#12382c] block transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${isFleetVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
                 }`}
             >
               OUR FLEET
@@ -802,7 +802,7 @@ export default function HomePage() {
                 transitionDelay: '220ms',
                 transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
               }}
-              className={`text-xs sm:text-sm text-[#4a5851] leading-relaxed font-normal transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${isFleetVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
+              className={`text-xs sm:text-sm text-[#1a2d24] leading-relaxed font-medium transition-all motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${isFleetVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
                 }`}
             >
               From executive sedans to spacious vans, our modern fleet ensures comfort, safety and luxury at every mile.
@@ -859,10 +859,10 @@ export default function HomePage() {
                           <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
                             {car.name}
                           </h4>
-                          <p className="text-[11px] text-slate-500 font-medium">
+                          <p className="text-[11px] text-slate-700 font-semibold">
                             {car.capacity}
                           </p>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-[11px] text-slate-600 font-medium">
                             {car.luggage}
                           </p>
                         </div>
@@ -910,10 +910,10 @@ export default function HomePage() {
                           <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
                             {car.name}
                           </h4>
-                          <p className="text-[11px] text-slate-500 font-medium">
+                          <p className="text-[11px] text-slate-700 font-semibold">
                             {car.capacity}
                           </p>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-[11px] text-slate-600 font-medium">
                             {car.luggage}
                           </p>
                         </div>

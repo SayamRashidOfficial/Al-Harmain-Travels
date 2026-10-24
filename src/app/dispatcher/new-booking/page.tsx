@@ -1331,14 +1331,14 @@ export default function DispatcherNewBookingPage() {
 
           {/* CUSTOM FARE INPUT */}
           {bookingMode === 'custom' && (
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                    <span className="text-xs font-extrabold text-amber-950">
                       Manually Agreed Custom Fare *
                     </span>
-                    <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
+                    <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300">
                       Custom Quote
                     </span>
                   </div>
@@ -1386,7 +1386,7 @@ export default function DispatcherNewBookingPage() {
                 onClick={() => setPaymentMethod('screenshot')}
                 className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
                   paymentMethod === 'screenshot'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    ? 'bg-emerald-100 text-emerald-950 border border-emerald-300'
                     : 'text-muted hover:text-primary'
                 }`}
               >
@@ -1409,7 +1409,7 @@ export default function DispatcherNewBookingPage() {
                 }}
                 className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
                   paymentMethod === 'cash'
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    ? 'bg-amber-100 text-amber-950 border border-amber-300'
                     : 'text-muted hover:text-primary'
                 }`}
               >
@@ -1420,19 +1420,19 @@ export default function DispatcherNewBookingPage() {
 
           {/* Conditional Payment UI: Cash on Pickup VS Screenshot Proof */}
           {paymentMethod === 'cash' ? (
-            <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3.5 text-xs">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+            <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-300 flex items-start gap-3.5 text-xs">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center shrink-0 mt-0.5">
                 <Banknote className="w-5 h-5" />
               </div>
               <div className="space-y-1.5 flex-1">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-amber-400 text-sm">Cash on Pickup</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    <span className="font-extrabold text-amber-950 text-sm">Cash on Pickup</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-200 text-amber-950 border border-amber-400">
                       Pending Cash Collection
                     </span>
                   </div>
-                  <span className="text-amber-400 font-mono font-bold text-xs bg-amber-950/40 px-2.5 py-1 rounded-lg border border-amber-500/30">
+                  <span className="text-amber-950 font-mono font-bold text-xs bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300">
                     {displayFareAmount ? `${displayFareAmount} SAR` : 'Agreed Tariff'}
                   </span>
                 </div>

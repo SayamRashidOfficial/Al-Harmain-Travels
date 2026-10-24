@@ -1093,17 +1093,17 @@ export default function DispatcherDriversPage() {
                           <p className="text-xs font-bold text-primary truncate">{vehicle.name}</p>
                           <span className="text-[10px] text-muted font-mono">{vehicle.plate_number}</span>
                         </div>
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 shrink-0">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-100 text-sky-900 border border-sky-300 shrink-0">
                           {vehicle.seating_capacity} Seats
                         </span>
                       </div>
                     ) : (
-                      <div className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 p-2 rounded-xl border border-amber-500/20 flex items-center justify-between">
+                      <div className="text-[11px] text-amber-950 font-medium bg-amber-100 p-2 rounded-xl border border-amber-300 flex items-center justify-between">
                         <span>No vehicle allocated</span>
                         <button
                           type="button"
                           onClick={() => openVehicleModal(driver)}
-                          className="font-bold underline text-[10px]"
+                          className="font-bold underline text-[10px] text-amber-950"
                         >
                           Assign Now
                         </button>

@@ -231,8 +231,8 @@ export default function AdminServicesPage() {
                   onClick={() => toggleServiceActive(s.id)}
                   className={`inline-flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-colors px-2.5 py-1.5 rounded-xl border ${
                     s.is_active
-                      ? 'text-amber-700 bg-amber-500/10 border-amber-500/25 hover:bg-amber-500/20'
-                      : 'text-emerald-700 bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/20'
+                      ? 'text-amber-950 bg-amber-100 border-amber-300 hover:bg-amber-200'
+                      : 'text-emerald-900 bg-emerald-100 border-emerald-300 hover:bg-emerald-200'
                   }`}
                 >
                   {s.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}

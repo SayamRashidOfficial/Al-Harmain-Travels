@@ -454,33 +454,33 @@ export default function DriverEarningsPage() {
 
       {/* ── 3. Cash Due to Company Alert (When Applicable) ────────────────── */}
       {summary.cash_due_to_company > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-amber-50 border-2 border-amber-400 rounded-3xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0 mt-0.5">
+            <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-800 shrink-0 mt-0.5">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-amber-500">
+                <h2 className="text-sm font-extrabold text-amber-950">
                   Cash Due to Al Harmain Company Office (FR-61)
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-950 border border-amber-400">
                   Action Required
                 </span>
               </div>
               <p className="text-xs text-secondary leading-relaxed">
                 You have collected physical cash ({formatCurrency(summary.cash_collection, summary.currency)}) exceeding your net earnings entitlement.
                 Please deposit the balance of{' '}
-                <span className="font-bold text-amber-500">
+                <span className="font-extrabold text-amber-950">
                   {formatCurrency(summary.cash_due_to_company, summary.currency)}
                 </span>{' '}
                 at the Al Harmain central dispatch office in Makkah or Madinah.
               </p>
             </div>
           </div>
-          <div className="shrink-0 text-right sm:border-l sm:border-amber-500/20 sm:pl-5">
-            <span className="text-[10px] font-bold uppercase text-muted block">Remittance Due</span>
-            <span className="text-xl font-bold text-amber-500">
+          <div className="shrink-0 text-right sm:border-l sm:border-amber-300 sm:pl-5">
+            <span className="text-[10px] font-bold uppercase text-slate-700 block">Remittance Due</span>
+            <span className="text-xl font-black text-amber-950">
               {formatCurrency(summary.cash_due_to_company, summary.currency)}
             </span>
           </div>
@@ -697,14 +697,14 @@ export default function DriverEarningsPage() {
                     {/* Reference & Type */}
                     <td className="p-3.5">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-amber-500">
+                        <span className="font-mono font-bold text-amber-950">
                           {tx.reference}
                         </span>
                         <span
                           className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
                             tx.type === 'settlement'
-                              ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                              : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                           }`}
                         >
                           {tx.type === 'settlement' ? 'Settlement' : 'Ride'}
@@ -713,7 +713,7 @@ export default function DriverEarningsPage() {
                     </td>
 
                     {/* Date */}
-                    <td className="p-3.5 text-muted whitespace-nowrap">
+                    <td className="p-3.5 text-slate-700 whitespace-nowrap">
                       {formatDateTime(tx.date)}
                     </td>
 
@@ -722,10 +722,10 @@ export default function DriverEarningsPage() {
                       <div className="font-semibold text-primary truncate" title={tx.route}>
                         {tx.route}
                       </div>
-                      <div className="text-[11px] text-muted flex items-center gap-1.5 mt-0.5">
+                      <div className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5 mt-0.5">
                         <span>Passenger: {tx.passenger_name}</span>
                         {tx.vehicle_type !== 'SETTLEMENT' && (
-                          <span className="text-emerald-500 font-medium uppercase text-[10px]">
+                          <span className="text-emerald-800 font-semibold uppercase text-[10px]">
                             • {tx.vehicle_type}
                           </span>
                         )}
@@ -735,18 +735,18 @@ export default function DriverEarningsPage() {
                     {/* Payment Channel */}
                     <td className="p-3.5 whitespace-nowrap">
                       {tx.type === 'settlement' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                          <Landmark className="w-3.5 h-3.5" />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-900 border border-blue-300">
+                          <Landmark className="w-3.5 h-3.5 text-blue-700" />
                           <span>Direct Bank Settlement</span>
                         </span>
                       ) : tx.payment_destination === 'driver_pocket' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                          <Banknote className="w-3.5 h-3.5" />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-950 border border-amber-300">
+                          <Banknote className="w-3.5 h-3.5 text-amber-700" />
                           <span>Cash (Collected by Driver)</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <Landmark className="w-3.5 h-3.5" />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                          <Landmark className="w-3.5 h-3.5 text-emerald-700" />
                           <span>Bank Transfer (Company Account)</span>
                         </span>
                       )}
@@ -760,22 +760,22 @@ export default function DriverEarningsPage() {
                     {/* Deductions */}
                     <td className="p-3.5 text-right whitespace-nowrap">
                       {tx.deduction_amount > 0 ? (
-                        <span className="text-rose-500 font-medium">
+                        <span className="text-rose-600 font-semibold">
                           -{formatCurrency(tx.deduction_amount, settings.currency)}
                         </span>
                       ) : (
-                        <span className="text-muted">0.00</span>
+                        <span className="text-slate-500">0.00</span>
                       )}
                     </td>
 
                     {/* Net */}
-                    <td className="p-3.5 text-right font-bold text-emerald-500 whitespace-nowrap">
+                    <td className="p-3.5 text-right font-extrabold text-emerald-800 whitespace-nowrap">
                       {formatCurrency(tx.net_amount, settings.currency)}
                     </td>
 
                     {/* Status */}
                     <td className="p-3.5 text-center whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
                         {tx.type === 'settlement' ? 'Settled' : 'Completed'}
                       </span>
                     </td>
@@ -823,7 +823,7 @@ export default function DriverEarningsPage() {
                   <h3 className="text-sm font-bold text-primary">
                     {selectedTx.type === 'settlement' ? 'Settlement Voucher' : 'Journey Fare Breakdown'}
                   </h3>
-                  <span className="font-mono text-xs text-amber-500 font-bold">
+                  <span className="font-mono text-xs text-amber-950 font-black">
                     {selectedTx.reference}
                   </span>
                 </div>
@@ -839,27 +839,27 @@ export default function DriverEarningsPage() {
             <div className="space-y-3 text-xs">
               <div className="bg-surface p-3.5 rounded-2xl border border-base space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted">Date &amp; Time:</span>
+                  <span className="text-slate-600 font-medium">Date &amp; Time:</span>
                   <span className="font-semibold text-primary">{formatDateTime(selectedTx.date)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted">Payment Channel:</span>
+                  <span className="text-slate-600 font-medium">Payment Channel:</span>
                   <span className="font-semibold text-primary">{selectedTx.payment_method_label}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted">Counterparty:</span>
+                  <span className="text-slate-600 font-medium">Counterparty:</span>
                   <span className="font-semibold text-primary">{selectedTx.passenger_name}</span>
                 </div>
                 {selectedTx.vehicle_type !== 'SETTLEMENT' && (
                   <div className="flex justify-between">
-                    <span className="text-muted">Vehicle Class:</span>
-                    <span className="font-semibold uppercase text-emerald-500">{selectedTx.vehicle_type}</span>
+                    <span className="text-slate-600 font-medium">Vehicle Class:</span>
+                    <span className="font-bold uppercase text-emerald-800">{selectedTx.vehicle_type}</span>
                   </div>
                 )}
               </div>
 
               <div className="space-y-2 bg-card border border-base p-4 rounded-2xl">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-muted mb-1">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
                   Accounting Line Items
                 </div>
                 <div className="flex justify-between text-secondary">
@@ -878,13 +878,13 @@ export default function DriverEarningsPage() {
                 ) : null}
                 <div className="flex justify-between text-secondary">
                   <span>Company Commission Deduction:</span>
-                  <span className={selectedTx.deduction_amount > 0 ? 'text-rose-500 font-semibold' : 'text-muted'}>
+                  <span className={selectedTx.deduction_amount > 0 ? 'text-rose-600 font-semibold' : 'text-slate-500'}>
                     -{formatCurrency(selectedTx.deduction_amount, settings.currency)}
                   </span>
                 </div>
                 <div className="pt-2 border-t border-base flex justify-between text-sm font-bold text-primary">
                   <span>Net Chauffeur Share:</span>
-                  <span className="text-emerald-500">
+                  <span className="text-emerald-800 font-extrabold">
                     {formatCurrency(selectedTx.net_amount, settings.currency)}
                   </span>
                 </div>

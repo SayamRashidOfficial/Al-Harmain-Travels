@@ -1036,11 +1036,11 @@ export default function CustomerHomePage() {
       {/* ── Welcome Bar ────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-semibold mb-1">
-            <Sparkles className="w-3 h-3 text-amber-500" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold mb-1">
+            <Sparkles className="w-3 h-3 text-amber-600" />
             {isRTL ? 'شركة الحرمين للنقل الفاخر' : 'Al Harmain Fixed-Fare Booking'}
           </span>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-primary">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
             {isRTL ? `إلى أين ترغب بالذهاب يا ${currentUser.full_name.split(' ')[0]}؟` : `Where would you like to go, ${currentUser.full_name.split(' ')[0]}?`}
           </h1>
         </div>
@@ -1051,18 +1051,18 @@ export default function CustomerHomePage() {
             <button
               type="button"
               onClick={handleUseCurrentLocation}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-semibold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold transition-colors cursor-pointer"
             >
-              <Crosshair className="w-3 h-3 text-emerald-500" />
+              <Crosshair className="w-3 h-3 text-emerald-600" />
               <span>{isRTL ? 'تحديد الموقع نشط' : 'Live GPS Active'}</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={handleUseCurrentLocation}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-semibold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-bold transition-colors cursor-pointer"
             >
-              <Crosshair className="w-3 h-3 text-amber-500" />
+              <Crosshair className="w-3 h-3 text-amber-600" />
               <span>{isRTL ? 'تحديد موقعي' : 'Use GPS'}</span>
             </button>
           )}
@@ -1071,7 +1071,7 @@ export default function CustomerHomePage() {
             <button
               type="button"
               onClick={resetBooking}
-              className="text-xs font-semibold text-muted hover:text-rose-500 px-2.5 py-1 rounded-full border border-base bg-card hover:bg-elevated transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+              className="text-xs font-bold text-slate-700 hover:text-rose-600 px-2.5 py-1 rounded-full border border-slate-300 bg-white hover:bg-slate-100 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
               <span>{isRTL ? 'إعادة تعيين' : 'Reset'}</span>
@@ -1082,13 +1082,13 @@ export default function CustomerHomePage() {
 
       {/* ── Deactivated Account Alert ────────────────────────────────────────── */}
       {(currentUser.status === 'deactivated' || currentUser.status === 'suspended') && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 flex items-start gap-3 shadow-sm">
-          <AlertCircle className="w-5 h-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex items-start gap-3 shadow-sm">
+          <AlertCircle className="w-5 h-5 shrink-0 text-amber-700 mt-0.5" />
           <div className="text-xs space-y-1">
-            <p className="font-bold text-sm text-amber-800 dark:text-amber-200">
+            <p className="font-black text-sm text-amber-950">
               {isRTL ? 'الحساب غير مفعّل' : 'Customer Account Deactivated'}
             </p>
-            <p className="opacity-90 leading-relaxed">
+            <p className="text-amber-900 font-medium leading-relaxed">
               {isRTL
                 ? 'تم تعطيل حسابك مؤقتًا من قِبل إدارة الرحلات. لا يمكنك إجراء حجوزات جديدة حالياً. يُرجى التواصل مع فريق التنسيق والترحيل لإعادة تفعيل الحساب.'
                 : 'Your customer account has been temporarily disabled by dispatch operations. New bookings cannot be submitted at this time. Please contact dispatch support to restore account privileges.'}

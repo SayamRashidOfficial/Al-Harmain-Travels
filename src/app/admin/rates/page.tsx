@@ -845,7 +845,7 @@ export default function AdminRatesPage() {
               onClick={() => setShowMatrix(!showMatrix)}
               className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-xs ${
                 showMatrix
-                  ? 'bg-amber-500/15 text-amber-700 border-amber-500/30'
+                  ? 'bg-amber-100 text-amber-950 border-amber-300 font-bold'
                   : 'border-base bg-surface hover:bg-elevated text-secondary hover:text-primary'
               }`}
               title="Toggle table versus matrix view"
@@ -2424,9 +2424,9 @@ export default function AdminRatesPage() {
             </div>
 
             {rateDeleteConflict && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 text-xs space-y-2">
-                <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs space-y-2 font-medium">
+                <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-700" />
                   <span>Linked Historical Bookings Detected</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
@@ -2480,9 +2480,9 @@ export default function AdminRatesPage() {
             </div>
 
             {vehicleDeleteConflict && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 text-xs space-y-2">
-                <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs space-y-2 font-medium">
+                <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-700" />
                   <span>Cannot Delete: Record in Active Use</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
@@ -2536,9 +2536,9 @@ export default function AdminRatesPage() {
             </div>
 
             {routeDeleteConflict && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 text-xs space-y-2">
-                <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs space-y-2 font-medium">
+                <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-700" />
                   <span>Linked Booking Records Detected</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
@@ -2592,9 +2592,9 @@ export default function AdminRatesPage() {
             </div>
 
             {terminalDeleteConflict && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 text-xs space-y-2">
-                <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs space-y-2 font-medium">
+                <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-700" />
                   <span>Linked Booking Records Detected</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">

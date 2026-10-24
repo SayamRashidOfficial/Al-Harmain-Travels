@@ -207,15 +207,15 @@ export default function DriverProfilePage() {
     const status = (currentDriver?.status || 'available').toLowerCase();
     switch (status) {
       case 'available':
-        return { label: isRTL ? 'متاح ومستعد للخدمة' : 'Available on Duty', color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-500' };
+        return { label: isRTL ? 'متاح ومستعد للخدمة' : 'Available on Duty', color: 'bg-emerald-100 text-emerald-950 border border-emerald-300 font-bold', dot: 'bg-emerald-600' };
       case 'on_trip':
-        return { label: isRTL ? 'في مسار رحلة' : 'On Active Trip', color: 'bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30', dot: 'bg-purple-500' };
+        return { label: isRTL ? 'في مسار رحلة' : 'On Active Trip', color: 'bg-purple-100 text-purple-950 border border-purple-300 font-bold', dot: 'bg-purple-600' };
       case 'assigned':
-        return { label: isRTL ? 'معين بمهمة' : 'Assigned to Mission', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30', dot: 'bg-amber-500' };
+        return { label: isRTL ? 'معين بمهمة' : 'Assigned to Mission', color: 'bg-amber-100 text-amber-950 border border-amber-300 font-bold', dot: 'bg-amber-600' };
       case 'offline':
-        return { label: isRTL ? 'خارج أوقات الخدمة' : 'Offline / Off Duty', color: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30', dot: 'bg-rose-500' };
+        return { label: isRTL ? 'خارج أوقات الخدمة' : 'Offline / Off Duty', color: 'bg-rose-100 text-rose-950 border border-rose-300 font-bold', dot: 'bg-rose-600' };
       default:
-        return { label: status.toUpperCase(), color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-500' };
+        return { label: status.toUpperCase(), color: 'bg-emerald-100 text-emerald-950 border border-emerald-300 font-bold', dot: 'bg-emerald-600' };
     }
   }, [currentDriver?.status, isRTL]);
 
@@ -513,8 +513,8 @@ export default function DriverProfilePage() {
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg sm:text-xl font-bold text-primary">{driverDisplayName}</h1>
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded-full uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded-full uppercase bg-emerald-100 text-emerald-950 border border-emerald-300">
+                <Sparkles className="w-3 h-3 text-amber-600 shrink-0" />
                 <span>{isRTL ? 'كابتن معتمد — الهيئة العامة للنقل' : 'MOT Certified Chauffeur'}</span>
               </span>
             </div>
@@ -707,9 +707,9 @@ export default function DriverProfilePage() {
                   <button
                     type="button"
                     onClick={openPhoneModal}
-                    className="w-full py-1.5 px-3 rounded-xl bg-card hover:bg-elevated border border-base text-amber-600 dark:text-amber-400 font-bold text-[11px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full py-1.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-950 font-bold text-[11px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Phone className="w-3 h-3" />
+                    <Phone className="w-3 h-3 text-amber-700" />
                     <span>{isRTL ? 'تعديل رقم الهاتف' : 'Change Phone Number'}</span>
                   </button>
                 </div>
@@ -770,13 +770,13 @@ export default function DriverProfilePage() {
 
             {/* In-form Success Alert */}
             {profileSuccessMsg && (
-              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5 text-xs text-emerald-700 dark:text-emerald-300 animate-fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 flex items-start gap-2.5 text-xs text-emerald-950 animate-fade-in font-medium">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span className="flex-1 font-medium">{profileSuccessMsg}</span>
                 <button
                   type="button"
                   onClick={() => setProfileSuccessMsg(null)}
-                  className="p-1 text-emerald-700 dark:text-emerald-300 hover:opacity-75"
+                  className="p-1 text-emerald-800 hover:opacity-75"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -1055,12 +1055,12 @@ export default function DriverProfilePage() {
                 </div>
 
                 {assignedVehicle ? (
-                  <div className="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 font-mono font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto shadow-xs">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-950 border border-emerald-300 font-mono font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto shadow-xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
                     <span>{assignedVehicle.plate_number || assignedVehicle.license_plate || 'VIP KSA'}</span>
                   </div>
                 ) : (
-                  <span className="px-3 py-1 rounded-xl bg-amber-500/15 text-amber-500 border border-amber-500/30 text-xs font-bold">
+                  <span className="px-3 py-1 rounded-xl bg-amber-100 text-amber-950 border border-amber-300 text-xs font-bold">
                     {isRTL ? 'قيد التخصيص' : 'Pending Allocation'}
                   </span>
                 )}
@@ -1084,7 +1084,7 @@ export default function DriverProfilePage() {
                   {/* Vehicle Class / Category */}
                   <div className="p-4 rounded-xl bg-surface border border-base space-y-1">
                     <span className="text-muted text-[10px] uppercase font-bold tracking-wider">{isRTL ? 'فئة وتصنيف المركبة' : 'Vehicle Class'}</span>
-                    <div className="text-amber-600 dark:text-amber-400 font-bold text-sm uppercase">
+                    <div className="text-amber-950 font-extrabold text-sm uppercase">
                       {assignedVehicle.vehicle_type?.replace('_', ' ') || assignedVehicle.category || 'VIP Transportation'}
                     </div>
                     <span className="text-[10px] text-muted block">
@@ -1212,13 +1212,13 @@ export default function DriverProfilePage() {
 
             {/* In-form Success Alert */}
             {passwordSuccessMsg && (
-              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5 text-xs text-emerald-700 dark:text-emerald-300 animate-fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 flex items-start gap-2.5 text-xs text-emerald-950 animate-fade-in font-medium">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span className="flex-1 font-medium">{passwordSuccessMsg}</span>
                 <button
                   type="button"
                   onClick={() => setPasswordSuccessMsg(null)}
-                  className="p-1 text-emerald-700 dark:text-emerald-300 hover:opacity-75"
+                  className="p-1 text-emerald-800 hover:opacity-75"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -1227,7 +1227,7 @@ export default function DriverProfilePage() {
 
             {/* In-form Error Alert */}
             {passwordError && (
-              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-2.5 text-xs text-rose-700 dark:text-rose-400 animate-fade-in">
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 flex items-start gap-2.5 text-xs text-rose-950 animate-fade-in font-medium">
                 <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                 <span className="flex-1 font-medium">{passwordError}</span>
                 <button

@@ -153,7 +153,7 @@ function FeatureCard({
             <h3 className="font-serif text-lg sm:text-xl font-normal text-[#08281e] tracking-tight group-hover:text-[#0b4736] transition-colors">
               {title}
             </h3>
-            <p className="text-xs sm:text-[13px] text-[#55635c] leading-relaxed font-sans font-normal">
+            <p className="text-xs sm:text-[13px] text-[#1e3328] leading-relaxed font-sans font-medium">
               {description}
             </p>
           </div>
