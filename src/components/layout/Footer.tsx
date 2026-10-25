@@ -182,7 +182,7 @@ export default function Footer() {
 
           {/* ── COL 1: BRAND & MOT LICENSE (4 COLS) ── */}
           <div className="sm:col-span-2 lg:col-span-4 space-y-4" style={getRevealStyle(180)}>
-            <BrandLogo size="md" href="/" subtitle="VIP Chauffeur · Makkah · Madinah" />
+            <BrandLogo size="md" href="/" subtitle="VIP Chauffeur · Makkah · Madinah" variant="dark" />
 
             {/* Clean Formal MOT License Info */}
             <div className="flex items-center gap-2 text-xs text-emerald-200/80 pt-1">

@@ -27,6 +27,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Portal } from '@/components/ui/Modal';
 
 export interface MatchedDriverData {
   id: string;
@@ -374,8 +375,17 @@ export default function DriverMatchingModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in">
-      <div className="bg-card border border-base rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transition-all duration-300">
+    <Portal>
+      <div
+        role="presentation"
+        data-modal-overlay="true"
+        className="modal-backdrop modal-overlay fixed inset-0 !m-0 !top-0 !left-0 !right-0 !bottom-0 z-70 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="bg-card border border-base rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transition-all duration-300"
+        >
 
         {/* Header Ribbon */}
         <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-base flex items-center justify-between bg-surface/50">
@@ -766,6 +776,7 @@ export default function DriverMatchingModal({
 
         </div>
       </div>
-    </div>
+      </div>
+    </Portal>
   );
 }

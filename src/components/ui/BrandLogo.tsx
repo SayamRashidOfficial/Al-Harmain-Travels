@@ -19,6 +19,8 @@ interface BrandLogoProps {
   compact?: boolean;
   /** Force light theme colors (no white text) */
   forceLight?: boolean;
+  /** Theme variant: 'light' (default, for light backgrounds) or 'dark' (for dark surfaces like footer) */
+  variant?: 'light' | 'dark';
   /** Optional click handler (e.g. to close drawers) */
   onClick?: () => void;
   /** Only show emblem/logo image without typography */
@@ -86,10 +88,23 @@ export default function BrandLogo({
   className = '',
   compact = false,
   forceLight = true,
+  variant = 'light',
   onClick,
   emblemOnly = false,
 }: BrandLogoProps) {
-  const isLight = forceLight;
+  const isDark = variant === 'dark' || forceLight === false;
+
+  const brandTextColor = isDark
+    ? 'text-white group-hover:text-[#dfc15a]'
+    : 'text-slate-900 group-hover:text-emerald-700';
+
+  const travelsTextColor = isDark
+    ? 'text-[#dfc15a] group-hover:text-[#f3e5ab]'
+    : 'text-[#a07c1e]';
+
+  const subtitleTextColor = isDark
+    ? 'text-emerald-300/85'
+    : 'text-emerald-700';
 
   const titleSizeMap: Record<string, string> = {
     xs: 'text-sm sm:text-base',
@@ -129,12 +144,12 @@ export default function BrandLogo({
       <div className="flex flex-col min-w-0 leading-none">
         <div className="flex items-baseline gap-1.5 leading-none">
           <span
-            className={`font-display ${titleSizeMap[size] || titleSizeMap.md} font-semibold tracking-heading text-slate-900 group-hover:text-emerald-700 transition-colors`}
+            className={`font-display ${titleSizeMap[size] || titleSizeMap.md} font-semibold tracking-heading ${brandTextColor} transition-colors`}
           >
             Al Harmain
           </span>
           <span
-            className={`font-display ${titleSizeMap[size] || titleSizeMap.md} font-medium italic tracking-heading text-[#a07c1e] transition-colors`}
+            className={`font-display ${titleSizeMap[size] || titleSizeMap.md} font-medium italic tracking-heading ${travelsTextColor} transition-colors`}
           >
             Travels
           </span>
@@ -142,7 +157,7 @@ export default function BrandLogo({
 
         {showSubtitle && !compact && (
           <p
-            className={`${subtitleSizeMap[size] || subtitleSizeMap.md} uppercase tracking-[0.2em] font-semibold text-emerald-700 mt-1 truncate transition-opacity hidden xs:block`}
+            className={`${subtitleSizeMap[size] || subtitleSizeMap.md} uppercase tracking-[0.2em] font-semibold ${subtitleTextColor} mt-1 truncate transition-opacity hidden xs:block`}
           >
             {subtitle}
           </p>

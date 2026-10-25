@@ -861,15 +861,6 @@ export default function FixedFareBookingPanel({
                 Exact fixed fares verified by Al Harmain operations. No meter, no surge.
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setBookingStep('route')}
-              className="px-2 py-1 rounded-lg bg-elevated border border-base hover:border-strong text-secondary text-[11px] font-semibold flex items-center gap-1 shrink-0 active:scale-95 transition-all cursor-pointer"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              <span>Back</span>
-            </button>
           </div>
 
           {/* Current Route Snapshot */}
@@ -1019,15 +1010,6 @@ export default function FixedFareBookingPanel({
                 Provide passenger details and exact pickup timing for your VIP chauffeur.
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setBookingStep('vehicle')}
-              className="px-2 py-1 rounded-lg bg-elevated border border-base hover:border-strong text-secondary text-[11px] font-semibold flex items-center gap-1 shrink-0 active:scale-95 transition-all cursor-pointer"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              <span>Back</span>
-            </button>
           </div>
 
           {/* Quick Itinerary Pill */}
@@ -1182,15 +1164,6 @@ export default function FixedFareBookingPanel({
                 Review your VIP itinerary and upload transfer confirmation screenshot.
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setBookingStep('details')}
-              className="px-2 py-1 rounded-lg bg-elevated border border-base hover:border-strong text-secondary text-[11px] font-semibold flex items-center gap-1 shrink-0 active:scale-95 transition-all cursor-pointer"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              <span>Back</span>
-            </button>
           </div>
 
           {/* Comprehensive Itinerary Card */}

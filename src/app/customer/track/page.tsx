@@ -47,6 +47,7 @@ import {
 import { toast } from 'sonner';
 import { createInvoicePdfBlobUrl } from '@/lib/pdf-invoice';
 import { formatDriverRating, fetchDriverDetails } from '@/lib/driver-stats';
+import Modal from '@/components/ui/Modal';
 
 interface TrackingStepConfig {
   id: number;
@@ -452,7 +453,9 @@ export default function CustomerTrackPage() {
           );
 
           if (!matchExisting) {
-            const { data: specificBooking, error: specErr } = await supabase
+            const cleanRef = urlRef.trim();
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanRef);
+            let query = supabase
               .from('bookings')
               .select(`
                 *,
@@ -463,9 +466,13 @@ export default function CustomerTrackPage() {
                 ),
                 additional_charges(*),
                 payments(*)
-              `)
-              .or(`booking_reference.eq.${urlRef},id.eq.${urlRef}`)
-              .maybeSingle();
+              `);
+
+            query = isUuid
+              ? query.or(`booking_reference.ilike.${cleanRef},id.eq.${cleanRef}`)
+              : query.ilike('booking_reference', cleanRef);
+
+            const { data: specificBooking, error: specErr } = await query.maybeSingle();
 
             if (!specErr && specificBooking) {
               bookingsList = [specificBooking, ...bookingsList];
@@ -530,9 +537,9 @@ export default function CustomerTrackPage() {
           if (typeof window !== 'undefined') {
             try {
               localStorage.setItem(STORAGE_KEY, targetSelection.booking_reference);
-              // Update URL parameter without reload
+              // Update URL parameter without reload (only when no ref was specified in the URL)
               const currentUrlParam = new URLSearchParams(window.location.search).get('ref');
-              if (currentUrlParam !== targetSelection.booking_reference) {
+              if (!currentUrlParam && targetSelection.booking_reference) {
                 window.history.replaceState(
                   null,
                   '',
@@ -1941,22 +1948,19 @@ export default function CustomerTrackPage() {
       {/* ========================================================= */}
       {/* Customer Payment Receipt Proof Modal */}
       {/* ========================================================= */}
-      {showReceiptModal && selectedBooking?.payment_screenshot_url && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-card border border-base rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl relative">
-            <div className="flex items-center justify-between border-b border-base pb-3">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-emerald-500" />
-                <h4 className="type-card-title text-sm">Customer Payment Receipt</h4>
-              </div>
-              <button
-                onClick={() => setShowReceiptModal(false)}
-                className="p-1.5 rounded-xl hover:bg-elevated text-muted hover:text-primary transition-colors cursor-pointer"
-                aria-label="Close modal"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal
+        isOpen={Boolean(showReceiptModal && selectedBooking?.payment_screenshot_url)}
+        onClose={() => setShowReceiptModal(false)}
+        size="lg"
+        title={
+          <div className="flex items-center gap-2">
+            <Eye className="w-4 h-4 text-emerald-500" />
+            <span className="type-card-title text-sm">Customer Payment Receipt</span>
+          </div>
+        }
+      >
+        {selectedBooking?.payment_screenshot_url && (
+          <div className="space-y-4">
             <div className="rounded-2xl overflow-hidden border border-base bg-surface flex items-center justify-center max-h-[65vh] p-2">
               <img
                 src={selectedBooking.payment_screenshot_url}
@@ -1976,8 +1980,8 @@ export default function CustomerTrackPage() {
               </a>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
