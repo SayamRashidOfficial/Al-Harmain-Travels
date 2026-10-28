@@ -11,7 +11,7 @@ import AuthShell from '@/components/auth/AuthShell';
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectParam = searchParams.get('redirect');
+  const redirectParam = searchParams?.get('redirect');
   const { signIn } = useApp();
 
   const [email, setEmail] = useState('');

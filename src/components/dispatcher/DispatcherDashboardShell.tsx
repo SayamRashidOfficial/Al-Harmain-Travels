@@ -20,7 +20,7 @@ interface DispatcherDashboardShellProps {
 }
 
 export default function DispatcherDashboardShell({ children }: DispatcherDashboardShellProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const { currentUser, bookings, drivers, signOut } = useApp();
   const { dir, isRTL, t } = useLanguage();
 

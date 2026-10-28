@@ -26,7 +26,7 @@ interface DispatcherMobileSidebarProps {
 }
 
 export default function DispatcherMobileSidebar({ isOpen, onClose }: DispatcherMobileSidebarProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const { currentUser, bookings, drivers, signOut } = useApp();
   const { dir, isRTL, t } = useLanguage();
 

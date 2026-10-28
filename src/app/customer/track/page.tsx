@@ -33,6 +33,7 @@ import {
   Eye,
   X,
   ExternalLink,
+  Zap,
   QrCode,
   RefreshCw,
   Copy,
@@ -182,7 +183,7 @@ const STORAGE_KEY = 'alharmain_customer_selected_track_booking';
 
 export default function CustomerTrackPage() {
   const searchParams = useSearchParams();
-  const urlRef = searchParams.get('ref') || searchParams.get('bookingId') || searchParams.get('id');
+  const urlRef = searchParams?.get('ref') || searchParams?.get('bookingId') || searchParams?.get('id');
 
   const {
     currentUser,
@@ -1206,12 +1207,26 @@ export default function CustomerTrackPage() {
           </div>
 
           <div className="bg-surface/60 p-2.5 rounded-xl border border-base">
-            <span className="text-[9.5px] uppercase font-bold text-muted block">{isRTL ? 'تاريخ ووقت الحجز' : 'Booking Date & Time'}</span>
-            <span className="font-semibold text-primary text-xs mt-0.5 block">
-              {formatDateTime(selectedBooking.scheduled_at || selectedBooking.created_at)}
+            <span className="text-[9.5px] uppercase font-bold text-muted block">
+              {selectedBooking.booking_type === 'immediate'
+                ? (isRTL ? 'توقيت الخدمة' : 'Service Timing')
+                : (isRTL ? 'موعد الرحلة المجدول' : 'Scheduled Pickup Time')}
             </span>
-            <span className="text-[10.5px] text-emerald-600 dark:text-emerald-400 capitalize">
-              {selectedBooking.booking_type} {isRTL ? '•' : 'Ride •'} {selectedBooking.passenger_count || 1} {isRTL ? 'ركاب' : 'Passengers'}
+            <span className="font-semibold text-primary text-xs mt-0.5 block">
+              {selectedBooking.booking_type === 'immediate' ? (
+                <span className="text-amber-700 flex items-center gap-1 font-bold">
+                  <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500/20" />
+                  {isRTL ? 'حجز فوري (مباشر)' : 'Book Now (Immediate / ASAP)'}
+                </span>
+              ) : (
+                <span className="text-emerald-700 flex items-center gap-1 font-bold">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                  {selectedBooking.scheduled_at ? formatDateTime(selectedBooking.scheduled_at) : '—'} (AST)
+                </span>
+              )}
+            </span>
+            <span className="text-[10.5px] text-muted block mt-0.5">
+              {isRTL ? 'تم الطلب في: ' : 'Requested on: '} {formatDateTime(selectedBooking.created_at)}
             </span>
           </div>
 
@@ -1961,6 +1976,14 @@ export default function CustomerTrackPage() {
       >
         {selectedBooking?.payment_screenshot_url && (
           <div className="space-y-4">
+            {selectedBooking.payment_account_details && (
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-xs flex items-center justify-between">
+                <span className="text-slate-600 font-medium">Payment Account:</span>
+                <span className="font-bold text-amber-950 font-mono">
+                  {selectedBooking.payment_account_details.provider_name}
+                </span>
+              </div>
+            )}
             <div className="rounded-2xl overflow-hidden border border-base bg-surface flex items-center justify-center max-h-[65vh] p-2">
               <img
                 src={selectedBooking.payment_screenshot_url}

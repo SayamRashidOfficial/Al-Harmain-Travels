@@ -20,7 +20,7 @@ interface CustomerDashboardShellProps {
 }
 
 export default function CustomerDashboardShell({ children }: CustomerDashboardShellProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const { currentUser, activeCustomerBooking, bookings, signOut } = useApp();
   const { dir, isRTL, t } = useLanguage();
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Driver, Vehicle, Profile } from '@/types';
+import { Driver, Vehicle, Profile, RateVehicleType } from '@/types';
 import { supabase } from '@/lib/supabase/client';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import {
@@ -45,6 +45,7 @@ import { toast } from 'sonner';
 function DriverDetailModal({
   driver,
   vehicles,
+  rateVehicles = [],
   onClose,
   onUpdate,
   onAssignVehicle,
@@ -53,6 +54,7 @@ function DriverDetailModal({
 }: {
   driver: Driver;
   vehicles: Vehicle[];
+  rateVehicles?: RateVehicleType[];
   onClose: () => void;
   onUpdate: (id: string, data: Record<string, unknown>) => Promise<void>;
   onAssignVehicle: (driverId: string, vehicleId: string | null) => Promise<void>;
@@ -290,11 +292,24 @@ function DriverDetailModal({
                 className="flex-1 bg-white border border-sky-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 cursor-pointer"
               >
                 <option value="">— Unassign Vehicle —</option>
-                {availableVehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.make} {v.model} — {v.plate_number} ({v.vehicle_type?.replace(/_/g, ' ')})
-                  </option>
-                ))}
+                {rateVehicles && rateVehicles.length > 0 && (
+                  <optgroup label="Rates Fleet Categories">
+                    {rateVehicles.filter((rv) => rv.is_active).map((rv) => (
+                      <option key={`rv-${rv.id}`} value={rv.id}>
+                        {rv.name} ({rv.category.toUpperCase()} • {rv.seating_capacity} Seats)
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {availableVehicles.length > 0 && (
+                  <optgroup label="Physical Fleet Inventory">
+                    {availableVehicles.map((v) => (
+                      <option key={`v-${v.id}`} value={v.id}>
+                        {v.make} {v.model} — {v.plate_number} ({v.vehicle_type?.replace(/_/g, ' ')})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               <button
                 onClick={handleVehicleAssign}
@@ -336,7 +351,7 @@ function DriverDetailModal({
 }
 
 export default function AdminDriversPage() {
-  const { drivers, vehicles, settings, refreshData, adminUpdateUser, adminAssignVehicle, toggleUserStatus } = useApp();
+  const { drivers, vehicles, rateVehicles, settings, refreshData, adminUpdateUser, adminAssignVehicle, toggleUserStatus } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -650,6 +665,7 @@ export default function AdminDriversPage() {
         <DriverDetailModal
           driver={selectedDriver}
           vehicles={vehicles}
+          rateVehicles={rateVehicles}
           onClose={() => setSelectedDriver(null)}
           onUpdate={handleUpdateDriver}
           onAssignVehicle={handleAssignVehicle}

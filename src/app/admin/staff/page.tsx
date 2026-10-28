@@ -133,16 +133,14 @@ export default function AdminStaffPage() {
     email: '',
     phone: '',
     password: '',
-    role: 'dispatcher' as 'dispatcher' | 'admin',
+    role: 'dispatcher' as const,
   });
   const [isCreating, setIsCreating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
   // Staff = dispatchers and admins (exclude customers and drivers)
-  const staffList = usersList.filter(
-    (u) => u.role === 'dispatcher' || u.role === 'admin'
-  );
+  const staffList = usersList.filter((u) => !u.is_super_admin && u.role === 'dispatcher');
 
   const filteredStaff = staffList.filter((s) => {
     if (roleFilter !== 'all' && s.role !== roleFilter) return false;
@@ -244,7 +242,6 @@ export default function AdminStaffPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <AdminStatCard title="Total Staff" value={totalStaff} subtitle="All staff accounts" icon={<UserCog className="w-4.5 h-4.5" />} tone="neutral" />
         <AdminStatCard title="Dispatchers" value={totalDispatchers} subtitle="Operations staff" icon={<Activity className="w-4.5 h-4.5" />} tone="blue" />
-        <AdminStatCard title="Administrators" value={totalAdmins} subtitle="Admin accounts" icon={<Shield className="w-4.5 h-4.5" />} tone="purple" />
         <AdminStatCard title="Active Accounts" value={activeStaff} subtitle="Currently active" icon={<CheckCircle2 className="w-4.5 h-4.5" />} tone="green" />
       </div>
 
@@ -266,7 +263,7 @@ export default function AdminStaffPage() {
           )}
         </div>
         <div className="flex gap-2">
-          {['all', 'admin', 'dispatcher'].map((r) => (
+          {['all', 'dispatcher'].map((r) => (
             <button
               key={r}
               onClick={() => { setRoleFilter(r); setCurrentPage(1); }}
@@ -385,11 +382,10 @@ export default function AdminStaffPage() {
                 <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Role</label>
                 <select
                   value={newStaffForm.role}
-                  onChange={(e) => setNewStaffForm({ ...newStaffForm, role: e.target.value as 'dispatcher' | 'admin' })}
+                  onChange={(e) => setNewStaffForm({ ...newStaffForm, role: e.target.value as 'dispatcher' })}
                   className="mt-1 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
                   <option value="dispatcher">Dispatcher</option>
-                  <option value="admin">Admin</option>
                 </select>
               </div>
               <div>

@@ -17,7 +17,7 @@ import CinematicTexture from '@/components/cinematic/CinematicTexture';
 import BrandLogo from '@/components/ui/BrandLogo';
 
 export default function Footer() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const footerRef = useRef<HTMLElement>(null);
   const [isInView, setIsInView] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);

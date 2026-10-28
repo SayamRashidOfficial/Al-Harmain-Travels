@@ -1,9 +1,13 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
-import { DriverStatus, AdditionalChargeType, Booking } from '@/types';
+import { supabase } from '@/lib/supabase/client';
+import { resolveDriverVehicle, calculateDriverTotalEarnings } from '@/lib/driver-stats';
+import { calculateDriverEarnings } from '@/lib/driver-earnings';
+import { formatCurrency, formatDateTime, formatPickupClock } from '@/lib/utils';
+import { DriverStatus, AdditionalChargeType, Booking, Driver } from '@/types';
 import {
   Car,
   Navigation,
@@ -27,6 +31,12 @@ import {
   Coins,
   Banknote,
   Loader2,
+  AlertTriangle,
+  RefreshCw,
+  Zap,
+  UserCheck,
+  User,
+  ShieldAlert,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -43,7 +53,10 @@ export default function DriverCockpitPage() {
     currentUser,
     userRole,
     drivers,
+    vehicles,
+    rateVehicles,
     bookings,
+    driverSettlements,
     updateDriverStatus,
     driverAcceptBooking,
     driverRejectBooking,
@@ -52,17 +65,125 @@ export default function DriverCockpitPage() {
     addAdditionalCharge,
     settings,
     isDataLoading,
+    refreshData,
   } = useApp();
+
+  // Active driver direct fetch state for instant real-time sync
+  const [directDriver, setDirectDriver] = useState<Driver | null>(null);
+  const [isRefreshingDriver, setIsRefreshingDriver] = useState<boolean>(false);
+
+  // Directly query the Supabase drivers table for the authenticated user
+  const loadDirectDriver = useCallback(async () => {
+    if (!currentUser?.id || currentUser.id === 'guest') return;
+    try {
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*), location:driver_locations(*)')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        const resolvedVeh = resolveDriverVehicle(data.assigned_vehicle_id, rateVehicles, vehicles);
+        const rawLoc = Array.isArray(data.location) ? data.location[0] : data.location;
+        const prof = data.profile || currentUser;
+        const computedEarnings = calculateDriverTotalEarnings(bookings, currentUser.id, Number((data as any)?.commission_rate || 0));
+        setDirectDriver({
+          ...data,
+          profile: prof,
+          full_name: prof?.full_name || currentUser.full_name || 'Captain',
+          phone: prof?.phone || currentUser.phone || null,
+          avatar_url: prof?.avatar_url || currentUser.avatar_url || null,
+          assigned_vehicle: resolvedVeh || data.assigned_vehicle,
+          vehicle: resolvedVeh || data.assigned_vehicle,
+          location: rawLoc || null,
+          total_earnings: computedEarnings > 0 ? computedEarnings : (data.total_earnings ? Number(data.total_earnings) : 0),
+        });
+      }
+    } catch (err) {
+      console.warn('[DriverCockpit] Direct driver load error:', err);
+    }
+  }, [currentUser?.id, currentUser.full_name, currentUser.phone, currentUser.avatar_url, rateVehicles, vehicles, bookings]);
+
+  useEffect(() => {
+    loadDirectDriver();
+  }, [loadDirectDriver]);
+
+  // Real-time listener for current driver profile & vehicle assignments
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.id === 'guest') return;
+    const channel = supabase
+      .channel(`driver_cockpit_realtime:${currentUser.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers', filter: `id=eq.${currentUser.id}` }, () => {
+        loadDirectDriver();
+        refreshData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser.id}` }, () => {
+        loadDirectDriver();
+        refreshData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `assigned_driver_id=eq.${currentUser.id}` }, () => {
+        refreshData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id, loadDirectDriver, refreshData]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshingDriver(true);
+    try {
+      await Promise.all([loadDirectDriver(), refreshData()]);
+      toast.success('Chauffeur credentials and fleet assignment synced.');
+    } finally {
+      setIsRefreshingDriver(false);
+    }
+  };
 
   // Active driver selection
   const [selectedDriverId, setSelectedDriverId] = useState<string>(
     currentUser.role === 'driver' ? currentUser.id : ''
   );
 
-  const currentDriver =
+  const contextDriver =
     drivers.find((d) => d.id === currentUser.id || d.profile?.id === currentUser.id) ||
     (selectedDriverId ? drivers.find((d) => d.id === selectedDriverId) : undefined) ||
     (userRole === 'admin' ? drivers[0] : undefined);
+
+  // Combine direct and context driver data to guarantee zero stale data
+  const currentDriver: Driver | undefined = useMemo(() => {
+    const base =
+      contextDriver && directDriver
+        ? {
+            ...contextDriver,
+            ...directDriver,
+            profile: directDriver.profile || contextDriver.profile || currentUser,
+            full_name: directDriver.full_name || contextDriver.full_name || currentUser.full_name,
+            phone: directDriver.phone || contextDriver.phone || currentUser.phone,
+            avatar_url: directDriver.avatar_url || contextDriver.avatar_url || currentUser.avatar_url,
+            assigned_vehicle: directDriver.assigned_vehicle || contextDriver.assigned_vehicle,
+            vehicle: directDriver.vehicle || contextDriver.vehicle,
+          }
+        : directDriver || contextDriver;
+
+    if (!base) return undefined;
+
+    const computedEarnings = calculateDriverTotalEarnings(
+      bookings,
+      base.id,
+      Number((base as any)?.commission_rate || 0)
+    );
+    return {
+      ...base,
+      total_earnings:
+        computedEarnings > 0
+          ? computedEarnings
+          : base.total_earnings
+          ? Number(base.total_earnings)
+          : 0,
+    };
+  }, [contextDriver, directDriver, currentUser, bookings]);
 
   // Tab State
   const [activeTab, setActiveTab] = useState<AssignmentTab>('today');
@@ -89,6 +210,56 @@ export default function DriverCockpitPage() {
     return categorizeDriverAssignments(currentDriver.id, bookings);
   }, [currentDriver?.id, bookings]);
 
+  // Authoritative calculation of driver total earnings (guaranteed synchronized with completed trips)
+  const displayTotalEarnings = useMemo(() => {
+    if (!currentDriver?.id) return 0;
+
+    // 1. Authoritative driver earnings summary calculation (same engine as /driver/earnings)
+    const { summary } = calculateDriverEarnings({
+      driverId: currentDriver.id,
+      bookings,
+      settlements: driverSettlements || [],
+      commissionRate: Number((currentDriver as any)?.commission_rate || 0),
+      currency: settings.currency || 'SAR',
+    });
+
+    if (summary.net_earnings > 0) return summary.net_earnings;
+    if (summary.gross_earnings > 0) return summary.gross_earnings;
+
+    // 2. Direct sum from completed assignments on this page
+    if (completedAssignments.length > 0) {
+      const sum = completedAssignments.reduce((acc, b) => {
+        const fare = Number(
+          b.final_fare ?? b.confirmed_fare ?? b.fixed_fare_amount ?? b.estimated_fare ?? 0
+        );
+        const extraCharges = Array.isArray(b.additional_charges)
+          ? b.additional_charges.reduce((total, c) => total + Number(c?.amount || 0), 0)
+          : 0;
+        return acc + (isNaN(fare) ? 0 : fare) + (isNaN(extraCharges) ? 0 : extraCharges);
+      }, 0);
+      if (sum > 0) return sum;
+    }
+
+    // 3. Fallback to calculateDriverTotalEarnings
+    const statsEarnings = calculateDriverTotalEarnings(
+      bookings,
+      currentDriver.id,
+      Number((currentDriver as any)?.commission_rate || 0)
+    );
+    if (statsEarnings > 0) return statsEarnings;
+
+    // 4. Fallback to driver record total_earnings
+    return Number(currentDriver.total_earnings || 0);
+  }, [
+    currentDriver?.id,
+    currentDriver?.total_earnings,
+    (currentDriver as any)?.commission_rate,
+    bookings,
+    driverSettlements,
+    settings.currency,
+    completedAssignments,
+  ]);
+
   // Decline assignment modal state
   const [declineModalOpen, setDeclineModalOpen] = useState(false);
   const [bookingToDecline, setBookingToDecline] = useState<Booking | null>(null);
@@ -103,6 +274,9 @@ export default function DriverCockpitPage() {
   // Cash confirmation modal state
   const [cashModalBooking, setCashModalBooking] = useState<Booking | null>(null);
   const [isConfirmingCash, setIsConfirmingCash] = useState(false);
+
+  // Accepting ride state for async button progress
+  const [acceptingBookingId, setAcceptingBookingId] = useState<string | null>(null);
 
   const handleOpenConfirmCashModal = (booking: Booking) => {
     setCashModalBooking(booking);
@@ -121,7 +295,6 @@ export default function DriverCockpitPage() {
     }
   };
 
-
   if (isDataLoading) {
     return (
       <div className="page-shell space-y-6 animate-pulse">
@@ -137,22 +310,212 @@ export default function DriverCockpitPage() {
     );
   }
 
-  if (!currentDriver) {
+  // Provisioning & Completeness Verification
+  const hasDriverRecord = Boolean(currentDriver?.id);
+  const assignedVeh = currentDriver?.assigned_vehicle || currentDriver?.vehicle;
+  const hasAssignedVehicle = Boolean(currentDriver?.assigned_vehicle_id || assignedVeh);
+  const rawLicense = currentDriver?.license_number?.trim();
+  const hasValidLicense = Boolean(rawLicense && rawLicense.length >= 3 && rawLicense !== 'DL-PENDING');
+  const isAccountActive = (currentDriver?.profile?.status || currentUser.status) === 'active';
+
+  // Only display pending provisioning when essential configuration is genuinely incomplete
+  const isProfileIncomplete = !hasDriverRecord || !hasAssignedVehicle || !isAccountActive;
+
+  if (!currentDriver || isProfileIncomplete) {
     return (
-      <div className="page-shell py-16 text-center space-y-4">
-        <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shadow-lg">
-          <Car className="w-8 h-8" />
+      <div className="page-shell py-12 max-w-3xl mx-auto space-y-6">
+        {/* Banner Card */}
+        <div className="bg-card border border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden text-center space-y-4">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 shadow-md">
+            <Car className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[11px] uppercase tracking-wider font-extrabold text-amber-700 bg-amber-100 px-3 py-1 rounded-full border border-amber-300 inline-block">
+              Chauffeur Onboarding &amp; Provisioning
+            </span>
+            <h2 className="type-page-title text-2xl font-bold text-primary">
+              Chauffeur Profile Pending Provisioning
+            </h2>
+            <p className="text-sm text-secondary max-w-lg mx-auto">
+              Your chauffeur user credentials have been authenticated. Central operations is currently completing your fleet assignment and credential verification.
+            </p>
+          </div>
+
+          {/* Chauffeur identity pill */}
+          <div className="inline-flex items-center gap-3 bg-surface border border-base rounded-2xl px-4 py-2.5 text-xs text-secondary shadow-sm">
+            <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
+              {(currentUser.full_name || currentDriver?.full_name || 'C').charAt(0).toUpperCase()}
+            </div>
+            <div className="text-left font-medium text-primary">
+              <div>{currentUser.full_name || currentDriver?.full_name || 'Captain'}</div>
+              <div className="text-[11px] text-muted">{currentUser.email || 'Email Verified'}</div>
+            </div>
+            {currentUser.phone && (
+              <span className="text-[11px] text-muted font-mono pl-2 border-l border-base">
+                {currentUser.phone}
+              </span>
+            )}
+          </div>
         </div>
-        <h2 className="type-page-title">Chauffeur Profile Pending Provisioning</h2>
-        <p className="text-sm text-secondary max-w-md mx-auto">
-          Your driver account is registered, but your vehicle and chauffeur credentials are being configured by central operations.
-        </p>
+
+        {/* Detailed Provisioning Checklist Card */}
+        <div className="bg-card border border-base rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
+          <div className="flex items-center justify-between border-b border-base pb-4">
+            <div>
+              <h3 className="text-base font-bold text-primary">Provisioning Status Checklist</h3>
+              <p className="text-xs text-muted">Real-time status of required credentials and fleet allocation</p>
+            </div>
+            <button
+              onClick={handleManualRefresh}
+              disabled={isRefreshingDriver}
+              className="px-3.5 py-1.5 rounded-xl bg-surface hover:bg-page border border-base text-xs font-bold text-primary flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingDriver ? 'animate-spin text-amber-600' : 'text-secondary'}`} />
+              <span>{isRefreshingDriver ? 'Syncing...' : 'Refresh Status'}</span>
+            </button>
+          </div>
+
+          <div className="space-y-3.5">
+            {/* 1. Identity & Auth Record */}
+            <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-surface/70 border border-base">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-primary">Chauffeur Identity &amp; Auth</p>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    Verified
+                  </span>
+                </div>
+                <p className="text-xs text-secondary mt-0.5">
+                  Authenticated as <strong>{currentUser.full_name || 'Captain'}</strong> ({currentUser.email}).
+                </p>
+              </div>
+            </div>
+
+            {/* 2. Commercial Driving License */}
+            <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-surface/70 border border-base">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                hasValidLicense
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600'
+                  : 'bg-amber-500/10 border border-amber-500/20 text-amber-600'
+              }`}>
+                {hasValidLicense ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-primary">Commercial Chauffeur License</p>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    hasValidLicense
+                      ? 'text-emerald-700 bg-emerald-100'
+                      : 'text-amber-700 bg-amber-100'
+                  }`}>
+                    {hasValidLicense ? 'Configured' : 'Pending Verification'}
+                  </span>
+                </div>
+                <p className="text-xs text-secondary mt-0.5">
+                  {hasValidLicense ? (
+                    <>Commercial License: <strong className="font-mono">{rawLicense}</strong></>
+                  ) : (
+                    <>Default license placeholder <span className="font-mono text-muted">{rawLicense || 'DL-PENDING'}</span> assigned. Central operations will verify your official driving permit.</>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* 3. Fleet Vehicle Allocation */}
+            <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-surface/70 border border-base">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                hasAssignedVehicle
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600'
+                  : 'bg-amber-500/10 border border-amber-500/20 text-amber-600'
+              }`}>
+                {hasAssignedVehicle ? <CheckCircle2 className="w-4 h-4" /> : <Car className="w-4 h-4" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-primary">Fleet Vehicle Allocation</p>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    hasAssignedVehicle
+                      ? 'text-emerald-700 bg-emerald-100'
+                      : 'text-amber-800 bg-amber-100'
+                  }`}>
+                    {hasAssignedVehicle ? 'Allocated' : 'Awaiting Assignment'}
+                  </span>
+                </div>
+                <p className="text-xs text-secondary mt-0.5">
+                  {hasAssignedVehicle ? (
+                    <>Assigned: <strong>{assignedVeh?.make} {assignedVeh?.model}</strong> ({assignedVeh?.plate_number})</>
+                  ) : (
+                    <>Operations has not yet assigned a vehicle to your chauffeur profile. A fleet vehicle must be assigned by the dispatcher or admin before accepting ride dispatches.</>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* 4. Operational Account Status */}
+            <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-surface/70 border border-base">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                isAccountActive
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600'
+                  : 'bg-rose-500/10 border border-rose-500/20 text-rose-600'
+              }`}>
+                {isAccountActive ? <CheckCircle2 className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-primary">Operational Account Status</p>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isAccountActive
+                      ? 'text-emerald-700 bg-emerald-100'
+                      : 'text-rose-700 bg-rose-100'
+                  }`}>
+                    {isAccountActive ? 'Active' : 'Suspended'}
+                  </span>
+                </div>
+                <p className="text-xs text-secondary mt-0.5">
+                  {isAccountActive
+                    ? 'Your driver account is active in the central operations registry.'
+                    : `Account status is "${currentUser.status || 'inactive'}". Contact central administration.`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Guidance & Actions Footer */}
+          <div className="pt-3 border-t border-base flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-muted text-center sm:text-left">
+              Need assistance? Central Dispatch is available 24/7.
+            </p>
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <Link
+                href="/driver/profile"
+                className="flex-1 sm:flex-none text-center px-4 py-2 rounded-xl bg-surface hover:bg-page border border-base text-xs font-bold text-primary transition-all"
+              >
+                View Profile
+              </Link>
+              <button
+                onClick={handleManualRefresh}
+                disabled={isRefreshingDriver}
+                className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-950/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingDriver ? 'animate-spin' : ''}`} />
+                <span>Sync Now</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   const handleStartDriving = async (bookingId: string) => {
     await driverUpdateRideStatus(bookingId, 'driver_arriving');
+    await refreshData();
   };
 
   const handleCompleteTrip = async (bookingId: string) => {
@@ -162,15 +525,24 @@ export default function DriverCockpitPage() {
       return;
     }
     await driverUpdateRideStatus(bookingId, 'completed');
+    await refreshData();
   };
 
   const handleStatusChange = (status: DriverStatus) => {
+    if (!currentDriver?.id) return;
     updateDriverStatus(currentDriver.id, status);
     toast.success(`Chauffeur status set to: ${status.toUpperCase().replace('_', ' ')}.`);
   };
 
   const handleAcceptRide = async (bookingId: string) => {
-    await driverAcceptBooking(bookingId);
+    if (acceptingBookingId) return;
+    setAcceptingBookingId(bookingId);
+    try {
+      await driverAcceptBooking(bookingId);
+      await refreshData();
+    } finally {
+      setAcceptingBookingId(null);
+    }
   };
 
   const handleOpenDeclineModal = (booking: Booking) => {
@@ -181,6 +553,7 @@ export default function DriverCockpitPage() {
   const handleConfirmDecline = async () => {
     if (!bookingToDecline) return;
     await driverRejectBooking(bookingToDecline.id, declineReason);
+    await refreshData();
     setDeclineModalOpen(false);
     setBookingToDecline(null);
   };
@@ -198,14 +571,9 @@ export default function DriverCockpitPage() {
   };
 
   // Helper formatting functions
-  const formatPickupClock = (isoString?: string | null) => {
+  const formatPickupClockDisplay = (isoString?: string | null) => {
     if (!isoString) return 'ASAP (Immediate)';
-    const d = new Date(isoString);
-    return new Intl.DateTimeFormat('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    }).format(d);
+    return formatPickupClock(isoString);
   };
 
   const formatPickupFull = (isoString?: string | null) => {
@@ -236,8 +604,17 @@ export default function DriverCockpitPage() {
           {/* Chauffeur identity */}
           <div className="flex items-center gap-4 sm:gap-5">
             <div className="relative shrink-0">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-emerald-500/15 text-emerald-400 font-bold flex items-center justify-center text-2xl sm:text-3xl border-2 border-emerald-500/40 shadow-lg shadow-emerald-950/20">
-                {currentDriver.profile?.full_name?.charAt(0) || currentDriver.full_name?.charAt(0) || 'C'}
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-emerald-500/15 text-emerald-800 font-bold flex items-center justify-center text-2xl sm:text-3xl border-2 border-emerald-500/40 shadow-lg shadow-emerald-950/20 overflow-hidden">
+                {currentDriver.avatar_url || currentDriver.profile?.avatar_url || currentUser.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={currentDriver.avatar_url || currentDriver.profile?.avatar_url || currentUser.avatar_url || ''}
+                    alt={currentDriver.profile?.full_name || currentDriver.full_name || 'Chauffeur Profile'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  (currentDriver.profile?.full_name || currentDriver.full_name || currentUser.full_name || 'C').charAt(0).toUpperCase()
+                )}
               </div>
               <span
                 className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-card ring-2 ring-card shadow ${currentDriver.status === 'available'
@@ -258,24 +635,40 @@ export default function DriverCockpitPage() {
                   <Sparkles className="w-3 h-3" /> VIP Executive Chauffeur
                 </span>
                 <span className="text-[11px] font-mono font-bold text-amber-950 bg-amber-100 px-2.5 py-0.5 rounded-md border border-amber-300 shadow-sm">
-                  {currentDriver.vehicle?.plate_number || currentDriver.assigned_vehicle?.plate_number || 'VIP KSA 7788'}
+                  {(currentDriver.assigned_vehicle || currentDriver.vehicle)?.plate_number || 'REG-PENDING'}
                 </span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-primary tracking-tight">
-                {currentDriver.profile?.full_name || currentDriver.full_name || 'Captain Tariq'}
+                {currentDriver.profile?.full_name || currentDriver.full_name || currentUser.full_name || 'VIP Chauffeur'}
               </h1>
               <p className="text-xs text-secondary flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span>
-                  {currentDriver.vehicle?.make || currentDriver.assigned_vehicle?.make || 'GMC'}{' '}
-                  {currentDriver.vehicle?.model || currentDriver.assigned_vehicle?.model || 'Yukon XL'}
+                <span className="font-semibold text-primary">
+                  {(currentDriver.assigned_vehicle || currentDriver.vehicle)?.make || 'Fleet Vehicle'}{' '}
+                  {(currentDriver.assigned_vehicle || currentDriver.vehicle)?.model || ''}
                 </span>
+                {currentDriver.license_number && (
+                  <>
+                    <span>&bull;</span>
+                    <span className="font-mono text-muted text-[11px]">
+                      Lic: {currentDriver.license_number}
+                    </span>
+                  </>
+                )}
                 <span>&bull;</span>
                 <a
-                  href={`tel:${currentDriver.phone || '+966501234567'}`}
+                  href={currentDriver.phone || currentUser.phone ? `tel:${currentDriver.phone || currentUser.phone}` : undefined}
                   className="hover:text-emerald-500 transition-colors underline-offset-2 hover:underline"
                 >
-                  {currentDriver.phone || '+966 50 123 4567'}
+                  {currentDriver.phone || currentDriver.profile?.phone || currentUser.phone || 'Phone unlisted'}
                 </a>
+                {(currentUser.email || currentDriver.profile?.email) && (
+                  <>
+                    <span>&bull;</span>
+                    <span className="text-muted text-[11px]">
+                      {currentUser.email || currentDriver.profile?.email}
+                    </span>
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -342,20 +735,24 @@ export default function DriverCockpitPage() {
         </div>
 
         {/* Total Earnings */}
-        <div className="bg-card border border-base p-5 rounded-3xl shadow-sm hover:border-emerald-500/30 transition-all flex items-start justify-between">
+        <Link
+          href="/driver/earnings"
+          className="bg-card border border-base p-5 rounded-3xl shadow-sm hover:border-emerald-500/40 hover:shadow-md transition-all flex items-start justify-between group cursor-pointer"
+        >
           <div className="space-y-1">
-            <span className="text-[11px] uppercase tracking-wider font-extrabold text-muted">
+            <span className="text-[11px] uppercase tracking-wider font-extrabold text-muted flex items-center gap-1 group-hover:text-emerald-700 transition-colors">
               Total Earnings
+              <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
             </span>
             <div className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-              {formatCurrency(currentDriver.total_earnings, settings.currency)}
+              {formatCurrency(displayTotalEarnings, settings.currency)}
             </div>
             <span className="text-[11px] text-secondary block">Paid &amp; confirmed fares</span>
           </div>
-          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 group-hover:scale-105 transition-transform shrink-0">
             <Wallet className="w-5 h-5" />
           </div>
-        </div>
+        </Link>
 
         {/* Roster Workload */}
         <div className="bg-card border border-base p-5 rounded-3xl shadow-sm hover:border-sky-500/30 transition-all flex items-start justify-between">
@@ -400,6 +797,19 @@ export default function DriverCockpitPage() {
               </h2>
             </div>
             <div className="flex items-center gap-2.5 flex-wrap justify-end">
+              {/* Ride Timing / Schedule Badge */}
+              {activeAssignment.booking_type === 'immediate' ? (
+                <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1.5 shadow-sm">
+                  <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500/20" />
+                  <span>Book Now &bull; Immediate Ride</span>
+                </span>
+              ) : (
+                <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-100 text-sky-950 border border-sky-300 flex items-center gap-1.5 shadow-sm">
+                  <Clock className="w-3.5 h-3.5 text-sky-600" />
+                  <span>Pickup: {formatDateTime(activeAssignment.scheduled_at)} (AST)</span>
+                </span>
+              )}
+
               {/* Payment Method Badge */}
               {isCashBooking(activeAssignment) ? (
                 isCashPaid(activeAssignment) ? (
@@ -482,6 +892,17 @@ export default function DriverCockpitPage() {
                   <span className="font-semibold text-primary text-sm leading-snug block">
                     {activeAssignment.pickup_address}
                   </span>
+                  <div className="text-[11px] font-semibold pt-0.5">
+                    {activeAssignment.booking_type === 'immediate' ? (
+                      <span className="text-amber-800 flex items-center gap-1">
+                        <Zap className="w-3 h-3 text-amber-600 fill-amber-500/20" /> Immediate / ASAP Pickup
+                      </span>
+                    ) : (
+                      <span className="text-emerald-800 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-emerald-600" /> Scheduled: {formatDateTime(activeAssignment.scheduled_at)} (AST)
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-start gap-3 md:border-l md:border-t-0 border-t border-base md:pl-4 md:pt-0 pt-3">
@@ -830,19 +1251,36 @@ export default function DriverCockpitPage() {
                               </span>
                             </div>
                             <div className="text-xs text-secondary flex items-center gap-2 mt-0.5">
-                              <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                              <span className="font-bold text-primary">
-                                Pickup: {formatPickupClock(assignment.scheduled_at)}
-                              </span>
-                              <span className="text-[11px] text-muted">
-                                ({formatPickupFull(assignment.scheduled_at)})
-                              </span>
+                              {assignment.booking_type === 'immediate' ? (
+                                <span className="font-bold text-amber-800 flex items-center gap-1">
+                                  <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500/20" /> Immediate / ASAP Pickup
+                                </span>
+                              ) : (
+                                <>
+                                  <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  <span className="font-bold text-primary">
+                                    Pickup: {formatPickupClock(assignment.scheduled_at)}
+                                  </span>
+                                  <span className="text-[11px] text-muted">
+                                    ({formatDateTime(assignment.scheduled_at)})
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
 
                         {/* Status Badges & Fare */}
                         <div className="flex items-center gap-2 flex-wrap">
+                          {assignment.booking_type === 'immediate' ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                              <Zap className="w-2.5 h-2.5 text-amber-600 fill-amber-500/20" /> Book Now
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-sky-100 text-sky-900 border border-sky-300 flex items-center gap-1">
+                              <Calendar className="w-2.5 h-2.5 text-sky-600" /> Scheduled
+                            </span>
+                          )}
                           {/* Assignment Status Pill */}
                           {isCurrentActive ? (
                             <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1.5">
@@ -978,17 +1416,24 @@ export default function DriverCockpitPage() {
                           {isActionable ? (
                             <div className="flex items-center gap-2 flex-wrap">
                               {/* Step 1: Assigned -> Accept or Decline */}
-                              {assignment.status === 'driver_assigned' && (
+                              {(assignment.status === 'driver_assigned' || assignment.status === 'confirmed') && (
                                 <>
                                   <button
                                     onClick={() => handleAcceptRide(assignment.id)}
-                                    className="py-2.5 px-5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all flex items-center gap-1.5"
+                                    disabled={acceptingBookingId === assignment.id}
+                                    className="py-2.5 px-5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all flex items-center gap-1.5 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
                                   >
-                                    <CheckCircle2 className="w-4 h-4" /> Accept Assignment
+                                    {acceptingBookingId === assignment.id ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <CheckCircle2 className="w-4 h-4" />
+                                    )}
+                                    <span>{acceptingBookingId === assignment.id ? 'Accepting...' : 'Accept Assignment'}</span>
                                   </button>
                                   <button
                                     onClick={() => handleOpenDeclineModal(assignment)}
-                                    className="py-2.5 px-4 rounded-xl text-xs font-semibold bg-surface hover:bg-rose-500/10 hover:text-rose-500 text-secondary border border-base transition-colors"
+                                    disabled={acceptingBookingId === assignment.id}
+                                    className="py-2.5 px-4 rounded-xl text-xs font-semibold bg-surface hover:bg-rose-500/10 hover:text-rose-500 text-secondary border border-base transition-colors disabled:opacity-50 cursor-pointer"
                                   >
                                     Decline
                                   </button>
@@ -1123,7 +1568,7 @@ export default function DriverCockpitPage() {
                           </div>
                           <div className="text-xs text-amber-900 font-bold flex items-center gap-1.5 mt-0.5">
                             <Clock className="w-3.5 h-3.5" /> Scheduled Tomorrow at{' '}
-                            {formatPickupClock(assignment.scheduled_at)}
+                            {formatPickupClock(assignment.scheduled_at)} ({formatDateTime(assignment.scheduled_at)})
                           </div>
                         </div>
                       </div>
@@ -1339,7 +1784,10 @@ export default function DriverCockpitPage() {
                           </button>
                         )}
                         <span className="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-base sm:text-lg block">
-                          {formatCurrency(ride.final_fare || ride.estimated_fare, settings.currency)}
+                          {formatCurrency(
+                            ride.final_fare ?? ride.confirmed_fare ?? ride.fixed_fare_amount ?? ride.estimated_fare ?? 0,
+                            settings.currency
+                          )}
                         </span>
                       </div>
                     </div>
@@ -1352,12 +1800,23 @@ export default function DriverCockpitPage() {
                     </div>
 
                     {/* Bottom Row: Date Timestamp (Clean, isolated, NEVER colliding with price) */}
-                    <div className="pt-2 border-t border-base/40 flex items-center justify-between text-[11px] text-muted">
+                    <div className="pt-2 border-t border-base/40 flex items-center justify-between text-[11px] text-muted flex-wrap gap-2">
                       <span>Vehicle: {ride.vehicle_type?.replace(/_/g, ' ').toUpperCase() || 'VIP FLEET'}</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        Completed on {formatDateTime(ride.updated_at)}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        {ride.booking_type === 'immediate' ? (
+                          <span className="text-amber-800 font-semibold flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-amber-600 fill-amber-500/20" /> Immediate Ride
+                          </span>
+                        ) : ride.scheduled_at ? (
+                          <span className="text-emerald-800 font-semibold flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-emerald-600" /> Scheduled: {formatDateTime(ride.scheduled_at)}
+                          </span>
+                        ) : null}
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Completed on {formatDateTime(ride.updated_at)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}

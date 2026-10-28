@@ -9,6 +9,7 @@ import {
   Car,
   Compass,
   Bell,
+  CheckCheck,
   Shield,
   User,
   Menu,
@@ -36,7 +37,7 @@ import UserProfileDropdown from '@/components/layout/UserProfileDropdown';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function Navbar() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const {
     userRole,
     currentUser,
@@ -45,6 +46,7 @@ export default function Navbar() {
     signOut,
     notifications,
     markNotificationAsRead,
+    markAllNotificationsAsRead,
     clearNotifications,
     activeCustomerBooking,
     settings,
@@ -442,6 +444,7 @@ export default function Navbar() {
                         notifications={notifications}
                         unreadCount={unreadCount}
                         markNotificationAsRead={markNotificationAsRead}
+                        markAllNotificationsAsRead={markAllNotificationsAsRead}
                         clearNotifications={clearNotifications}
                       />
                     </div>
@@ -512,6 +515,7 @@ export default function Navbar() {
                         notifications={notifications}
                         unreadCount={unreadCount}
                         markNotificationAsRead={markNotificationAsRead}
+                        markAllNotificationsAsRead={markAllNotificationsAsRead}
                         clearNotifications={clearNotifications}
                       />
                     </div>
@@ -582,6 +586,7 @@ export default function Navbar() {
                         notifications={notifications}
                         unreadCount={unreadCount}
                         markNotificationAsRead={markNotificationAsRead}
+                        markAllNotificationsAsRead={markAllNotificationsAsRead}
                         clearNotifications={clearNotifications}
                       />
                     </div>
@@ -652,6 +657,7 @@ export default function Navbar() {
                         notifications={notifications}
                         unreadCount={unreadCount}
                         markNotificationAsRead={markNotificationAsRead}
+                        markAllNotificationsAsRead={markAllNotificationsAsRead}
                         clearNotifications={clearNotifications}
                       />
                     </div>
@@ -852,6 +858,7 @@ export default function Navbar() {
                       notifications={notifications}
                       unreadCount={unreadCount}
                       markNotificationAsRead={markNotificationAsRead}
+                      markAllNotificationsAsRead={markAllNotificationsAsRead}
                       clearNotifications={clearNotifications}
                     />
                   </div>
@@ -1207,9 +1214,12 @@ interface NotificationDropdownProps {
     message: string;
     timestamp: string | number | Date;
     read: boolean;
+    type?: string;
+    booking_id?: string | null;
   }>;
   unreadCount: number;
   markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead?: () => void;
   clearNotifications: () => void;
 }
 
@@ -1217,13 +1227,31 @@ function NotificationDropdownContent({
   notifications,
   unreadCount,
   markNotificationAsRead,
+  markAllNotificationsAsRead,
   clearNotifications,
 }: NotificationDropdownProps) {
   const { dir, isRTL } = useLanguage();
+
+  const formatNotifTime = (timestamp: string | number | Date) => {
+    try {
+      const d = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now.getTime() - d.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return isRTL ? 'الآن' : 'Just now';
+      if (diffMins < 60) return isRTL ? `منذ ${diffMins} د` : `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return isRTL ? `منذ ${diffHours} س` : `${diffHours}h ago`;
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
+  };
+
   return (
-    <div className="bg-white text-slate-900" dir={dir}>
+    <div className="bg-white text-slate-900 shadow-xl" dir={dir}>
       {/* Header */}
-      <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+      <div className="px-4 py-3 bg-slate-50/90 border-b border-slate-200 flex items-center justify-between gap-2">
         <span className="text-xs font-bold text-slate-800 flex items-center gap-2">
           <Bell className="w-3.5 h-3.5 text-amber-500" />
           {isRTL ? 'الإشعارات' : 'Notifications'}
@@ -1233,18 +1261,32 @@ function NotificationDropdownContent({
             </span>
           )}
         </span>
-        {notifications.length > 0 && (
-          <button
-            onClick={clearNotifications}
-            className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
-          >
-            {isRTL ? 'مسح الكل' : 'Clear all'}
-          </button>
-        )}
+        <div className="flex items-center gap-2.5">
+          {unreadCount > 0 && markAllNotificationsAsRead && (
+            <button
+              type="button"
+              onClick={markAllNotificationsAsRead}
+              className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer transition-colors"
+              title={isRTL ? 'تحديد الكل كمقروء' : 'Mark all as read'}
+            >
+              <CheckCheck className="w-3.5 h-3.5" />
+              <span>{isRTL ? 'قراءة الكل' : 'Mark read'}</span>
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={clearNotifications}
+              className="text-[11px] font-semibold text-slate-500 hover:text-rose-600 cursor-pointer transition-colors"
+            >
+              {isRTL ? 'مسح الكل' : 'Clear all'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Body */}
-      <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+      <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
         {notifications.length === 0 ? (
           <div className="p-8 text-center bg-white">
             <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2" />
@@ -1252,7 +1294,7 @@ function NotificationDropdownContent({
               {isRTL ? 'لا توجد إشعارات حالياً' : "You're all caught up"}
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              {isRTL ? 'ستظهر تحديثات الرحلة هنا فور توفرها' : 'Trip updates will appear here'}
+              {isRTL ? 'ستظهر تحديثات الرحلة هنا فور توفرها' : 'Trip and system updates will appear here'}
             </p>
           </div>
         ) : (
@@ -1261,26 +1303,38 @@ function NotificationDropdownContent({
               key={n.id}
               type="button"
               onClick={() => markNotificationAsRead(n.id)}
-              className={`w-full text-left rtl:text-right px-4 py-3 text-xs transition-colors cursor-pointer ${
+              className={`w-full text-left rtl:text-right px-4 py-3 text-xs transition-colors cursor-pointer group flex items-start gap-3 ${
                 n.read
                   ? 'bg-white text-slate-600 hover:bg-slate-50'
-                  : 'bg-emerald-50/70 text-slate-900 hover:bg-emerald-50 font-medium'
+                  : 'bg-emerald-50/60 text-slate-900 hover:bg-emerald-50/90 font-medium'
               }`}
             >
-              <div className="flex items-center justify-between mb-0.5 gap-2">
-                <span className={`font-semibold ${n.read ? 'text-slate-700' : 'text-emerald-800'}`}>
-                  {n.title}
-                </span>
-                <span className="text-[10px] text-slate-500 shrink-0">
-                  {new Date(n.timestamp).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
+              <span
+                className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
+                  n.read
+                    ? 'bg-transparent'
+                    : n.type === 'ride'
+                    ? 'bg-purple-500 shadow-xs shadow-purple-500/50'
+                    : n.type === 'warning'
+                    ? 'bg-amber-500 shadow-xs shadow-amber-500/50'
+                    : n.type === 'success'
+                    ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50'
+                    : 'bg-sky-500 shadow-xs shadow-sky-500/50'
+                }`}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5 gap-2">
+                  <span className={`font-semibold truncate ${n.read ? 'text-slate-700' : 'text-emerald-900 font-bold'}`}>
+                    {n.title}
+                  </span>
+                  <span className="text-[10px] text-slate-400 shrink-0 whitespace-nowrap">
+                    {formatNotifTime(n.timestamp)}
+                  </span>
+                </div>
+                <p className="line-clamp-2 text-slate-600 text-[11px] leading-relaxed">
+                  {n.message}
+                </p>
               </div>
-              <p className="line-clamp-2 text-slate-600 text-[11px] leading-relaxed">
-                {n.message}
-              </p>
             </button>
           ))
         )}

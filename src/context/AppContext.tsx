@@ -26,6 +26,10 @@ import {
   RateTerminal,
   DriverLocation,
   DriverSettlement,
+  NotificationItem,
+  NotificationType,
+  PaymentAccount,
+  PaymentAccountSnapshot,
 } from '@/types';
 import {
   INITIAL_SETTINGS,
@@ -55,9 +59,15 @@ import {
 import {
   calculateDriverRating,
   calculateDriverCompletedRides,
+  calculateDriverTotalEarnings,
   resolveDriverVehicle,
 } from '@/lib/driver-stats';
 import { isValidCoordinate } from '@/lib/maps/location-service';
+import {
+  playNotificationSound,
+  initNotificationAudio,
+  NotificationSoundOptions,
+} from '@/lib/notification-sound';
 
 // Location write throttling map (driverId -> last written payload & timestamp)
 const locationThrottleMap = new Map<
@@ -72,15 +82,7 @@ const locationThrottleMap = new Map<
   }
 >();
 
-export interface NotificationItem {
-  id: string;
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  type: 'info' | 'success' | 'warning' | 'ride';
-  role?: UserRole;
-}
+export type { NotificationItem, NotificationType } from '@/types';
 
 export interface VerificationState {
   fullName: string;
@@ -144,9 +146,18 @@ interface AppContextType {
 
   // Settings & Notifications
   updateSettings: (newSettings: Partial<SystemSettings>) => void;
-  addNotification: (title: string, message: string, type?: 'info' | 'success' | 'warning' | 'ride', role?: UserRole) => void;
+  addNotification: (
+    title: string,
+    message: string,
+    type?: 'info' | 'success' | 'warning' | 'ride',
+    role?: UserRole,
+    targetUserId?: string,
+    bookingId?: string
+  ) => void;
   markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => Promise<void>;
   clearNotifications: () => void;
+  playNotificationSound: (options?: NotificationSoundOptions) => Promise<boolean>;
 
   // Services Management (Admin / CMS)
   addService: (service: Omit<ServiceItem, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -225,6 +236,17 @@ interface AppContextType {
   uploadDriverAvatar: (file: File, driverId?: string) => Promise<string | null>;
   uploadCustomerAvatar: (file: File, customerId?: string) => Promise<string | null>;
 
+  // Payment Accounts Management (Admin / Dynamic Accounts)
+  paymentAccounts: PaymentAccount[];
+  activePaymentAccounts: PaymentAccount[];
+  isPaymentAccountsLoading: boolean;
+  refreshPaymentAccounts: () => Promise<void>;
+  createPaymentAccount: (account: Partial<PaymentAccount>) => Promise<PaymentAccount | null>;
+  updatePaymentAccount: (id: string, updates: Partial<PaymentAccount>) => Promise<PaymentAccount | null>;
+  deletePaymentAccount: (id: string) => Promise<boolean>;
+  togglePaymentAccountActive: (id: string, isActive: boolean) => Promise<boolean>;
+  setDefaultPaymentAccount: (id: string) => Promise<boolean>;
+
   // Vehicle Management (Admin)
   addVehicle: (vehicle: Omit<Vehicle, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateVehicle: (id: string, vehicle: Partial<Vehicle>) => Promise<void>;
@@ -239,7 +261,7 @@ interface AppContextType {
     booking_method?: 'fixed' | 'custom';
     trip_type?: 'one_way' | 'round_trip';
     intermediate_stops?: import('@/types').IntermediateStop[];
-    return_scheduled_at?: string;
+    return_scheduled_at?: string | null;
     pickup_address: string;
     pickup_latitude: number;
     pickup_longitude: number;
@@ -249,8 +271,10 @@ interface AppContextType {
     vehicle_type: VehicleType;
     passenger_count: number;
     notes?: string;
-    scheduled_at?: string;
+    scheduled_at?: string | null;
     payment_screenshot_url?: string;
+    payment_account_id?: string | null;
+    payment_account_details?: PaymentAccountSnapshot | null;
     // Fixed-fare fields (optional — legacy or custom bookings won't have these)
     vehicle_category?: string | null;
     service_type?: string | null;
@@ -343,6 +367,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<UserRole>('customer');
   const [currentUser, setCurrentUser] = useState<Profile>(FALLBACK_GUEST_PROFILE);
 
+  const currentUserRef = React.useRef<Profile>(currentUser);
+  currentUserRef.current = currentUser;
+  const userRoleRef = React.useRef<UserRole>(userRole);
+  userRoleRef.current = userRole;
+
   // Verification state for customer registration (email-only flow)
   const [verificationState, setVerificationState] = useState<VerificationState | null>(null);
 
@@ -421,11 +450,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [usersList, setUsersList] = useState<Profile[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(INITIAL_SETTINGS);
+
+  const rateVehiclesRef = React.useRef<RateVehicleType[]>(rateVehicles);
+  rateVehiclesRef.current = rateVehicles;
+  const vehiclesRef = React.useRef<Vehicle[]>(vehicles);
+  vehiclesRef.current = vehicles;
+  const usersListRef = React.useRef<Profile[]>(usersList);
+  usersListRef.current = usersList;
+  const driversRef = React.useRef<Driver[]>(drivers);
+  driversRef.current = drivers;
+  const bookingsRef = React.useRef<Booking[]>(bookings);
+  bookingsRef.current = bookings;
   const [ratings, setRatings] = useState<RatingFeedback[]>([]);
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
   const [recentLocations, setRecentLocations] = useState<RecentLocation[]>([]);
   const [driverSettlements, setDriverSettlements] = useState<DriverSettlement[]>([]);
+  const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
+  const [isPaymentAccountsLoading, setIsPaymentAccountsLoading] = useState<boolean>(true);
 
   // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -468,9 +510,34 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         ? supabase.from('recent_locations').select('*').eq('customer_id', effectiveUserId).order('last_used_at', { ascending: false }).limit(8)
         : Promise.resolve({ data: [], error: null });
 
-      const notifsQuery = isValidUser
-        ? supabase.from('notifications').select('*').or(`user_id.eq.${effectiveUserId},user_id.is.null`).order('created_at', { ascending: false }).limit(40)
-        : supabase.from('notifications').select('*').is('user_id', null).order('created_at', { ascending: false }).limit(40);
+      let notifsQuery;
+      if (!isValidUser) {
+        notifsQuery = Promise.resolve({ data: [], error: null });
+      } else {
+        const activeRole = userRoleRef.current;
+        const activeProfileRole = currentUserRef.current?.role;
+        const isStaff =
+          activeRole === 'admin' ||
+          activeRole === 'dispatcher' ||
+          activeProfileRole === 'admin' ||
+          activeProfileRole === 'dispatcher';
+
+        if (isStaff) {
+          notifsQuery = supabase
+            .from('notifications')
+            .select('*')
+            .or(`user_id.eq.${effectiveUserId},role.in.('admin','dispatcher'),user_id.is.null`)
+            .order('created_at', { ascending: false })
+            .limit(50);
+        } else {
+          notifsQuery = supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', effectiveUserId)
+            .order('created_at', { ascending: false })
+            .limit(50);
+        }
+      }
 
       const [
         { data: dbServices, error: errServices },
@@ -490,6 +557,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         { data: dbRateTerminals },
         { data: dbRatings },
         { data: dbSettlements },
+        { data: dbPaymentAccounts, error: errPaymentAccounts },
       ] = await Promise.all([
         supabase.from('services').select('*').order('display_order', { ascending: true }),
         supabase.from('profiles').select('*'),
@@ -517,7 +585,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         supabase.from('rate_terminals').select('*').order('display_order', { ascending: true }),
         supabase.from('ratings_feedback').select('*').order('created_at', { ascending: false }),
         supabase.from('driver_settlements').select('*').order('created_at', { ascending: false }),
+        supabase.from('payment_accounts').select('*').order('is_default', { ascending: false }).order('display_order', { ascending: true }).order('created_at', { ascending: false }),
       ]);
+
+      if (dbPaymentAccounts) {
+        setPaymentAccounts(dbPaymentAccounts as PaymentAccount[]);
+        setIsPaymentAccountsLoading(false);
+      }
 
       if (dbSettlements) {
         setDriverSettlements(dbSettlements as DriverSettlement[]);
@@ -577,7 +651,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // An empty array is a valid response (no profiles) and must replace any stale state.
       // If there's an error, clear usersList to avoid showing deleted/stale records.
       if (!errProfiles) {
-        setUsersList(dbProfiles as Profile[] ?? []);
+        setUsersList(((dbProfiles as Profile[]) ?? []).filter((u) => !u.is_super_admin));
       } else {
         setUsersList([]);
       }
@@ -586,18 +660,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (dbVehicles) setVehicles(dbVehicles as Vehicle[]);
       if (dbPlaces) setSavedPlaces(dbPlaces as SavedPlace[]);
       if (dbRecents) setRecentLocations(dbRecents as RecentLocation[]);
-      if (dbNotifs && dbNotifs.length > 0) {
+      if (dbNotifs) {
         setNotifications(
           (dbNotifs as any[]).map((n) => ({
             id: n.id,
             title: n.title,
             message: n.message,
             timestamp: n.created_at,
-            read: n.read ?? false,
+            read: Boolean(n.read),
             type: (n.type as any) || 'info',
             role: n.role as UserRole | undefined,
+            user_id: n.user_id,
+            booking_id: n.booking_id,
           }))
         );
+      } else {
+        setNotifications([]);
       }
 
       const allRatings: RatingFeedback[] = (dbRatings as RatingFeedback[]) || [];
@@ -614,6 +692,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         mappedDrivers = (dbDrivers as any[]).map((d) => {
           const prof = (dbProfiles as Profile[] || []).find((p) => p.id === d.id) || d.profile;
           const completedRides = calculateDriverCompletedRides(rawBookings, d.id);
+          const totalEarnings = calculateDriverTotalEarnings(rawBookings, d.id, Number(d.commission_rate || 0));
           const ratingStats = calculateDriverRating(allRatings, d.id);
           const resolvedVeh = resolveDriverVehicle(d.assigned_vehicle_id, currentRateVehs, currentVehicles);
 
@@ -642,11 +721,80 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             rating: ratingStats.rating,
             rating_count: ratingStats.count,
             total_rides: completedRides,
+            total_earnings: totalEarnings > 0 ? totalEarnings : (d.total_earnings ? Number(d.total_earnings) : 0),
             assigned_vehicle: resolvedVeh || d.assigned_vehicle,
             vehicle: resolvedVeh || d.vehicle,
             location: cleanLoc,
           };
         });
+
+        // Auto-heal check: If authenticated user is a driver but not present in mappedDrivers
+        const currentAuthProf = (dbProfiles as Profile[] || []).find((p) => p.id === effectiveUserId);
+        if (currentAuthProf && currentAuthProf.role === 'driver' && !mappedDrivers.some((d) => d.id === currentAuthProf.id)) {
+          const authDriverId = currentAuthProf.id;
+          try {
+            const { data: directDriver } = await supabase
+              .from('drivers')
+              .select('*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*), location:driver_locations(*)')
+              .eq('id', authDriverId)
+              .maybeSingle();
+
+            if (directDriver) {
+              const prof = directDriver.profile || currentAuthProf;
+              const completedRides = calculateDriverCompletedRides(rawBookings, directDriver.id);
+              const totalEarnings = calculateDriverTotalEarnings(rawBookings, directDriver.id, Number(directDriver.commission_rate || 0));
+              const ratingStats = calculateDriverRating(allRatings, directDriver.id);
+              const resolvedVeh = resolveDriverVehicle(directDriver.assigned_vehicle_id, currentRateVehs, currentVehicles);
+              mappedDrivers.unshift({
+                ...directDriver,
+                profile: prof,
+                full_name: prof?.full_name || 'Captain',
+                phone: prof?.phone || null,
+                avatar_url: prof?.avatar_url || null,
+                rating: ratingStats.rating,
+                rating_count: ratingStats.count,
+                total_rides: completedRides,
+                total_earnings: totalEarnings > 0 ? totalEarnings : (directDriver.total_earnings ? Number(directDriver.total_earnings) : 0),
+                assigned_vehicle: resolvedVeh,
+                vehicle: resolvedVeh,
+                location: null,
+              });
+            } else {
+              const defaultLic = 'DL-' + authDriverId.substring(0, 8).toUpperCase();
+              await supabase.from('drivers').upsert({
+                id: authDriverId,
+                license_number: defaultLic,
+                status: 'available',
+                rating: 5.0,
+                total_rides: 0,
+                total_earnings: 0,
+                cash_collected: 0,
+              });
+              mappedDrivers.unshift({
+                id: authDriverId,
+                license_number: defaultLic,
+                status: 'available',
+                rating: 5.0,
+                rating_count: 0,
+                total_rides: 0,
+                total_earnings: 0,
+                cash_collected: 0,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                profile: currentAuthProf,
+                full_name: currentAuthProf.full_name || 'Captain',
+                phone: currentAuthProf.phone || null,
+                avatar_url: currentAuthProf.avatar_url || null,
+                assigned_vehicle: null,
+                vehicle: null,
+                location: null,
+              });
+            }
+          } catch (e) {
+            console.warn('Driver auto-heal check error:', e);
+          }
+        }
+
         setDrivers(mappedDrivers);
       }
 
@@ -694,6 +842,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Sync initial data and subscribe to real-time updates
   useEffect(() => {
     fetchRemoteData();
+
+    // Initialize notification audio unlock listeners
+    const cleanupAudio = initNotificationAudio();
 
     // Listen to real-time driver locations
     const locationChannel = supabase
@@ -766,16 +917,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         if (payload.new && 'id' in payload.new) {
           const updated = payload.new as any;
+          const currentDrivers = driversRef.current;
+          const currentUsers = usersListRef.current;
+          const attachedCustomer = updated.customer_id
+            ? currentUsers.find((u) => u.id === updated.customer_id) || null
+            : null;
+
           setBookings((prev) => {
             const existingIndex = prev.findIndex(
               (b) => b.id === updated.id || (updated.booking_reference && b.booking_reference === updated.booking_reference)
             );
             if (existingIndex >= 0) {
               const existing = prev[existingIndex];
-              // Keep driver and vehicle relations intact or resolve driver
               let attachedDriver = existing.driver;
               if (updated.assigned_driver_id && (!attachedDriver || attachedDriver.id !== updated.assigned_driver_id)) {
-                attachedDriver = drivers.find((d) => d.id === updated.assigned_driver_id) || attachedDriver;
+                attachedDriver = currentDrivers.find((d) => d.id === updated.assigned_driver_id) || attachedDriver;
               } else if (updated.assigned_driver_id === null) {
                 attachedDriver = null as any;
               }
@@ -784,6 +940,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 ...updated,
                 id: updated.id,
                 driver: attachedDriver,
+                customer: attachedCustomer || existing.customer,
                 updated_at: updated.updated_at || new Date().toISOString(),
               };
               const copy = [...prev];
@@ -792,15 +949,50 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             } else {
               let attachedDriver = null;
               if (updated.assigned_driver_id) {
-                attachedDriver = drivers.find((d) => d.id === updated.assigned_driver_id) || null;
+                attachedDriver = currentDrivers.find((d) => d.id === updated.assigned_driver_id) || null;
               }
               const newBookingRecord: Booking = {
                 ...(updated as Booking),
                 driver: attachedDriver as any,
+                customer: attachedCustomer,
               };
               return [newBookingRecord, ...prev];
             }
           });
+
+          // Asynchronously enrich with full relations if UUID
+          if (updated.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(updated.id)) {
+            supabase
+              .from('bookings')
+              .select(`
+                *,
+                driver:drivers(*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*), location:driver_locations(*)),
+                payments(*)
+              `)
+              .eq('id', updated.id)
+              .maybeSingle()
+              .then(
+                ({ data: enriched }) => {
+                  if (enriched) {
+                    setBookings((prev) => {
+                      const idx = prev.findIndex((b) => b.id === enriched.id);
+                      const enrichedWithPayment: Booking = {
+                        ...enriched,
+                        payment: Array.isArray(enriched.payments) && enriched.payments.length > 0 ? enriched.payments[0] : null,
+                      } as Booking;
+                      if (idx >= 0) {
+                        const copy = [...prev];
+                        copy[idx] = { ...copy[idx], ...enrichedWithPayment };
+                        return copy;
+                      } else {
+                        return [enrichedWithPayment, ...prev];
+                      }
+                    });
+                  }
+                },
+                () => {}
+              );
+          }
         }
       })
       .subscribe();
@@ -816,9 +1008,58 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
         if (payload.new && 'id' in payload.new) {
           const updatedD = payload.new as any;
-          setDrivers((prev) =>
-            prev.map((d) => (d.id === updatedD.id ? { ...d, ...updatedD } : d))
-          );
+          setDrivers((prev) => {
+            const resolvedVeh = resolveDriverVehicle(
+              updatedD.assigned_vehicle_id,
+              rateVehiclesRef.current,
+              vehiclesRef.current
+            );
+            const exists = prev.some((d) => d.id === updatedD.id);
+            if (!exists) {
+              const prof =
+                usersListRef.current.find((u) => u.id === updatedD.id) ||
+                (currentUserRef.current?.id === updatedD.id ? currentUserRef.current : undefined);
+              const newD: Driver = {
+                ...updatedD,
+                profile: prof,
+                full_name: prof?.full_name || 'Captain',
+                phone: prof?.phone || null,
+                avatar_url: prof?.avatar_url || null,
+                rating: updatedD.rating ? Number(updatedD.rating) : 5.0,
+                rating_count: updatedD.rating_count || 0,
+                total_rides: updatedD.total_rides || calculateDriverCompletedRides(bookingsRef.current, updatedD.id),
+                total_earnings: calculateDriverTotalEarnings(bookingsRef.current, updatedD.id, Number(updatedD.commission_rate || 0)) || (updatedD.total_earnings ? Number(updatedD.total_earnings) : 0),
+                cash_collected: updatedD.cash_collected ? Number(updatedD.cash_collected) : 0,
+                assigned_vehicle: resolvedVeh,
+                vehicle: resolvedVeh,
+                location: null,
+              };
+              return [newD, ...prev];
+            }
+            return prev.map((d) => {
+              if (d.id === updatedD.id) {
+                const computedEarnings = calculateDriverTotalEarnings(
+                  bookingsRef.current,
+                  updatedD.id,
+                  Number((updatedD.commission_rate ?? (d as any).commission_rate) || 0)
+                );
+                const computedRides = calculateDriverCompletedRides(bookingsRef.current, updatedD.id);
+                return {
+                  ...d,
+                  ...updatedD,
+                  total_rides: updatedD.total_rides || computedRides || d.total_rides,
+                  total_earnings: computedEarnings > 0 ? computedEarnings : (updatedD.total_earnings ? Number(updatedD.total_earnings) : d.total_earnings),
+                  assigned_vehicle: resolvedVeh,
+                  vehicle: resolvedVeh,
+                  profile: d.profile,
+                  full_name: d.profile?.full_name || d.full_name,
+                  phone: d.profile?.phone || d.phone,
+                  avatar_url: d.profile?.avatar_url || d.avatar_url,
+                };
+              }
+              return d;
+            });
+          });
         }
       })
       .subscribe();
@@ -888,6 +1129,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, (payload) => {
         if (payload.new && 'id' in payload.new) {
           const newProfile = payload.new as Profile;
+          if (newProfile.is_super_admin) return;
           setUsersList((prev) => {
             // Avoid duplicates (e.g. optimistic insert already applied)
             if (prev.some((u) => u.id === newProfile.id)) {
@@ -920,14 +1162,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setUsersList((prev) =>
             prev.map((u) => (u.id === updatedProfile.id ? { ...u, ...updatedProfile } : u))
           );
-          // Keep driver profile in sync
+          // Keep driver profile in sync with profile edits (name, phone, avatar)
           setDrivers((prev) =>
             prev.map((d) =>
               d.id === updatedProfile.id || d.profile?.id === updatedProfile.id
-                ? { ...d, profile: { ...(d.profile || {}), ...updatedProfile } }
+                ? {
+                    ...d,
+                    profile: { ...(d.profile || {}), ...updatedProfile },
+                    full_name: updatedProfile.full_name || d.full_name,
+                    phone: updatedProfile.phone || d.phone,
+                    avatar_url: updatedProfile.avatar_url !== undefined ? updatedProfile.avatar_url : d.avatar_url,
+                  }
                 : d
             )
           );
+          if (currentUserRef.current?.id === updatedProfile.id) {
+            setCurrentUser((prev) => ({ ...prev, ...updatedProfile }));
+          }
         }
       })
       .subscribe();
@@ -958,22 +1209,85 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
         if (payload.eventType === 'INSERT' && payload.new) {
           const n = payload.new as any;
-          setNotifications((prev) => [
-            {
+          const activeUser = currentUserRef.current;
+          const activeRole = userRoleRef.current;
+
+          // Target verification
+          const isTargetUser = Boolean(n.user_id && activeUser?.id && n.user_id === activeUser.id);
+          const isStaff =
+            activeUser?.role === 'admin' ||
+            activeUser?.role === 'dispatcher' ||
+            activeRole === 'admin' ||
+            activeRole === 'dispatcher';
+          const isStaffBroadcast = isStaff && (!n.user_id || n.role === 'admin' || n.role === 'dispatcher');
+
+          if (!isTargetUser && !isStaffBroadcast) {
+            return;
+          }
+
+          // Play sound for genuinely newly received real-time notification
+          playNotificationSound({
+            id: n.id,
+            bookingId: n.booking_id,
+            title: n.title,
+            message: n.message,
+          });
+
+          setNotifications((prev) => {
+            // Deduplicate by ID
+            if (prev.some((item) => item.id === n.id)) return prev;
+
+            // Deduplicate by booking_id + title within 10 seconds
+            if (
+              n.booking_id &&
+              prev.some(
+                (item) =>
+                  item.booking_id === n.booking_id &&
+                  item.title === n.title &&
+                  Math.abs(new Date(item.timestamp).getTime() - new Date(n.created_at).getTime()) < 10000
+              )
+            ) {
+              return prev;
+            }
+
+            const newItem: NotificationItem = {
               id: n.id,
               title: n.title,
               message: n.message,
               timestamp: n.created_at,
-              read: n.read ?? false,
-              type: n.type || 'info',
-              role: n.role,
-            },
-            ...prev,
-          ]);
+              read: Boolean(n.read),
+              type: (n.type as any) || 'info',
+              role: n.role as UserRole | undefined,
+              user_id: n.user_id,
+              booking_id: n.booking_id,
+            };
+
+            // Display transient Sonner toast for fresh unread notifications
+            if (!n.read) {
+              if (n.type === 'success') {
+                toast.success(n.title, { description: n.message });
+              } else if (n.type === 'warning') {
+                toast.warning(n.title, { description: n.message });
+              } else {
+                toast.info(n.title, { description: n.message });
+              }
+            }
+
+            return [newItem, ...prev];
+          });
         } else if (payload.eventType === 'UPDATE' && payload.new) {
           const n = payload.new as any;
           setNotifications((prev) =>
-            prev.map((item) => (item.id === n.id ? { ...item, read: n.read ?? item.read } : item))
+            prev.map((item) =>
+              item.id === n.id
+                ? {
+                    ...item,
+                    read: n.read !== undefined ? Boolean(n.read) : item.read,
+                    title: n.title || item.title,
+                    message: n.message || item.message,
+                  }
+                : item
+            )
           );
         } else if (payload.eventType === 'DELETE' && payload.old) {
           const delId = (payload.old as any).id;
@@ -1034,6 +1348,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       })
       .subscribe();
 
+    // Listen to real-time payment accounts changes
+    const paymentAccountsChannel = supabase
+      .channel('public:payment_accounts')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_accounts' }, (payload) => {
+        if (payload.eventType === 'INSERT' && payload.new) {
+          const newAcc = payload.new as PaymentAccount;
+          setPaymentAccounts((prev) => [newAcc, ...prev.filter((a) => a.id !== newAcc.id)]);
+        } else if (payload.eventType === 'UPDATE' && payload.new) {
+          const updatedAcc = payload.new as PaymentAccount;
+          setPaymentAccounts((prev) =>
+            prev.map((a) => (a.id === updatedAcc.id ? updatedAcc : (updatedAcc.is_default && a.is_default ? { ...a, is_default: false } : a)))
+          );
+        } else if (payload.eventType === 'DELETE' && payload.old) {
+          setPaymentAccounts((prev) => prev.filter((a) => a.id !== (payload.old as any).id));
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(locationChannel);
       supabase.removeChannel(bookingsChannel);
@@ -1044,6 +1376,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       supabase.removeChannel(notifsChannel);
       supabase.removeChannel(ratingsChannel);
       supabase.removeChannel(settlementsChannel);
+      supabase.removeChannel(paymentAccountsChannel);
+      cleanupAudio();
     };
     // Empty dependency array: channels are set up once on mount and torn down
     // on unmount. Using [drivers] here caused re-subscriptions (and channel
@@ -2144,10 +2478,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     title: string,
     message: string,
     type: 'info' | 'success' | 'warning' | 'ride' = 'info',
-    role?: UserRole
+    role?: UserRole,
+    targetUserId?: string,
+    bookingId?: string
   ) => {
     const now = new Date().toISOString();
     const tempId = 'notif-' + Date.now();
+    const activeUser = currentUserRef.current;
+    const activeRole = userRoleRef.current;
+
+    // Determine target user id
+    let resolvedUserId: string | null = null;
+    if (targetUserId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId)) {
+      resolvedUserId = targetUserId;
+    } else if (role === 'customer' && activeUser?.role === 'customer') {
+      resolvedUserId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeUser?.id) ? activeUser.id : null;
+    } else if (role === 'driver' && activeUser?.role === 'driver') {
+      resolvedUserId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeUser?.id) ? activeUser.id : null;
+    } else if ((role === 'admin' || role === 'dispatcher') && (activeRole === 'admin' || activeRole === 'dispatcher')) {
+      resolvedUserId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeUser?.id) ? activeUser.id : null;
+    }
+
     const newItem: NotificationItem = {
       id: tempId,
       title,
@@ -2155,20 +2506,52 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       timestamp: now,
       read: false,
       type,
-      role,
+      role: role || activeUser?.role,
+      user_id: resolvedUserId,
+      booking_id: bookingId || null,
     };
-    setNotifications((prev) => [newItem, ...prev]);
 
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id);
-    try {
-      await supabase.from('notifications').insert({
-        user_id: isUuid ? currentUser.id : null,
-        role: role || (currentUser.id !== 'guest' ? currentUser.role : null),
+    const isForActiveUser =
+      (resolvedUserId && resolvedUserId === activeUser?.id) ||
+      ((activeRole === 'admin' || activeRole === 'dispatcher') && (role === 'admin' || role === 'dispatcher' || !resolvedUserId));
+
+    if (isForActiveUser) {
+      // Play sound immediately for active user's newly created notification
+      playNotificationSound({
+        id: tempId,
+        bookingId,
         title,
         message,
-        type,
-        read: false,
       });
+
+      setNotifications((prev) => {
+        if (prev.some((item) => item.id === tempId || (bookingId && item.booking_id === bookingId && item.title === title))) {
+          return prev;
+        }
+        return [newItem, ...prev];
+      });
+    }
+
+    try {
+      const { data: dbInsert } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: resolvedUserId,
+          role: role || (activeUser?.id !== 'guest' ? activeUser?.role : null),
+          title,
+          message,
+          type,
+          read: false,
+          booking_id: bookingId || null,
+        })
+        .select()
+        .single();
+
+      if (dbInsert && isForActiveUser) {
+        setNotifications((prev) =>
+          prev.map((item) => (item.id === tempId ? { ...item, id: dbInsert.id } : item))
+        );
+      }
     } catch (err) {
       console.warn('Supabase addNotification error:', err);
     }
@@ -2186,12 +2569,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const clearNotifications = async () => {
-    setNotifications([]);
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id);
-    if (isUuid) {
+  const markAllNotificationsAsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    const unreadUuids = notifications
+      .filter((n) => !n.read && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(n.id))
+      .map((n) => n.id);
+
+    if (unreadUuids.length > 0) {
       try {
-        await supabase.from('notifications').delete().eq('user_id', currentUser.id);
+        await supabase.from('notifications').update({ read: true }).in('id', unreadUuids);
+      } catch (err) {
+        console.warn('Supabase markAllNotificationsAsRead error:', err);
+      }
+    }
+  };
+
+  const clearNotifications = async () => {
+    const unreadIds = notifications.map((n) => n.id);
+    setNotifications([]);
+    const validUuids = unreadIds.filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+    if (validUuids.length > 0) {
+      try {
+        await supabase.from('notifications').delete().in('id', validUuids);
       } catch (err) {
         console.warn('Supabase clearNotifications error:', err);
       }
@@ -2831,35 +3230,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const createdProfile: Profile = resData.user;
       setUsersList((prev) => [createdProfile, ...prev.filter((u) => u.id !== createdProfile.id)]);
 
-      if (data.role === 'driver' && resData.driver) {
-        const matchedRateVeh = data.assigned_vehicle_id
-          ? rateVehicles.find((rv) => rv.id === data.assigned_vehicle_id || rv.category === data.assigned_vehicle_id) || null
-          : null;
-        const matchedLegacyVeh = !matchedRateVeh && data.assigned_vehicle_id
-          ? vehicles.find((v) => v.id === data.assigned_vehicle_id) || null
-          : null;
-
-        const assignedVeh: Vehicle | null = matchedRateVeh
-          ? {
-              id: matchedRateVeh.id,
-              plate_number: matchedRateVeh.category.toUpperCase(),
-              make: matchedRateVeh.name,
-              model: `(${matchedRateVeh.seating_capacity} Seats)`,
-              vehicle_type: matchedRateVeh.category as any,
-              seating_capacity: matchedRateVeh.seating_capacity,
-              status: 'assigned',
-              created_at: matchedRateVeh.created_at || new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }
-          : matchedLegacyVeh;
+      if (data.role === 'driver') {
+        const dObj = resData.driver;
+        const resolvedVeh = resolveDriverVehicle(
+          dObj?.assigned_vehicle_id || data.assigned_vehicle_id,
+          rateVehicles,
+          vehicles
+        );
 
         const newDriver: Driver = {
-          ...resData.driver,
+          id: createdProfile.id,
+          license_number: data.license_number || dObj?.license_number || ('DL-' + createdProfile.id.substring(0, 8).toUpperCase()),
+          national_id: data.national_id || dObj?.national_id || null,
+          assigned_vehicle_id: dObj?.assigned_vehicle_id || data.assigned_vehicle_id || null,
+          status: (dObj?.status || (data.assigned_vehicle_id ? 'assigned' : 'available')) as any,
+          rating: 5.0,
+          total_rides: 0,
+          total_earnings: 0,
+          cash_collected: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          ...dObj,
           profile: createdProfile,
           full_name: createdProfile.full_name,
           phone: createdProfile.phone,
           avatar_url: createdProfile.avatar_url || data.avatar_url || null,
-          assigned_vehicle: assignedVeh,
+          assigned_vehicle: resolvedVeh,
+          vehicle: resolvedVeh,
         };
         setDrivers((prev) => [newDriver, ...prev.filter((d) => d.id !== createdProfile.id)]);
       }
@@ -2919,73 +3316,91 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         prev.map((u) => (u.id === userId ? { ...u, ...updatedProfile } : u))
       );
 
-      // Handle driver state update whenever this user is in the fleet roster
-      setDrivers((prev) =>
-        prev.map((d) => {
-          if (d.id === userId || d.profile?.id === userId) {
-            let assignedVeh = d.assigned_vehicle;
-            if (updates.assigned_vehicle_id !== undefined) {
-              const matchedRateVeh = updates.assigned_vehicle_id
-                ? rateVehicles.find((rv) => rv.id === updates.assigned_vehicle_id || rv.category === updates.assigned_vehicle_id) || null
-                : null;
-              const matchedLegacyVeh = !matchedRateVeh && updates.assigned_vehicle_id
-                ? vehicles.find((v) => v.id === updates.assigned_vehicle_id) || null
-                : null;
+      // Handle driver state update whenever this user is in the fleet roster or was provisioned
+      const isOrWasDriver = resData.driver || updates.role === 'driver' || updatedProfile.role === 'driver' || drivers.some((d) => d.id === userId || d.profile?.id === userId);
+      if (isOrWasDriver) {
+        setDrivers((prev) => {
+          const exists = prev.some((d) => d.id === userId || d.profile?.id === userId);
+          const resolvedVeh = resolveDriverVehicle(
+            updates.assigned_vehicle_id !== undefined ? updates.assigned_vehicle_id : resData.driver?.assigned_vehicle_id,
+            rateVehicles,
+            vehicles
+          );
 
-              assignedVeh = matchedRateVeh
-                ? {
-                    id: matchedRateVeh.id,
-                    plate_number: matchedRateVeh.category.toUpperCase(),
-                    make: matchedRateVeh.name,
-                    model: `(${matchedRateVeh.seating_capacity} Seats)`,
-                    vehicle_type: matchedRateVeh.category as any,
-                    seating_capacity: matchedRateVeh.seating_capacity,
-                    status: 'assigned',
-                    created_at: matchedRateVeh.created_at || new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                  }
-                : matchedLegacyVeh;
-            }
-
-            const updatedStatus = updates.status !== undefined ? updates.status : d.profile?.status;
-            let resolvedDutyStatus = d.status;
-            if (updatedStatus === 'deactivated' || updatedStatus === 'suspended') {
-              resolvedDutyStatus = 'unavailable';
-            } else if (updates.status === 'active' && resolvedDutyStatus === 'unavailable') {
-              resolvedDutyStatus = (updates.assigned_vehicle_id !== undefined ? updates.assigned_vehicle_id : d.assigned_vehicle_id) ? 'assigned' : 'available';
-            } else if (updates.assigned_vehicle_id !== undefined) {
-              resolvedDutyStatus = updates.assigned_vehicle_id ? 'assigned' : 'available';
-            }
-
-            const newAvatar = updates.avatar_url !== undefined
-              ? (updates.avatar_url || null)
-              : (updatedProfile.avatar_url !== undefined ? updatedProfile.avatar_url : d.avatar_url);
-
-            return {
-              ...d,
-              full_name: updatedProfile.full_name || d.full_name,
-              phone: updatedProfile.phone || d.phone,
-              avatar_url: newAvatar,
-              license_number:
-                updates.license_number !== undefined ? updates.license_number : d.license_number,
-              national_id:
-                updates.national_id !== undefined ? updates.national_id : d.national_id,
-              assigned_vehicle_id:
-                updates.assigned_vehicle_id !== undefined
-                  ? updates.assigned_vehicle_id
-                  : d.assigned_vehicle_id,
-              assigned_vehicle: assignedVeh,
-              status: resolvedDutyStatus,
-              profile: {
-                ...d.profile,
-                ...updatedProfile,
-                avatar_url: newAvatar,
-              } as Profile,
+          if (!exists && (updates.role === 'driver' || updatedProfile.role === 'driver' || resData.driver)) {
+            const newDriverObj: Driver = {
+              id: userId,
+              license_number: updates.license_number || resData.driver?.license_number || ('DL-' + userId.substring(0, 8).toUpperCase()),
+              national_id: updates.national_id || resData.driver?.national_id || null,
+              assigned_vehicle_id: updates.assigned_vehicle_id !== undefined ? updates.assigned_vehicle_id : resData.driver?.assigned_vehicle_id || null,
+              status: (updates.assigned_vehicle_id || resData.driver?.assigned_vehicle_id) ? 'assigned' : 'available',
+              rating: 5.0,
+              rating_count: 0,
+              total_rides: 0,
+              total_earnings: 0,
+              cash_collected: 0,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              ...resData.driver,
+              profile: updatedProfile,
+              full_name: updatedProfile.full_name,
+              phone: updatedProfile.phone,
+              avatar_url: updatedProfile.avatar_url,
+              assigned_vehicle: resolvedVeh,
+              vehicle: resolvedVeh,
             };
+            return [newDriverObj, ...prev];
           }
-          return d;
-        })
-      );
+
+          return prev.map((d) => {
+            if (d.id === userId || d.profile?.id === userId) {
+              const effectiveVehicle = updates.assigned_vehicle_id !== undefined ? resolvedVeh : (d.assigned_vehicle || resolvedVeh);
+              const updatedStatus = updates.status !== undefined ? updates.status : d.profile?.status;
+              let resolvedDutyStatus = d.status;
+              if (updatedStatus === 'deactivated' || updatedStatus === 'suspended') {
+                resolvedDutyStatus = 'unavailable';
+              } else if (updates.status === 'active' && resolvedDutyStatus === 'unavailable') {
+                resolvedDutyStatus = (updates.assigned_vehicle_id !== undefined ? updates.assigned_vehicle_id : d.assigned_vehicle_id) ? 'assigned' : 'available';
+              } else if (updates.assigned_vehicle_id !== undefined) {
+                resolvedDutyStatus = updates.assigned_vehicle_id ? 'assigned' : 'available';
+              }
+
+              const newAvatar = updates.avatar_url !== undefined
+                ? (updates.avatar_url || null)
+                : (updatedProfile.avatar_url !== undefined ? updatedProfile.avatar_url : d.avatar_url);
+
+              return {
+                ...d,
+                ...(resData.driver || {}),
+                full_name: updatedProfile.full_name || d.full_name,
+                phone: updatedProfile.phone || d.phone,
+                avatar_url: newAvatar,
+                license_number:
+                  updates.license_number !== undefined ? updates.license_number : (resData.driver?.license_number || d.license_number),
+                national_id:
+                  updates.national_id !== undefined ? updates.national_id : (resData.driver?.national_id || d.national_id),
+                assigned_vehicle_id:
+                  updates.assigned_vehicle_id !== undefined
+                    ? updates.assigned_vehicle_id
+                    : (resData.driver?.assigned_vehicle_id || d.assigned_vehicle_id),
+                assigned_vehicle: effectiveVehicle,
+                vehicle: effectiveVehicle,
+                status: resolvedDutyStatus,
+                profile: {
+                  ...d.profile,
+                  ...updatedProfile,
+                  avatar_url: newAvatar,
+                } as Profile,
+              };
+            }
+            return d;
+          });
+        });
+      }
+
+      if (currentUser.id === userId) {
+        setCurrentUser((prev) => ({ ...prev, ...updatedProfile }));
+      }
 
       toast.success(resData.message || 'User updated successfully');
       return { success: true };
@@ -3369,6 +3784,123 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toast.success('Vehicle updated successfully');
   };
 
+  // ── Payment Accounts Management ─────────────────────────────────────────────
+  const refreshPaymentAccounts = useCallback(async () => {
+    setIsPaymentAccountsLoading(true);
+    try {
+      const res = await fetch('/api/admin/payment-accounts');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.accounts)) {
+          setPaymentAccounts(json.accounts);
+          return;
+        }
+      }
+      const { data, error } = await supabase
+        .from('payment_accounts')
+        .select('*')
+        .order('is_default', { ascending: false })
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setPaymentAccounts(data as PaymentAccount[]);
+      }
+    } catch (err) {
+      console.error('Error refreshing payment accounts:', err);
+    } finally {
+      setIsPaymentAccountsLoading(false);
+    }
+  }, []);
+
+  const createPaymentAccount = async (account: Partial<PaymentAccount>): Promise<PaymentAccount | null> => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      const res = await fetch('/api/admin/payment-accounts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(account),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to create payment account');
+      }
+      toast.success(`Payment account "${data.account.provider_name}" created successfully!`);
+      await refreshPaymentAccounts();
+      return data.account;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create payment account');
+      return null;
+    }
+  };
+
+  const updatePaymentAccount = async (id: string, updates: Partial<PaymentAccount>): Promise<PaymentAccount | null> => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      const res = await fetch('/api/admin/payment-accounts', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update payment account');
+      }
+      toast.success('Payment account updated!');
+      await refreshPaymentAccounts();
+      return data.account;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update payment account');
+      return null;
+    }
+  };
+
+  const deletePaymentAccount = async (id: string): Promise<boolean> => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      const res = await fetch('/api/admin/payment-accounts', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete payment account');
+      }
+      toast.success('Payment account permanently removed.');
+      setPaymentAccounts((prev) => prev.filter((a) => a.id !== id));
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete payment account');
+      return false;
+    }
+  };
+
+  const togglePaymentAccountActive = async (id: string, isActive: boolean): Promise<boolean> => {
+    const updated = await updatePaymentAccount(id, { is_active: isActive });
+    return Boolean(updated);
+  };
+
+  const setDefaultPaymentAccount = async (id: string): Promise<boolean> => {
+    const updated = await updatePaymentAccount(id, { is_default: true, is_active: true });
+    return Boolean(updated);
+  };
+
+  const activePaymentAccounts = React.useMemo(() => {
+    return paymentAccounts.filter((a) => a.is_active);
+  }, [paymentAccounts]);
+
   // Booking Creation
   const createBooking = async (data: {
     passenger_name: string;
@@ -3377,7 +3909,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     booking_method?: 'fixed' | 'custom';
     trip_type?: 'one_way' | 'round_trip';
     intermediate_stops?: import('@/types').IntermediateStop[];
-    return_scheduled_at?: string;
+    return_scheduled_at?: string | null;
     pickup_address: string;
     pickup_latitude: number;
     pickup_longitude: number;
@@ -3387,8 +3919,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     vehicle_type: VehicleType;
     passenger_count: number;
     notes?: string;
-    scheduled_at?: string;
+    scheduled_at?: string | null;
     payment_screenshot_url?: string;
+    payment_account_id?: string | null;
+    payment_account_details?: PaymentAccountSnapshot | null;
     // Fixed-fare fields
     vehicle_category?: string | null;
     service_type?: string | null;
@@ -3516,6 +4050,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       notes: data.notes,
       scheduled_at: data.scheduled_at,
       payment_screenshot_url: data.payment_screenshot_url || null,
+      payment_account_id: data.payment_account_id || null,
+      payment_account_details: data.payment_account_details || null,
       payment_status: 'pending',
       payment_method: data.payment_method || (data.payment_screenshot_url ? 'online' : 'cash'),
       estimated_distance_km: distKm,
@@ -3558,6 +4094,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         notes: newBooking.notes,
         scheduled_at: newBooking.scheduled_at,
         payment_screenshot_url: newBooking.payment_screenshot_url,
+        payment_account_id: newBooking.payment_account_id,
+        payment_account_details: newBooking.payment_account_details,
         payment_status: 'pending',
         payment_method: newBooking.payment_method || 'cash',
         estimated_distance_km: newBooking.estimated_distance_km,
@@ -3588,6 +4126,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           await supabase.from('payments').insert({
             booking_id: inserted.id,
             customer_id: customerId,
+            payment_account_id: newBooking.payment_account_id,
+            payment_account_details: newBooking.payment_account_details,
             amount: paymentAmount,
             method: data.payment_screenshot_url ? 'online' : (data.payment_method || 'cash'),
             status: 'pending',
@@ -4771,6 +5311,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         b.id === bookingId ? { ...b, status: canonicalStatus } : b
       );
       const newCompletedRides = calculateDriverCompletedRides(updatedBookings, booking.assigned_driver_id);
+      const newTotalEarnings = calculateDriverTotalEarnings(updatedBookings, booking.assigned_driver_id);
 
       setDrivers((prev) =>
         prev.map((d) =>
@@ -4779,7 +5320,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               ...d,
               status: nextDriverStatus,
               total_rides: newCompletedRides,
-              total_earnings: d.total_earnings + (booking.final_fare || booking.confirmed_fare || booking.estimated_fare || 0),
+              total_earnings: newTotalEarnings > 0 ? newTotalEarnings : (d.total_earnings + (booking.final_fare || booking.confirmed_fare || booking.fixed_fare_amount || booking.estimated_fare || 0)),
             }
             : d
         )
@@ -4816,6 +5357,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               b.id === bookingId ? { ...b, status: canonicalStatus } : b
             );
             updatePayload.total_rides = calculateDriverCompletedRides(updatedBookings, booking.assigned_driver_id);
+            updatePayload.total_earnings = calculateDriverTotalEarnings(updatedBookings, booking.assigned_driver_id);
           }
           await supabase.from('drivers').update(updatePayload).eq('id', booking.assigned_driver_id);
         }
@@ -5457,10 +5999,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const activeDriverBooking = bookings.find(
     (b) =>
       (b.assigned_driver_id === currentUser.id || (b.driver && b.driver.id === currentUser.id)) &&
-      b.status !== 'cancelled' &&
-      b.status !== 'rejected' &&
-      b.status !== 'trip_completed' &&
-      b.status !== 'payment_completed'
+      isBookingActive(b.status)
   );
 
   return (
@@ -5514,7 +6053,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         updateSettings,
         addNotification,
         markNotificationAsRead,
+        markAllNotificationsAsRead,
         clearNotifications,
+        playNotificationSound,
 
         addService,
         updateService,
@@ -5585,6 +6126,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         driverSettlements,
         createDriverSettlement,
+
+        paymentAccounts,
+        activePaymentAccounts,
+        isPaymentAccountsLoading,
+        refreshPaymentAccounts,
+        createPaymentAccount,
+        updatePaymentAccount,
+        deletePaymentAccount,
+        togglePaymentAccountActive,
+        setDefaultPaymentAccount,
 
         activeCustomerBooking,
         activeDriverBooking,

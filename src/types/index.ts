@@ -163,11 +163,41 @@ export type BookingStatus =
 export type PaymentMethod = 'cash' | 'online' | 'card';
 export type PaymentStatus = 'pending' | 'paid' | 'confirmed' | 'failed' | 'refunded';
 
+export type PaymentAccountMethodType = 'bank_transfer' | 'stc_pay' | 'urpay' | 'other';
+
+export interface PaymentAccount {
+  id: string;
+  payment_method_type: PaymentAccountMethodType;
+  provider_name: string;
+  account_holder_name: string;
+  account_number?: string | null;
+  iban?: string | null;
+  wallet_number?: string | null;
+  instructions?: string | null;
+  is_active: boolean;
+  is_default: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentAccountSnapshot {
+  id?: string;
+  payment_method_type: PaymentAccountMethodType;
+  provider_name: string;
+  account_holder_name: string;
+  account_number?: string | null;
+  iban?: string | null;
+  wallet_number?: string | null;
+  instructions?: string | null;
+}
+
 export type AdditionalChargeType = 'waiting' | 'parking' | 'toll' | 'extra_luggage' | 'special_service';
 
 export interface Profile {
   id: string;
   role: UserRole;
+  is_super_admin?: boolean;
   full_name: string;
   email?: string | null;
   phone?: string | null;
@@ -341,6 +371,8 @@ export interface Booking {
   cancelled_by?: string | null;
   cancelled_at?: string | null;
   payment_screenshot_url?: string | null;
+  payment_account_id?: string | null;
+  payment_account_details?: PaymentAccountSnapshot | null;
   payment_status?: PaymentStatus;
   payment_method?: PaymentMethod;
   payment_rejected_reason?: string | null;
@@ -357,6 +389,8 @@ export interface Payment {
   id: string;
   booking_id: string;
   customer_id?: string | null;
+  payment_account_id?: string | null;
+  payment_account_details?: PaymentAccountSnapshot | null;
   amount: number;
   method: PaymentMethod;
   status: PaymentStatus;
@@ -550,3 +584,17 @@ export interface DriverEarningsSummary {
 }
 
 
+
+export type NotificationType = 'info' | 'success' | 'warning' | 'ride';
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  type: NotificationType;
+  role?: UserRole | string;
+  user_id?: string | null;
+  booking_id?: string | null;
+}

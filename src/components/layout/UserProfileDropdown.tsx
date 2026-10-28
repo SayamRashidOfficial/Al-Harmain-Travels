@@ -33,7 +33,7 @@ export default function UserProfileDropdown({
   className = '',
   forceLight = false,
 }: UserProfileDropdownProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const router = useRouter();
   const { t, language, dir, isRTL } = useLanguage();
   const {

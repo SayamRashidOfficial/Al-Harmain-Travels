@@ -25,10 +25,10 @@ function ResetPasswordContent() {
   const searchParams = useSearchParams();
 
   // URL query parameters
-  const codeParam = searchParams.get('code');
-  const tokenHashParam = searchParams.get('token_hash');
-  const typeParam = searchParams.get('type');
-  const urlEmail = searchParams.get('email') || '';
+  const codeParam = searchParams?.get('code');
+  const tokenHashParam = searchParams?.get('token_hash');
+  const typeParam = searchParams?.get('type');
+  const urlEmail = searchParams?.get('email') || '';
 
   // Component state
   const [sessionStatus, setSessionStatus] = useState<'checking' | 'ready' | 'invalid' | 'success'>('checking');
@@ -74,7 +74,7 @@ function ResetPasswordContent() {
           }
         }
 
-        const queryError = searchParams.get('error_description') || searchParams.get('error');
+        const queryError = searchParams?.get('error_description') || searchParams?.get('error');
         if (queryError) {
           if (!isCancelled) {
             setSessionStatus('invalid');

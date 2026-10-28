@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
         settlement_reference,
         payment_method: payment_method === 'cash' ? 'cash' : 'bank_transfer',
         status: 'completed',
-        bank_name: bank_name || (payment_method === 'bank_transfer' ? 'Al Rajhi Bank' : null),
+        bank_name: bank_name || null,
         transaction_number: transaction_number || `TXN-${Date.now().toString().slice(-6)}`,
         notes: notes || 'Driver earnings settlement payout',
         processed_by: processed_by && UUID_REGEX.test(processed_by) ? processed_by : null,

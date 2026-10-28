@@ -19,7 +19,7 @@ interface DriverDashboardShellProps {
 }
 
 export default function DriverDashboardShell({ children }: DriverDashboardShellProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const { currentUser, userRole, drivers, bookings, signOut } = useApp();
   const { dir, isRTL, t } = useLanguage();
 

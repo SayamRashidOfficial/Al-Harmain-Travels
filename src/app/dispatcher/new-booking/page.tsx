@@ -25,6 +25,8 @@ import {
   getVehicleCapacity,
   getActiveTerminalsForService,
   getActiveServiceTypes,
+  getAirportTerminalLocation,
+  getAirportTerminalTarget,
 } from '@/lib/fixed-fare';
 import {
   Briefcase,
@@ -62,6 +64,11 @@ import {
   Banknote,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  createScheduledPickupTimestamp,
+  getSaudiCurrentDateString,
+  getSaudiCurrentTimeString,
+} from '@/lib/utils';
 
 const CATEGORY_TO_VEHICLE_TYPE: Record<VehicleCategory, VehicleType> = {
   sedan: 'sedan',
@@ -122,17 +129,8 @@ export default function DispatcherNewBookingPage() {
 
   // ─── Travel Schedule State ────────────────────────────────────────────────
   const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled'>('immediate');
-  const [travelDate, setTravelDate] = useState<string>(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
-  const [travelTime, setTravelTime] = useState<string>(() => {
-    const now = new Date();
-    now.setHours(now.getHours() + 1);
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(Math.floor(now.getMinutes() / 15) * 15).padStart(2, '0');
-    return `${hh}:${mm}`;
-  });
+  const [travelDate, setTravelDate] = useState<string>(() => getSaudiCurrentDateString());
+  const [travelTime, setTravelTime] = useState<string>(() => getSaudiCurrentTimeString(60));
 
   // ─── Custom Fare State (for Custom Route) ──────────────────────────────────
   const [customFareInput, setCustomFareInput] = useState<string>('');
@@ -274,14 +272,28 @@ export default function DispatcherNewBookingPage() {
   // Populate default pickup & destination when fixed route changes
   useEffect(() => {
     if (bookingMode === 'fixed' && currentRouteObj) {
-      if (!customPickupAddress) {
-        setCustomPickupAddress(currentRouteObj.origin);
-      }
-      if (!customDestAddress) {
-        setCustomDestAddress(currentRouteObj.dest);
+      const target = isCurrentRouteAirport ? getAirportTerminalTarget(selectedRouteId, rateRoutes) : null;
+      if (isCurrentRouteAirport && selectedTerminal) {
+        const termLoc = getAirportTerminalLocation(selectedTerminal, rateTerminals);
+        if (termLoc) {
+          if (target === 'destination') {
+            setCustomDestAddress(termLoc.address);
+            if (!customPickupAddress) setCustomPickupAddress(currentRouteObj.origin);
+          } else {
+            setCustomPickupAddress(termLoc.address);
+            if (!customDestAddress) setCustomDestAddress(currentRouteObj.dest);
+          }
+        }
+      } else {
+        if (!customPickupAddress) {
+          setCustomPickupAddress(currentRouteObj.origin);
+        }
+        if (!customDestAddress) {
+          setCustomDestAddress(currentRouteObj.dest);
+        }
       }
     }
-  }, [bookingMode, currentRouteObj]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [bookingMode, currentRouteObj, isCurrentRouteAirport, selectedRouteId, selectedTerminal, rateRoutes, rateTerminals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Vehicles & Dynamic Fixed Fare Calculation ───────────────────────────
   const vehicleCategoriesList: VehicleCategory[] = ['sedan', 'staria', 'gmc', 'hiroof'];
@@ -441,18 +453,24 @@ export default function DispatcherNewBookingPage() {
       }
 
       // 7. Resolve Coordinates
+      const target = (bookingMode === 'fixed' && isCurrentRouteAirport)
+        ? getAirportTerminalTarget(selectedRouteId, rateRoutes)
+        : null;
+      const terminalLoc = (bookingMode === 'fixed' && isCurrentRouteAirport && selectedTerminal)
+        ? getAirportTerminalLocation(selectedTerminal, rateTerminals)
+        : null;
       const pLm = SAUDI_LANDMARKS.find((l) => l.id === pickupLandmarkId) || SAUDI_LANDMARKS[0];
       const dLm = SAUDI_LANDMARKS.find((l) => l.id === destLandmarkId) || SAUDI_LANDMARKS[2];
 
-      const pickupLat = pLm.latitude;
-      const pickupLng = pLm.longitude;
-      const destLat = dLm.latitude;
-      const destLng = dLm.longitude;
+      const pickupLat = (target === 'pickup' && terminalLoc) ? terminalLoc.latitude : pLm.latitude;
+      const pickupLng = (target === 'pickup' && terminalLoc) ? terminalLoc.longitude : pLm.longitude;
+      const destLat = (target === 'destination' && terminalLoc) ? terminalLoc.latitude : dLm.latitude;
+      const destLng = (target === 'destination' && terminalLoc) ? terminalLoc.longitude : dLm.longitude;
 
       // 8. Determine Scheduled Timestamp
       const scheduledDateTime = scheduleType === 'immediate'
-        ? new Date().toISOString()
-        : `${travelDate}T${travelTime}:00Z`;
+        ? null
+        : createScheduledPickupTimestamp(travelDate, travelTime);
 
       // 9. Format Notes & Audit Trail
       const routeTitle = bookingMode === 'fixed'
@@ -656,11 +674,10 @@ export default function DispatcherNewBookingPage() {
         <button
           type="button"
           onClick={() => setBookingMode('fixed')}
-          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-            bookingMode === 'fixed'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-secondary hover:text-primary hover:bg-surface'
-          }`}
+          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${bookingMode === 'fixed'
+            ? 'bg-emerald-600 text-white shadow-md'
+            : 'text-secondary hover:text-primary hover:bg-surface'
+            }`}
         >
           <Sparkles className="w-4 h-4 text-amber-300" />
           <span>Fixed-Fare Route (Configured Rates)</span>
@@ -672,11 +689,10 @@ export default function DispatcherNewBookingPage() {
         <button
           type="button"
           onClick={() => setBookingMode('custom')}
-          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-            bookingMode === 'custom'
-              ? 'bg-amber-600 text-white shadow-md'
-              : 'text-secondary hover:text-primary hover:bg-surface'
-          }`}
+          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${bookingMode === 'custom'
+            ? 'bg-amber-600 text-white shadow-md'
+            : 'text-secondary hover:text-primary hover:bg-surface'
+            }`}
         >
           <Route className="w-4 h-4 text-amber-200" />
           <span>Custom Route Booking (Chartered / Bespoke)</span>
@@ -708,11 +724,10 @@ export default function DispatcherNewBookingPage() {
                 onClick={() => {
                   setCustomerMode('existing');
                 }}
-                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
-                  customerMode === 'existing'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'text-muted hover:text-primary'
-                }`}
+                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${customerMode === 'existing'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'text-muted hover:text-primary'
+                  }`}
               >
                 Existing Customer
               </button>
@@ -722,11 +737,10 @@ export default function DispatcherNewBookingPage() {
                   setCustomerMode('new');
                   handleClearSelectedCustomer();
                 }}
-                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
-                  customerMode === 'new'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'text-muted hover:text-primary'
-                }`}
+                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${customerMode === 'new'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'text-muted hover:text-primary'
+                  }`}
               >
                 New / Walk-in
               </button>
@@ -780,13 +794,12 @@ export default function DispatcherNewBookingPage() {
                             type="button"
                             disabled={isDeactivated}
                             onClick={() => handleSelectCustomer(cust)}
-                            className={`w-full text-left p-2 rounded-xl transition-all flex items-center justify-between text-xs ${
-                              isSelected
-                                ? 'bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30'
-                                : isDeactivated
+                            className={`w-full text-left p-2 rounded-xl transition-all flex items-center justify-between text-xs ${isSelected
+                              ? 'bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30'
+                              : isDeactivated
                                 ? 'opacity-50 cursor-not-allowed bg-rose-500/5'
                                 : 'hover:bg-card text-primary'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
                               <div className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-500 font-bold flex items-center justify-center shrink-0 text-xs border border-emerald-500/20">
@@ -1160,11 +1173,10 @@ export default function DispatcherNewBookingPage() {
                   key={category}
                   type="button"
                   onClick={() => setSelectedCategory(category)}
-                  className={`p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-3 cursor-pointer ${
-                    isSelected
-                      ? 'bg-emerald-500/10 border-emerald-500 shadow-md ring-1 ring-emerald-500/30'
-                      : 'bg-surface/50 border-base hover:border-emerald-500/40 hover:bg-surface'
-                  }`}
+                  className={`p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-3 cursor-pointer ${isSelected
+                    ? 'bg-emerald-500/10 border-emerald-500 shadow-md ring-1 ring-emerald-500/30'
+                    : 'bg-surface/50 border-base hover:border-emerald-500/40 hover:bg-surface'
+                    }`}
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
@@ -1226,22 +1238,20 @@ export default function DispatcherNewBookingPage() {
               <button
                 type="button"
                 onClick={() => setScheduleType('immediate')}
-                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
-                  scheduleType === 'immediate'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'text-muted hover:text-primary'
-                }`}
+                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${scheduleType === 'immediate'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'text-muted hover:text-primary'
+                  }`}
               >
                 Immediate / ASAP
               </button>
               <button
                 type="button"
                 onClick={() => setScheduleType('scheduled')}
-                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
-                  scheduleType === 'scheduled'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'text-muted hover:text-primary'
-                }`}
+                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${scheduleType === 'scheduled'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'text-muted hover:text-primary'
+                  }`}
               >
                 Scheduled Trip
               </button>
@@ -1384,11 +1394,10 @@ export default function DispatcherNewBookingPage() {
               <button
                 type="button"
                 onClick={() => setPaymentMethod('screenshot')}
-                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
-                  paymentMethod === 'screenshot'
-                    ? 'bg-emerald-100 text-emerald-950 border border-emerald-300'
-                    : 'text-muted hover:text-primary'
-                }`}
+                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${paymentMethod === 'screenshot'
+                  ? 'bg-emerald-100 text-emerald-950 border border-emerald-300'
+                  : 'text-muted hover:text-primary'
+                  }`}
               >
                 Bank Transfer / Proof
               </button>
@@ -1407,11 +1416,10 @@ export default function DispatcherNewBookingPage() {
                     fileInputRef.current.value = '';
                   }
                 }}
-                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
-                  paymentMethod === 'cash'
-                    ? 'bg-amber-100 text-amber-950 border border-amber-300'
-                    : 'text-muted hover:text-primary'
-                }`}
+                className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${paymentMethod === 'cash'
+                  ? 'bg-amber-100 text-amber-950 border border-amber-300'
+                  : 'text-muted hover:text-primary'
+                  }`}
               >
                 Cash on Pickup
               </button>
@@ -1573,8 +1581,8 @@ export default function DispatcherNewBookingPage() {
                   {paymentMethod === 'cash'
                     ? 'Confirm Payment & Dispatch Booking'
                     : paymentFile
-                    ? 'Confirm & Register Booking (Pending Verification)'
-                    : 'Confirm & Dispatch Booking'}
+                      ? 'Confirm & Register Booking (Pending Verification)'
+                      : 'Confirm & Dispatch Booking'}
                 </span>
                 <ArrowRight className="w-4 h-4" />
               </>
@@ -1582,7 +1590,7 @@ export default function DispatcherNewBookingPage() {
           </button>
 
           <p className="text-center text-[10.5px] text-muted">
-            The booking will be immediately persisted to Supabase and published to the Ride Queue and Customer Portal.
+            The booking will be immediately persisted and published to the Ride Queue and Customer Portal.
           </p>
         </div>
       </form>

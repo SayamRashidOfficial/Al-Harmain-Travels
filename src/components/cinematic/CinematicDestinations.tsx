@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import Lenis from 'lenis';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    SINGLE EDITABLE DESTINATIONS ARRAY (EDITABLE FROM HERE)
@@ -181,29 +180,8 @@ export default function CinematicDestinations({
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // 1. Initialize Lenis for Smooth Inertial Scrolling
-    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    // Native scrolling enabled: GSAP ScrollTrigger tracks natural browser scroll
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    let lenis: Lenis | null = null;
-    if (!prefersReducedMotion) {
-      try {
-        lenis = new Lenis({
-          lerp: isTouch ? 1 : 0.08,
-          smoothWheel: true,
-          syncTouch: false,
-        });
-
-        lenis.on('scroll', ScrollTrigger.update);
-        const tickerCallback = (time: number) => {
-          lenis?.raf(time * 1000);
-        };
-        gsap.ticker.add(tickerCallback);
-        gsap.ticker.lagSmoothing(0);
-      } catch {
-        // Lenis fallback if window constraints exist
-      }
-    }
 
     // 2. Setup GSAP ScrollTrigger Pinned Wipe Animation
     const ctx = gsap.context(() => {
@@ -258,7 +236,7 @@ export default function CinematicDestinations({
         scrollTrigger: {
           trigger: containerRef.current,
           start: 'top top',
-          end: `+=${totalPanels * 100}%`,
+          end: 'bottom bottom',
           pin: stageRef.current,
           scrub: 1.0, // Smooth lag
           anticipatePin: 1,
@@ -360,9 +338,6 @@ export default function CinematicDestinations({
 
     return () => {
       ctx.revert();
-      if (lenis) {
-        lenis.destroy();
-      }
     };
   }, [totalPanels]);
 

@@ -39,7 +39,7 @@ function VerifyEmailContent() {
   const [isChecking, setIsChecking] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
-  const queryEmail = searchParams.get('email');
+  const queryEmail = searchParams?.get('email');
   const storedEmail = typeof window !== 'undefined' ? localStorage.getItem('aht_pending_verification_email') : null;
   const emailTarget = queryEmail || verificationState?.email || storedEmail || '';
 

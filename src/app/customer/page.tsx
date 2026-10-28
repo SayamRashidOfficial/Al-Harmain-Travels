@@ -16,7 +16,9 @@ import {
   TerminalCode,
   IntermediateStop,
   BookingMethod,
+  BookingType,
   TripType,
+  PaymentAccount,
 } from '@/types';
 import CustomRouteBookingPanel from '@/components/customer/CustomRouteBookingPanel';
 import FixedFareBookingPanel from '@/components/customer/FixedFareBookingPanel';
@@ -44,8 +46,15 @@ import {
   TERMINAL_REQUIRED_SERVICES,
   ZIYARAT_SERVICES,
   isAirportRoute,
+  getAirportTerminalLocation,
+  getAirportTerminalTarget,
 } from '@/lib/fixed-fare';
-import { formatCurrency } from '@/lib/utils';
+import {
+  formatCurrency,
+  createScheduledPickupTimestamp,
+  getSaudiCurrentDateString,
+  getSaudiCurrentTimeString,
+} from '@/lib/utils';
 import { isBookingForCustomer } from '@/lib/assignment-utils';
 import {
   MapPin,
@@ -287,14 +296,17 @@ export default function CustomerHomePage() {
   // Payment Screenshot State
   const [paymentFile, setPaymentFile] = useState<File | null>(null);
   const [paymentPreviewUrl, setPaymentPreviewUrl] = useState<string | null>(null);
+  const [selectedPaymentAccount, setSelectedPaymentAccount] = useState<PaymentAccount | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Additional Passenger Details
+  // Additional Passenger Details & Schedule
   const [passengerName, setPassengerName] = useState<string>(currentUser.full_name || 'Al Harmain Guest');
   const [passengerPhone, setPassengerPhone] = useState<string>(currentUser.phone || '');
   const [passengerCount, setPassengerCount] = useState<number>(3);
-  const [journeyDate, setJourneyDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [journeyTime, setJourneyTime] = useState<string>('15:00');
+  const [bookingType, setBookingType] = useState<BookingType>('scheduled');
+  const [customBookingType, setCustomBookingType] = useState<BookingType>('scheduled');
+  const [journeyDate, setJourneyDate] = useState<string>(() => getSaudiCurrentDateString());
+  const [journeyTime, setJourneyTime] = useState<string>(() => getSaudiCurrentTimeString(60));
   const [specialInstructions, setSpecialInstructions] = useState<string>('');
 
   // Saved Places Modal State
@@ -333,6 +345,12 @@ export default function CustomerHomePage() {
   const needsTerminal = useMemo(
     () => selectedService ? isAirportRoute(selectedService, rateRoutes) : false,
     [selectedService, rateRoutes],
+  );
+
+  // Whether the airport terminal applies to pickup (e.g. Jeddah -> Makkah) or destination (e.g. Makkah -> Jeddah)
+  const terminalTarget = useMemo(
+    () => selectedService ? getAirportTerminalTarget(selectedService, rateRoutes) : null,
+    [selectedService, rateRoutes]
   );
 
   // Whether the selected service is a Ziyarat (no separate destination input)
@@ -669,6 +687,41 @@ export default function CustomerHomePage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Airport Terminal selection: automatically maps terminal as pickup OR destination depending on route direction
+  const handleTerminalSelect = useCallback((terminal: TerminalCode) => {
+    if (!terminal || terminal === selectedTerminal) {
+      setSelectedTerminal(null);
+      // Deselected: if terminal was targeting pickup, reset pickup; if targeting destination, reset destination
+      if (terminalTarget === 'destination') {
+        if (destination && (destination.placeId?.startsWith('jed-airport') || destination.address.includes('King Abdulaziz International Airport') || destination.address.includes('Terminal'))) {
+          setDestination(null);
+        }
+      } else {
+        if (pickup && (pickup.placeId?.startsWith('jed-airport') || pickup.address.includes('King Abdulaziz International Airport') || pickup.address.includes('Terminal'))) {
+          setPickup(null);
+        }
+      }
+      return;
+    }
+
+    setSelectedTerminal(terminal);
+    const terminalLocation = getAirportTerminalLocation(terminal, rateTerminals);
+    if (terminalLocation) {
+      if (terminalTarget === 'destination') {
+        setDestination(terminalLocation);
+        toast.success(`Destination set to ${TERMINAL_LABELS[terminal] || 'Terminal'} (KAIA Jeddah)`, {
+          id: 'terminal-dest-toast',
+        });
+      } else {
+        setPickup(terminalLocation);
+        setManualPickup(terminalLocation);
+        toast.success(`Pickup set to ${TERMINAL_LABELS[terminal] || 'Terminal'} (KAIA Jeddah)`, {
+          id: 'terminal-pickup-toast',
+        });
+      }
+    }
+  }, [selectedTerminal, terminalTarget, pickup, destination, rateTerminals, setManualPickup]);
+
   // Service selection → advance to route step
   const handleServiceSelect = (service: ServiceType) => {
     setSelectedService(service);
@@ -682,19 +735,20 @@ export default function CustomerHomePage() {
   // Route/terminal confirmed → advance to vehicle step
   const handleRouteConfirmed = () => {
     if (!selectedService) return;
-    // For non-ziyarat, require pickup (destination auto-populated for some services)
-    if (!isZiyarat && !pickup) {
-      toast.error('Please enter your pickup location.');
-      return;
-    }
-    // For intercity not-ziyarat, require destination
-    if (!isZiyarat && !destination && !pickup) {
-      toast.error('Please enter your destination.');
-      return;
-    }
-    // For terminal-required services (non-sedan), require terminal
     if (needsTerminal && !selectedTerminal) {
-      toast.error('Please select the Jeddah Airport terminal.');
+      toast.error(
+        terminalTarget === 'destination'
+          ? 'Please select your Jeddah Airport departure terminal.'
+          : 'Please select your Jeddah Airport arrival terminal.'
+      );
+      return;
+    }
+    if (!isZiyarat && !pickup) {
+      toast.error('Please specify your pickup location.');
+      return;
+    }
+    if (!isZiyarat && !destination) {
+      toast.error('Please enter your destination address.');
       return;
     }
     setBookingStep('vehicle');
@@ -781,26 +835,69 @@ export default function CustomerHomePage() {
 
       // 3. Determine pickup/destination
       const serviceLabel = SERVICE_LABELS[selectedService];
-      const termLabel = selectedTerminal ? ` (${TERMINAL_LABELS[selectedTerminal]})` : '';
-      const pickupAddr = pickup?.address || `Service: ${serviceLabel}${termLabel}`;
-      const destAddr = destination?.address || serviceLabel;
+      const termLabel = selectedTerminal ? ` (${TERMINAL_LABELS[selectedTerminal] || selectedTerminal})` : '';
+      const fallbackTerminalLoc = selectedTerminal ? getAirportTerminalLocation(selectedTerminal, rateTerminals) : null;
+
+      let pickupAddr: string;
+      let pickupLat: number;
+      let pickupLng: number;
+
+      let destAddr: string;
+      let destLat: number;
+      let destLng: number;
+
+      if (terminalTarget === 'destination') {
+        pickupAddr = pickup?.address || 'Makkah Al-Mukarramah';
+        pickupLat = pickup?.latitude ?? 21.4225;
+        pickupLng = pickup?.longitude ?? 39.8262;
+        destAddr = destination?.address || fallbackTerminalLoc?.address || `King Abdulaziz International Airport (${TERMINAL_LABELS[selectedTerminal || ''] || 'Terminal'}), Jeddah`;
+        destLat = destination?.latitude ?? (fallbackTerminalLoc?.latitude ?? 21.6826);
+        destLng = destination?.longitude ?? (fallbackTerminalLoc?.longitude ?? 39.1564);
+      } else if (terminalTarget === 'pickup') {
+        pickupAddr = pickup?.address || fallbackTerminalLoc?.address || `Service: ${serviceLabel}${termLabel}`;
+        pickupLat = pickup?.latitude ?? (fallbackTerminalLoc?.latitude ?? 21.6826);
+        pickupLng = pickup?.longitude ?? (fallbackTerminalLoc?.longitude ?? 39.1564);
+        destAddr = destination?.address || serviceLabel;
+        destLat = destination?.latitude ?? 21.4225;
+        destLng = destination?.longitude ?? 39.8262;
+      } else {
+        pickupAddr = pickup?.address || `Service: ${serviceLabel}`;
+        pickupLat = pickup?.latitude ?? 21.4225;
+        pickupLng = pickup?.longitude ?? 39.8262;
+        destAddr = destination?.address || serviceLabel;
+        destLat = destination?.latitude ?? 24.4672;
+        destLng = destination?.longitude ?? 39.6151;
+      }
 
       // 4. Create booking with confirmed fixed fare from server
       const booking = await createBooking({
         passenger_name: passengerName.trim(),
         passenger_phone: passengerPhone.trim(),
-        booking_type: 'scheduled',
+        booking_type: bookingType,
         pickup_address: pickupAddr,
-        pickup_latitude: pickup?.latitude ?? 21.4225,
-        pickup_longitude: pickup?.longitude ?? 39.8262,
+        pickup_latitude: pickupLat,
+        pickup_longitude: pickupLng,
         destination_address: destAddr,
-        destination_latitude: destination?.latitude ?? 24.4672,
-        destination_longitude: destination?.longitude ?? 39.6151,
+        destination_latitude: destLat,
+        destination_longitude: destLng,
         vehicle_type: CATEGORY_TO_VEHICLE_TYPE[selectedVehicle],
         passenger_count: passengerCount,
-        notes: `Fixed-Fare Booking | Service: ${serviceLabel}${termLabel} | Vehicle: ${VEHICLE_LABELS[selectedVehicle]} | ${journeyDate} at ${journeyTime}${specialInstructions ? ` | Special: ${specialInstructions}` : ''}`,
-        scheduled_at: `${journeyDate}T${journeyTime}:00Z`,
+        notes: `Fixed-Fare Booking | Service: ${serviceLabel}${termLabel} | Vehicle: ${VEHICLE_LABELS[selectedVehicle]} | ${
+          bookingType === 'immediate' ? 'Book Now (Immediate ASAP)' : `${journeyDate} at ${journeyTime}`
+        }${specialInstructions ? ` | Special: ${specialInstructions}` : ''}`,
+        scheduled_at: bookingType === 'scheduled' ? createScheduledPickupTimestamp(journeyDate, journeyTime) : null,
         payment_screenshot_url: uploadedScreenshotUrl || undefined,
+        payment_account_id: selectedPaymentAccount?.id || null,
+        payment_account_details: selectedPaymentAccount ? {
+          id: selectedPaymentAccount.id,
+          payment_method_type: selectedPaymentAccount.payment_method_type,
+          provider_name: selectedPaymentAccount.provider_name,
+          account_holder_name: selectedPaymentAccount.account_holder_name,
+          account_number: selectedPaymentAccount.account_number,
+          iban: selectedPaymentAccount.iban,
+          wallet_number: selectedPaymentAccount.wallet_number,
+          instructions: selectedPaymentAccount.instructions,
+        } : null,
         // Fixed-fare extra fields
         vehicle_category: selectedVehicle,
         service_type: selectedService,
@@ -872,6 +969,7 @@ export default function CustomerHomePage() {
     setBookingStep('service');
     setPaymentFile(null);
     setPaymentPreviewUrl(null);
+    setSelectedPaymentAccount(null);
     setConfirmedBookingRef(null);
   };
 
@@ -965,13 +1063,13 @@ export default function CustomerHomePage() {
       const booking = await createBooking({
         passenger_name: passengerName.trim(),
         passenger_phone: passengerPhone.trim(),
-        booking_type: 'scheduled',
+        booking_type: customBookingType,
         booking_method: 'custom',
         trip_type: customTripType,
         intermediate_stops: validStops,
         return_scheduled_at:
           customTripType === 'round_trip' && customReturnDate && customReturnTime
-            ? `${customReturnDate}T${customReturnTime}:00Z`
+            ? createScheduledPickupTimestamp(customReturnDate, customReturnTime)
             : undefined,
         pickup_address: customPickup.address,
         pickup_latitude: customPickup.latitude,
@@ -982,8 +1080,10 @@ export default function CustomerHomePage() {
         vehicle_type: CATEGORY_TO_VEHICLE_TYPE[selectedCustomVehicle],
         vehicle_category: selectedCustomVehicle,
         passenger_count: passengerCount,
-        notes: `Custom Route Booking | ${customTripType === 'round_trip' ? 'Round Trip' : 'One Way'} | Vehicle: ${vehicleLabel} | Stops: ${validStops.length}${specialInstructions ? ` | Notes: ${specialInstructions}` : ''}`,
-        scheduled_at: `${journeyDate}T${journeyTime}:00Z`,
+        notes: `Custom Route Booking | ${customTripType === 'round_trip' ? 'Round Trip' : 'One Way'} | Vehicle: ${vehicleLabel} | Stops: ${validStops.length} | ${
+          customBookingType === 'immediate' ? 'Book Now (Immediate ASAP)' : `${journeyDate} at ${journeyTime}`
+        }${specialInstructions ? ` | Notes: ${specialInstructions}` : ''}`,
+        scheduled_at: customBookingType === 'scheduled' ? createScheduledPickupTimestamp(journeyDate, journeyTime) : null,
       });
 
       setCustomConfirmedRef(booking.booking_reference);
@@ -1187,6 +1287,8 @@ export default function CustomerHomePage() {
               setPassengerPhone={setPassengerPhone}
               passengerCount={passengerCount}
               setPassengerCount={setPassengerCount}
+              bookingType={customBookingType}
+              setBookingType={setCustomBookingType}
               journeyDate={journeyDate}
               setJourneyDate={setJourneyDate}
               journeyTime={journeyTime}
@@ -1214,7 +1316,7 @@ export default function CustomerHomePage() {
               selectedService={selectedService}
               onSelectService={handleServiceSelect}
               selectedTerminal={selectedTerminal}
-              onSelectTerminal={setSelectedTerminal}
+              onSelectTerminal={handleTerminalSelect}
               needsTerminal={needsTerminal}
               isZiyarat={isZiyarat}
               pickup={pickup}
@@ -1248,6 +1350,8 @@ export default function CustomerHomePage() {
               setPassengerPhone={setPassengerPhone}
               passengerCount={passengerCount}
               setPassengerCount={setPassengerCount}
+              bookingType={bookingType}
+              setBookingType={setBookingType}
               journeyDate={journeyDate}
               setJourneyDate={setJourneyDate}
               journeyTime={journeyTime}
@@ -1257,6 +1361,8 @@ export default function CustomerHomePage() {
               onDetailsSubmit={handleDetailsSubmit}
               paymentFile={paymentFile}
               paymentPreviewUrl={paymentPreviewUrl}
+              selectedPaymentAccount={selectedPaymentAccount}
+              onSelectPaymentAccount={setSelectedPaymentAccount}
               fileInputRef={fileInputRef}
               onPaymentFileChange={handlePaymentFileChange}
               onRemovePaymentFile={removePaymentFile}

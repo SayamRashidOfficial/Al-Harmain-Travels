@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { NotificationItem } from '@/context/AppContext';
+import { NotificationItem, UserRole } from '@/types';
 import { formatDateTime } from '@/lib/utils';
 import {
   Bell,
@@ -47,18 +47,19 @@ function ComposeNotificationModal({
   onSend,
 }: {
   onClose: () => void;
-  onSend: (title: string, message: string, type: NotificationItem['type']) => void;
+  onSend: (title: string, message: string, type: NotificationItem['type'], targetRole?: UserRole) => void;
 }) {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [type, setType] = useState<NotificationItem['type']>('info');
+  const [targetRole, setTargetRole] = useState<UserRole>('dispatcher');
 
   const handleSend = () => {
     if (!title.trim() || !message.trim()) {
       toast.error('Title and message are required.');
       return;
     }
-    onSend(title, message, type);
+    onSend(title, message, type, targetRole);
     onClose();
   };
 
@@ -76,11 +77,31 @@ function ComposeNotificationModal({
         </div>
         <div className="p-5 space-y-4">
           <div>
+            <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Target Audience</label>
+            <div className="mt-2 flex gap-2 flex-wrap">
+              {(['dispatcher', 'driver', 'customer', 'admin'] as UserRole[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setTargetRole(r)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer capitalize ${
+                    targetRole === r
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
             <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Type</label>
             <div className="mt-2 flex gap-2 flex-wrap">
               {(['info', 'success', 'warning', 'ride'] as NotificationItem['type'][]).map((t) => (
                 <button
                   key={t}
+                  type="button"
                   onClick={() => setType(t)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                     type === t
@@ -132,7 +153,7 @@ function ComposeNotificationModal({
 }
 
 export default function AdminNotificationsPage() {
-  const { notifications, markNotificationAsRead, clearNotifications, addNotification } = useApp();
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, clearNotifications, addNotification } = useApp();
 
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [readFilter, setReadFilter] = useState<string>('all');
@@ -154,16 +175,20 @@ export default function AdminNotificationsPage() {
   const infoCount = notifications.filter((n) => n.type === 'info').length;
   const warningCount = notifications.filter((n) => n.type === 'warning').length;
 
-  const handleMarkAllRead = () => {
-    notifications.forEach((n) => {
-      if (!n.read) markNotificationAsRead(n.id);
-    });
+  const handleMarkAllRead = async () => {
+    if (markAllNotificationsAsRead) {
+      await markAllNotificationsAsRead();
+    } else {
+      notifications.forEach((n) => {
+        if (!n.read) markNotificationAsRead(n.id);
+      });
+    }
     toast.success('All notifications marked as read.');
   };
 
-  const handleSendNotification = (title: string, message: string, type: NotificationItem['type']) => {
-    addNotification(title, message, type, 'admin');
-    toast.success('Notification added.');
+  const handleSendNotification = (title: string, message: string, type: NotificationItem['type'], targetRole?: UserRole) => {
+    addNotification(title, message, type, targetRole || 'dispatcher');
+    toast.success('Notification dispatched.');
   };
 
   return (

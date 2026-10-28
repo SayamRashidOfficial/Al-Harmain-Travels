@@ -32,7 +32,6 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
-  KeyRound,
   RotateCcw,
   FileText,
   BadgeCheck,
@@ -1162,42 +1161,7 @@ export default function DriverProfilePage() {
           TAB 3: SECURITY & PASSWORD (Supabase Auth Updates)
       ───────────────────────────────────────────────────────────── */}
       {activeTab === 'security' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left Column: Security Overview */}
-          <div className="lg:col-span-4 space-y-4">
-            <div className="surface-card p-5 rounded-2xl space-y-3.5 text-xs">
-              <h3 className="text-sm font-bold text-primary flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                <span>{isRTL ? 'نظرة عامة على أمان الحساب' : 'Security Overview'}</span>
-              </h3>
-
-              <div className="space-y-2.5">
-                <div className="p-3.5 rounded-xl bg-surface border border-base space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-primary flex items-center gap-1.5 text-xs">
-                      <KeyRound className="w-3.5 h-3.5 text-emerald-500" />
-                      {isRTL ? 'المصادقة المشفرة' : 'Encrypted Authentication'}
-                    </span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  </div>
-                  <p className="text-[11px] text-muted leading-relaxed">
-                    {isRTL
-                      ? 'محمي بواسطة Supabase Auth مع تشفير كامل لكلمات المرور والجلسات.'
-                      : 'Protected with Supabase Auth with bcrypt-hashed credentials and token rotation.'}
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-surface border border-base space-y-1">
-                  <span className="text-[10px] text-muted uppercase font-bold">{isRTL ? 'البريد الإلكتروني المرتبط' : 'Associated Auth Email'}</span>
-                  <p className="text-xs font-mono text-primary truncate">{currentUser.email || 'Verified Captain'}</p>
-                  <span className="text-[10px] text-emerald-500 font-semibold block">{isRTL ? 'جلسة العمل نشطة ومحمية' : 'Driver Cockpit Session Active'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Password Change Form */}
-          <div className="lg:col-span-8 surface-card p-5 sm:p-6 space-y-4 rounded-2xl">
+        <div className="max-w-2xl surface-card p-5 sm:p-6 space-y-4 rounded-2xl">
             <div className="border-b border-base pb-3.5">
               <h2 className="text-base font-bold text-primary flex items-center gap-2">
                 <Lock className="w-4 h-4 text-amber-500" />
@@ -1365,7 +1329,6 @@ export default function DriverProfilePage() {
               </div>
             </form>
           </div>
-        </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────

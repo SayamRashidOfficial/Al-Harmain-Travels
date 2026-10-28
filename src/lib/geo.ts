@@ -19,6 +19,15 @@ export const SAUDI_LANDMARKS: Landmark[] = [
     popular: true,
   },
   {
+    id: 'jed-airport-hajj',
+    name: 'King Abdulaziz International Airport (Hajj & Umrah Terminal)',
+    city: 'Jeddah',
+    category: 'airport',
+    latitude: 21.6980,
+    longitude: 39.1610,
+    popular: true,
+  },
+  {
     id: 'jed-airport-north',
     name: 'King Abdulaziz Airport (North Terminal)',
     city: 'Jeddah',

@@ -27,6 +27,8 @@ import {
   UserCheck,
   Receipt,
   Info,
+  Calendar,
+  Zap,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -204,7 +206,7 @@ function BookingDetailModal({
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3 pt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
               <div>
                 <span className="text-[10px] text-slate-400 font-medium">Distance</span>
                 <p className="text-sm font-bold text-slate-900">{booking.estimated_distance_km?.toFixed(1) || '—'} km</p>
@@ -212,6 +214,20 @@ function BookingDetailModal({
               <div>
                 <span className="text-[10px] text-slate-400 font-medium">Duration</span>
                 <p className="text-sm font-bold text-slate-900">{booking.estimated_duration_min || '—'} min</p>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 font-medium">Schedule</span>
+                <div className="text-xs font-bold text-slate-900 mt-0.5">
+                  {booking.booking_type === 'immediate' ? (
+                    <span className="text-amber-800 flex items-center gap-1">
+                      <Zap className="w-3 h-3 text-amber-600 fill-amber-500/20" /> Immediate (ASAP)
+                    </span>
+                  ) : (
+                    <span className="text-emerald-800 flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-emerald-600" /> {booking.scheduled_at ? formatDateTime(booking.scheduled_at) : '—'}
+                    </span>
+                  )}
+                </div>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-medium">Booked At</span>
@@ -852,8 +868,21 @@ export default function AdminBookingsPage() {
                       {formatCurrency(b.final_fare || b.estimated_fare, settings.currency)}
                     </span>
                   </td>
-                  <td className="py-3 px-4 hidden md:table-cell text-[10px] text-slate-400 whitespace-nowrap">
-                    {formatDateTime(b.created_at)}
+                  <td className="py-3 px-4 hidden md:table-cell text-[10px] text-slate-700 whitespace-nowrap">
+                    <div className="font-semibold text-slate-800">
+                      {b.booking_type === 'immediate' ? (
+                        <span className="text-amber-800 flex items-center gap-1 font-bold">
+                          <Zap className="w-2.5 h-2.5 text-amber-600 fill-amber-500/20" /> Immediate
+                        </span>
+                      ) : (
+                        <span className="text-emerald-800 flex items-center gap-1 font-bold">
+                          <Calendar className="w-2.5 h-2.5 text-emerald-600" /> {b.scheduled_at ? formatDateTime(b.scheduled_at) : '—'}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-slate-400 text-[10px]">
+                      Booked: {formatDateTime(b.created_at)}
+                    </span>
                   </td>
                   <td className="py-3 px-4 text-center">
                     <AdminActionButton

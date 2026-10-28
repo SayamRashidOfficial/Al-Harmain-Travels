@@ -29,6 +29,7 @@ import {
   Star,
   MessageSquare,
   Sparkles,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDriverRating } from '@/lib/driver-stats';
@@ -53,6 +54,7 @@ export default function CustomerBookingsPage() {
   const [cancelReason, setCancelReason] = useState<string>('Change of travel plan');
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
   const [viewReceiptUrl, setViewReceiptUrl] = useState<string | null>(null);
+  const [viewReceiptBooking, setViewReceiptBooking] = useState<Booking | null>(null);
   const [paymentUploadBooking, setPaymentUploadBooking] = useState<Booking | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -629,6 +631,15 @@ export default function CustomerBookingsPage() {
                     <span className="font-mono font-bold text-xs sm:text-sm text-amber-600 dark:text-amber-400">
                       {b.booking_reference}
                     </span>
+                    {b.booking_type === 'immediate' ? (
+                      <span className="text-[9.5px] uppercase font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/80 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-700/60 flex items-center gap-1">
+                        <Zap className="w-2.5 h-2.5 text-amber-600 fill-amber-500/20" /> {isRTL ? 'حجز فوري' : 'Book Now (Immediate)'}
+                      </span>
+                    ) : (
+                      <span className="text-[9.5px] uppercase font-bold text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/80 px-2 py-0.5 rounded-full border border-sky-300 dark:border-sky-700/60 flex items-center gap-1">
+                        <Calendar className="w-2.5 h-2.5 text-sky-600" /> {isRTL ? 'رحلة مجدولة' : 'Scheduled Pickup'}
+                      </span>
+                    )}
                     <span className="text-[11px] text-muted">&bull; {formatDateTime(b.created_at)}</span>
                     <span className="text-[9.5px] uppercase font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/50">
                       {b.vehicle_type?.replace('_', ' ') || 'Sedan'}
@@ -647,7 +658,7 @@ export default function CustomerBookingsPage() {
                         {isRTL ? 'ذهاب وعودة' : 'Round Trip'}
                       </span>
                     )}
-                    {b.scheduled_at && (
+                    {b.booking_type === 'scheduled' && b.scheduled_at && (
                       <span className="text-[9.5px] font-medium text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 px-1.5 py-0.5 rounded border border-sky-200 dark:border-sky-800/50 flex items-center gap-1">
                         <Clock className="w-2.5 h-2.5" /> {isRTL ? 'الموعد:' : 'Scheduled:'} {formatDateTime(b.scheduled_at)}
                       </span>
@@ -857,7 +868,10 @@ export default function CustomerBookingsPage() {
                       {b.payment_screenshot_url ? (
                         <button
                           type="button"
-                          onClick={() => setViewReceiptUrl(b.payment_screenshot_url!)}
+                          onClick={() => {
+                            setViewReceiptUrl(b.payment_screenshot_url!);
+                            setViewReceiptBooking(b);
+                          }}
                           className="bg-surface hover:bg-elevated border border-base text-secondary hover:text-primary text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
                         >
                           <Eye className="w-3 h-3 text-amber-500" /> {isRTL ? 'إيصال الدفع' : 'Payment Proof'}
@@ -949,13 +963,22 @@ export default function CustomerBookingsPage() {
                 <span>{isRTL ? 'إيصال الدفع الموثق' : 'Verified Payment Proof'}</span>
               </div>
               <button
-                onClick={() => setViewReceiptUrl(null)}
+                onClick={() => { setViewReceiptUrl(null); setViewReceiptBooking(null); }}
                 className="p-1 rounded-lg hover:bg-elevated text-muted hover:text-primary transition-colors cursor-pointer"
                 aria-label={isRTL ? 'إغلاق' : 'Close modal'}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {viewReceiptBooking?.payment_account_details && (
+              <div className="bg-amber-50/80 border border-amber-300 rounded-xl p-2.5 text-xs flex items-center justify-between">
+                <span className="text-slate-600 font-medium">{isRTL ? 'الحساب البنكي / المحفظة:' : 'Paid via Account:'}</span>
+                <span className="font-bold text-amber-950 font-mono">
+                  {viewReceiptBooking.payment_account_details.provider_name}
+                </span>
+              </div>
+            )}
 
             <div className="rounded-xl overflow-hidden border border-base bg-surface flex items-center justify-center max-h-[380px] p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -976,7 +999,7 @@ export default function CustomerBookingsPage() {
                 {isRTL ? 'فتح في علامة تبويب جديدة' : 'Open in new tab'} &rarr;
               </a>
               <button
-                onClick={() => setViewReceiptUrl(null)}
+                onClick={() => { setViewReceiptUrl(null); setViewReceiptBooking(null); }}
                 className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-surface hover:bg-elevated border border-base text-primary cursor-pointer transition-colors"
               >
                 {isRTL ? 'إغلاق' : 'Close'}

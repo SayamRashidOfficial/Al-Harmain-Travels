@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
-import { Booking } from '@/types';
+import { Booking, PaymentAccountSnapshot } from '@/types';
 import { supabase } from '@/lib/supabase/client';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import {
@@ -21,6 +22,7 @@ import {
   Camera,
   Filter,
   ChevronDown,
+  Building2,
 } from 'lucide-react';
 import {
   AdminPageHeader,
@@ -46,6 +48,8 @@ interface PaymentRecord {
   transaction_reference: string | null;
   created_at: string;
   booking_status: string;
+  payment_account_id?: string | null;
+  payment_account_details?: PaymentAccountSnapshot | null;
 }
 
 function PaymentDetailModal({
@@ -151,6 +155,55 @@ function PaymentDetailModal({
               <p className="text-xs text-slate-600">{formatDateTime(payment.created_at)}</p>
             </div>
           </div>
+
+          {/* Selected Payment Account Details */}
+          {payment.payment_account_details && (
+            <div className="bg-amber-50/80 border border-amber-300 rounded-xl p-3.5 space-y-2 text-xs">
+              <div className="flex items-center justify-between text-amber-950 font-bold">
+                <span className="flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-amber-700" />
+                  Selected Business Account
+                </span>
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-bold">
+                  {payment.payment_account_details.provider_name}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px] bg-white p-2.5 rounded-lg border border-amber-200/80 font-mono">
+                <div>
+                  <span className="font-sans text-[10px] text-slate-500 block">Account Holder</span>
+                  <strong className="text-slate-900 font-sans font-bold">{payment.payment_account_details.account_holder_name}</strong>
+                </div>
+                <div>
+                  <span className="font-sans text-[10px] text-slate-500 block">Payment Type</span>
+                  <span className="text-slate-700 capitalize font-sans">{payment.payment_account_details.payment_method_type.replace('_', ' ')}</span>
+                </div>
+                {payment.payment_account_details.iban && (
+                  <div className="col-span-2 pt-1 border-t border-slate-100">
+                    <span className="font-sans text-[10px] text-slate-500 block">IBAN</span>
+                    <span className="text-amber-950 font-black break-all select-all">{payment.payment_account_details.iban}</span>
+                  </div>
+                )}
+                {payment.payment_account_details.account_number && (
+                  <div>
+                    <span className="font-sans text-[10px] text-slate-500 block">Account Number</span>
+                    <span className="text-slate-900 font-bold">{payment.payment_account_details.account_number}</span>
+                  </div>
+                )}
+                {payment.payment_account_details.wallet_number && (
+                  <div>
+                    <span className="font-sans text-[10px] text-slate-500 block">Wallet Phone</span>
+                    <span className="text-emerald-950 font-bold">{payment.payment_account_details.wallet_number}</span>
+                  </div>
+                )}
+                {payment.payment_account_details.instructions && (
+                  <div className="col-span-2 pt-1 border-t border-slate-100 font-sans text-[10.5px] text-amber-900">
+                    <strong>Instructions: </strong>
+                    <span>{payment.payment_account_details.instructions}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Payment Screenshot */}
           {payment.screenshot_url ? (
@@ -274,7 +327,9 @@ export default function AdminPaymentsPage() {
             status,
             payment_screenshot_url,
             payment_method,
-            payment_status
+            payment_status,
+            payment_account_id,
+            payment_account_details
           )
         `)
         .order('created_at', { ascending: false });
@@ -293,6 +348,8 @@ export default function AdminPaymentsPage() {
           transaction_reference: p.transaction_reference || null,
           created_at: p.created_at,
           booking_status: p.booking?.status || 'pending',
+          payment_account_id: p.payment_account_id || p.booking?.payment_account_id || null,
+          payment_account_details: p.payment_account_details || p.booking?.payment_account_details || null,
         }));
         setPayments(records);
       } else {
@@ -312,6 +369,8 @@ export default function AdminPaymentsPage() {
             transaction_reference: null,
             created_at: b.created_at,
             booking_status: b.status,
+            payment_account_id: b.payment_account_id || null,
+            payment_account_details: b.payment_account_details || null,
           }));
         setPayments(derived);
       }
@@ -332,6 +391,8 @@ export default function AdminPaymentsPage() {
           transaction_reference: null,
           created_at: b.created_at,
           booking_status: b.status,
+          payment_account_id: b.payment_account_id || null,
+          payment_account_details: b.payment_account_details || null,
         }));
       setPayments(derived);
     } finally {
@@ -412,21 +473,19 @@ export default function AdminPaymentsPage() {
       return (
         p.booking_reference.toLowerCase().includes(q) ||
         p.passenger_name.toLowerCase().includes(q) ||
-        p.passenger_phone.includes(q)
+        p.passenger_phone.includes(q) ||
+        p.payment_account_details?.provider_name.toLowerCase().includes(q) ||
+        (p.transaction_reference && p.transaction_reference.toLowerCase().includes(q))
       );
     }
     return true;
   });
 
-  const totalPages = Math.ceil(filteredPayments.length / pageSize);
   const paginated = filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // KPI stats
   const totalPayments = payments.length;
-  const pendingVerification = payments.filter(
-    (p) => p.status === 'pending' && p.method !== 'cash' && p.screenshot_url
-  ).length;
-  const confirmedPayments = payments.filter((p) => p.status === 'confirmed' || p.status === 'paid').length;
+  const pendingVerification = payments.filter((p) => p.status === 'pending' && p.screenshot_url).length;
+  const confirmedPayments = payments.filter((p) => p.status === 'confirmed').length;
   const cashPayments = payments.filter((p) => p.method === 'cash').length;
   const totalRevenue = payments
     .filter((p) => p.status === 'confirmed' || p.status === 'paid')
@@ -444,6 +503,13 @@ export default function AdminPaymentsPage() {
         description="Review customer payment screenshots, verify online payments, manage cash reconciliation, and track all transaction history."
       >
         <div className="flex items-center gap-2.5">
+          <Link
+            href="/admin/payment-accounts"
+            className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs border border-amber-300 shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Building2 className="w-3.5 h-3.5 text-amber-700" />
+            Manage Payment Accounts
+          </Link>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
@@ -508,7 +574,7 @@ export default function AdminPaymentsPage() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search reference, name, phone..."
+              placeholder="Search reference, name, phone, bank..."
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-9 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 shadow-sm"
@@ -528,7 +594,7 @@ export default function AdminPaymentsPage() {
             >
               <option value="all">All Methods</option>
               <option value="cash">Cash</option>
-              <option value="online">Online</option>
+              <option value="online">Online / Transfer</option>
               <option value="card">Card</option>
             </select>
             <select
@@ -559,7 +625,7 @@ export default function AdminPaymentsPage() {
       {/* Payments Table */}
       <AdminTableCard
         title="Payment Transaction History"
-        subtitle="All payment records with verification status and method breakdown."
+        subtitle="All payment records with verification status, chosen provider accounts, and proof screenshots."
         totalCount={filteredPayments.length}
         footer={
           <AdminPagination
@@ -579,7 +645,7 @@ export default function AdminPaymentsPage() {
             <tr>
               <th className="py-3.5 px-4 font-semibold">Reference</th>
               <th className="py-3.5 px-4 font-semibold">Passenger</th>
-              <th className="py-3.5 px-4 font-semibold">Method</th>
+              <th className="py-3.5 px-4 font-semibold">Method &amp; Provider</th>
               <th className="py-3.5 px-4 font-semibold">Status</th>
               <th className="py-3.5 px-4 font-semibold">Screenshot</th>
               <th className="py-3.5 px-4 font-semibold text-right">Amount</th>
@@ -619,16 +685,24 @@ export default function AdminPaymentsPage() {
                     <div className="text-[10px] text-slate-400">{p.passenger_phone}</div>
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                      p.method === 'cash'
-                        ? 'bg-amber-50 text-amber-800 border-amber-200'
-                        : p.method === 'online'
-                        ? 'bg-sky-50 text-sky-800 border-sky-200'
-                        : 'bg-purple-50 text-purple-800 border-purple-200'
-                    }`}>
-                      {p.method === 'cash' ? <Banknote className="w-2.5 h-2.5" /> : <CreditCard className="w-2.5 h-2.5" />}
-                      {p.method}
-                    </span>
+                    <div className="flex flex-col gap-1 items-start">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                        p.method === 'cash'
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : p.method === 'online'
+                          ? 'bg-sky-50 text-sky-800 border-sky-200'
+                          : 'bg-purple-50 text-purple-800 border-purple-200'
+                      }`}>
+                        {p.method === 'cash' ? <Banknote className="w-2.5 h-2.5" /> : <CreditCard className="w-2.5 h-2.5" />}
+                        {p.method}
+                      </span>
+                      {p.payment_account_details && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-900 bg-amber-50/80 px-1.5 py-0.5 rounded border border-amber-200 truncate max-w-[140px]" title={p.payment_account_details.provider_name}>
+                          <Building2 className="w-2.5 h-2.5 text-amber-700 shrink-0" />
+                          <span className="truncate">{p.payment_account_details.provider_name}</span>
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     <AdminStatusBadge

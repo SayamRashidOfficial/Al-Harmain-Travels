@@ -1,6 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
+// ── Super Admin Guard ────────────────────────────────────────────────────────
+// The Super Admin row is identified by is_super_admin = true in public.profiles.
+// No operation (list, create, modify, delete) is permitted against this account
+// through any API route. All protections are enforced server-side here, and
+// additionally at the database level via RLS and the protect_profile_role trigger.
+
+/**
+ * Returns true when the given profile UUID belongs to the Super Admin.
+ * Uses the service-role admin client so it bypasses RLS for the lookup.
+ */
+async function isSuperAdmin(uid: string): Promise<boolean> {
+  if (!uid) return false;
+  const admin = getSupabaseAdmin();
+  const { data } = await admin
+    .from('profiles')
+    .select('is_super_admin')
+    .eq('id', uid)
+    .maybeSingle();
+  return data?.is_super_admin === true;
+}
+
 // Helper: Normalize phone numbers for duplicate detection
 function normalizePhone(phone: string): string {
   return phone.replace(/[\s\-\(\)\.]/g, '');
@@ -10,6 +31,33 @@ function normalizePhone(phone: string): string {
 function isValidEmail(email: string): boolean {
   const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
   return emailRegex.test(email.trim());
+}
+
+/**
+ * Helper to resolve vehicle ID from either rate_vehicle_types (id or category)
+ * or physical fleet vehicles table, mapping safely to a valid rate_vehicle_types.id
+ * to ensure database foreign key constraints are always respected.
+ */
+async function resolveVehicleToRateTypeId(admin: any, vehicleIdOrCategory: string | null | undefined): Promise<string | null> {
+  if (!vehicleIdOrCategory) return null;
+  const clean = vehicleIdOrCategory.trim();
+  // 1. Direct match by id in rate_vehicle_types
+  const { data: directRate } = await admin.from('rate_vehicle_types').select('id, category, is_active, name').eq('id', clean).maybeSingle();
+  if (directRate) return directRate.id;
+
+  // 2. Match by category in rate_vehicle_types
+  const { data: catRate } = await admin.from('rate_vehicle_types').select('id, category, is_active, name').eq('category', clean).maybeSingle();
+  if (catRate) return catRate.id;
+
+  // 3. Match in physical vehicles table and map category
+  const { data: physVeh } = await admin.from('vehicles').select('id, vehicle_type').eq('id', clean).maybeSingle();
+  if (physVeh?.vehicle_type) {
+    const vType = physVeh.vehicle_type;
+    const mappedCategory = (vType === 'vip_gmc' || vType === 'suv') ? 'gmc' : (vType === 'van' ? 'staria' : (vType === 'bus' ? 'hiroof' : vType));
+    const { data: mappedRate } = await admin.from('rate_vehicle_types').select('id').or(`id.eq.${mappedCategory},category.eq.${mappedCategory}`).maybeSingle();
+    if (mappedRate) return mappedRate.id;
+  }
+  return null;
 }
 
 /**
@@ -27,7 +75,8 @@ export async function GET() {
       { data: rateVehicles, error: rateVehErr },
       { data: authUsers, error: authErr },
     ] = await Promise.all([
-      admin.from('profiles').select('*').order('created_at', { ascending: false }),
+      // Exclude the Super Admin from all listings — they are not manageable via dashboard
+      admin.from('profiles').select('*').eq('is_super_admin', false).order('created_at', { ascending: false }),
       admin.from('drivers').select('*'),
       admin.from('vehicles').select('*'),
       admin.from('rate_vehicle_types').select('*').order('display_order', { ascending: true }),
@@ -123,8 +172,7 @@ export async function GET() {
       users: enrichedUsers,
       total: enrichedUsers.length,
       rateVehicles: rateVehicles || [],
-    });
-  } catch (err: unknown) {
+    });  } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch users';
     console.error('[GET /api/admin/users] Error:', err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
@@ -184,6 +232,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Super Admin protection: creating another admin via the dashboard is blocked.
+    // There is exactly one permanent Super Admin; additional admin accounts are not creatable here.
+    if (role === 'admin') {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Creating an Admin account through this interface is not permitted. ' +
+            'There is one permanent Super Administrator. Staff accounts can be Dispatcher, Driver, or Customer.',
+        },
+        { status: 403 }
+      );
+    }
+
     const cleanEmail = email.trim().toLowerCase();
     const cleanPhone = phone.trim();
     const normalizedPhone = normalizePhone(cleanPhone);
@@ -227,6 +289,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Role specific checks (Driver)
+    let resolvedVehicleId: string | null = null;
     if (role === 'driver') {
       if (!license_number || typeof license_number !== 'string' || license_number.trim().length < 3) {
         return NextResponse.json(
@@ -252,22 +315,25 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Check vehicle assignment availability from Rates module
+      // Check vehicle assignment availability from Rates module or fleet
       if (assigned_vehicle_id) {
-        const { data: targetRateVehicle, error: rateVehErr } = await admin
-          .from('rate_vehicle_types')
-          .select('*')
-          .eq('id', assigned_vehicle_id)
-          .maybeSingle();
+        resolvedVehicleId = await resolveVehicleToRateTypeId(admin, assigned_vehicle_id);
 
-        if (rateVehErr || !targetRateVehicle) {
+        if (!resolvedVehicleId) {
           return NextResponse.json(
-            { success: false, error: 'The selected vehicle does not exist in the Rates module.' },
+            { success: false, error: 'The selected vehicle does not exist in the Rates module or fleet inventory.' },
             { status: 400 }
           );
         }
 
-        if (!targetRateVehicle.is_active) {
+        // Verify rate vehicle type is active
+        const { data: targetRateVehicle } = await admin
+          .from('rate_vehicle_types')
+          .select('*')
+          .eq('id', resolvedVehicleId)
+          .maybeSingle();
+
+        if (targetRateVehicle && !targetRateVehicle.is_active) {
           return NextResponse.json(
             {
               success: false,
@@ -281,7 +347,7 @@ export async function POST(req: NextRequest) {
         const { data: vehicleCurrentDriver } = await admin
           .from('drivers')
           .select('id, profile:profiles(full_name)')
-          .eq('assigned_vehicle_id', assigned_vehicle_id)
+          .eq('assigned_vehicle_id', resolvedVehicleId)
           .maybeSingle();
 
         if (vehicleCurrentDriver) {
@@ -289,7 +355,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json(
             {
               success: false,
-              error: `Vehicle "${targetRateVehicle.name}" (${targetRateVehicle.category.toUpperCase()}) is currently assigned to ${currentDriverName}. Reassign or unassign that vehicle before allocating it here.`,
+              error: `Vehicle "${targetRateVehicle?.name || resolvedVehicleId}" is currently assigned to ${currentDriverName}. Reassign or unassign that vehicle before allocating it here.`,
             },
             { status: 400 }
           );
@@ -314,6 +380,10 @@ export async function POST(req: NextRequest) {
         full_name: full_name.trim(),
         role,
         phone: cleanPhone,
+        avatar_url: avatar_url ? String(avatar_url).trim() : null,
+        license_number: role === 'driver' && license_number ? license_number.trim() : null,
+        national_id: role === 'driver' && national_id ? national_id.trim() : null,
+        assigned_vehicle_id: resolvedVehicleId,
       },
     });
 
@@ -357,21 +427,21 @@ export async function POST(req: NextRequest) {
     let createdDriver = null;
     if (role === 'driver') {
       const isDriverActive = status !== 'suspended' && status !== 'deactivated';
+      const cleanLicense = license_number ? license_number.trim() : ('DL-' + newUserId.substring(0, 8).toUpperCase());
       const driverRecord = {
         id: newUserId,
-        license_number: license_number.trim(),
+        license_number: cleanLicense,
         national_id: national_id?.trim() || null,
-        assigned_vehicle_id: assigned_vehicle_id || null,
+        assigned_vehicle_id: resolvedVehicleId || null,
         status: !isDriverActive
           ? 'unavailable'
-          : assigned_vehicle_id
+          : resolvedVehicleId
           ? 'assigned'
           : 'available',
         rating: 5.0,
         total_rides: 0,
         total_earnings: 0,
         cash_collected: 0,
-        avatar_url: avatar_url ? String(avatar_url).trim() : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -379,16 +449,18 @@ export async function POST(req: NextRequest) {
       const { data: dData, error: dErr } = await admin
         .from('drivers')
         .upsert(driverRecord)
-        .select('*')
+        .select('*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*)')
         .single();
 
       if (dErr) {
         console.error('[POST /api/admin/users] Driver insert error:', dErr);
+        return NextResponse.json(
+          { success: false, error: `Failed to create chauffeur profile record: ${dErr.message}` },
+          { status: 500 }
+        );
       } else {
         createdDriver = dData;
       }
-
-
     } else if (role === 'customer') {
       try {
         await admin
@@ -461,6 +533,32 @@ export async function PATCH(req: NextRequest) {
 
     if (fetchErr || !existingProfile) {
       return NextResponse.json({ success: false, error: 'User profile not found.' }, { status: 404 });
+    }
+
+    // Super Admin protection: the Super Admin row cannot be modified through any API call.
+    if (existingProfile.is_super_admin === true) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'The Super Administrator account is permanently protected and cannot be modified, ' +
+            'demoted, or have its status changed through this interface.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Prevent role escalation to 'admin' via PATCH
+    if (role === 'admin' && existingProfile.role !== 'admin') {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Escalating a user account to Admin role is not permitted. ' +
+            'There is one permanent Super Administrator. Contact the system owner to adjust permissions.',
+        },
+        { status: 403 }
+      );
     }
 
     // 1. Duplicate email check if changed
@@ -550,89 +648,73 @@ export async function PATCH(req: NextRequest) {
       }
 
       // Check if vehicle assignment is changing
+      let targetVehicleId: string | null = currentDriver?.assigned_vehicle_id || null;
       if (assigned_vehicle_id !== undefined) {
-        const targetVehicleId = assigned_vehicle_id ? assigned_vehicle_id.trim() : null;
-
-        if (targetVehicleId && targetVehicleId !== previousVehicleId) {
-          // Verify vehicle exists in rate_vehicle_types
-          const { data: targetRateVeh, error: vErr } = await admin
-            .from('rate_vehicle_types')
-            .select('*')
-            .eq('id', targetVehicleId)
-            .maybeSingle();
-
-          if (vErr || !targetRateVeh) {
+        if (assigned_vehicle_id && assigned_vehicle_id.trim() !== '') {
+          const resolved = await resolveVehicleToRateTypeId(admin, assigned_vehicle_id);
+          if (!resolved) {
             return NextResponse.json(
-              { success: false, error: 'Selected vehicle does not exist in the Rates module.' },
+              { success: false, error: 'The selected vehicle does not exist in the fleet inventory or Rates module.' },
               { status: 400 }
             );
           }
+          targetVehicleId = resolved;
 
-          if (!targetRateVeh.is_active) {
-            return NextResponse.json(
-              {
-                success: false,
-                error: `Vehicle "${targetRateVeh.name}" is currently inactive in the Rates module and cannot be assigned.`,
-              },
-              { status: 400 }
-            );
+          if (targetVehicleId !== previousVehicleId) {
+            // Check if target vehicle is currently assigned to another driver
+            const { data: existingDriverWithVeh } = await admin
+              .from('drivers')
+              .select('id, profile:profiles(full_name)')
+              .eq('assigned_vehicle_id', targetVehicleId)
+              .neq('id', uid)
+              .maybeSingle();
+
+            if (existingDriverWithVeh) {
+              const driverName = (existingDriverWithVeh.profile as any)?.full_name || 'another captain';
+              return NextResponse.json(
+                {
+                  success: false,
+                  error: `Vehicle is already assigned to ${driverName}. Please unassign that captain first.`,
+                },
+                { status: 400 }
+              );
+            }
           }
-
-          // Check if target vehicle is currently assigned to another driver
-          const { data: existingDriverWithVeh } = await admin
-            .from('drivers')
-            .select('id, profile:profiles(full_name)')
-            .eq('assigned_vehicle_id', targetVehicleId)
-            .neq('id', uid)
-            .maybeSingle();
-
-          if (existingDriverWithVeh) {
-            const driverName = (existingDriverWithVeh.profile as any)?.full_name || 'another driver';
-            return NextResponse.json(
-              {
-                success: false,
-                error: `Vehicle "${targetRateVeh.name}" (${targetRateVeh.category.toUpperCase()}) is already assigned to ${driverName}. Please unassign that driver first.`,
-              },
-              { status: 400 }
-            );
-          }
+        } else {
+          targetVehicleId = null;
         }
+      }
 
-        // Determine driver duty status based on account status & vehicle assignment
-        let resolvedDriverStatus = targetVehicleId ? 'assigned' : 'available';
-        if (status === 'deactivated' || status === 'suspended' || existingProfile.status === 'deactivated') {
-          resolvedDriverStatus = 'unavailable';
-        } else if (status === 'active') {
-          resolvedDriverStatus = targetVehicleId ? 'assigned' : 'available';
-        }
+      // Determine driver duty status based on account status & vehicle assignment
+      let resolvedDriverStatus = targetVehicleId ? 'assigned' : 'available';
+      if (status === 'deactivated' || status === 'suspended' || existingProfile.status === 'deactivated') {
+        resolvedDriverStatus = 'unavailable';
+      } else if (status === 'active') {
+        resolvedDriverStatus = targetVehicleId ? 'assigned' : 'available';
+      } else if (currentDriver?.status) {
+        resolvedDriverStatus = currentDriver.status;
+      }
 
-        // Upsert or update drivers row
-        await admin.from('drivers').upsert({
-          id: uid,
-          license_number: license_number !== undefined ? license_number.trim() : currentDriver?.license_number || 'DL-PENDING',
-          national_id: national_id !== undefined ? (national_id?.trim() || null) : currentDriver?.national_id,
-          assigned_vehicle_id: targetVehicleId,
-          status: resolvedDriverStatus,
-          avatar_url: avatar_url !== undefined ? (avatar_url ? avatar_url.trim() : null) : currentDriver?.avatar_url,
-          updated_at: new Date().toISOString(),
-        });
-      } else if (license_number !== undefined || national_id !== undefined || avatar_url !== undefined || status !== undefined) {
-        let resolvedDriverStatus = currentDriver?.status || 'available';
-        if (status === 'deactivated' || status === 'suspended') {
-          resolvedDriverStatus = 'unavailable';
-        } else if (status === 'active' && resolvedDriverStatus === 'unavailable') {
-          resolvedDriverStatus = currentDriver?.assigned_vehicle_id ? 'assigned' : 'available';
-        }
+      // Upsert or update drivers row (drivers table has no avatar_url column; avatar lives on profiles)
+      const cleanLicense = license_number !== undefined
+        ? (license_number ? license_number.trim() : null)
+        : (currentDriver?.license_number || ('DL-' + uid.substring(0, 8).toUpperCase()));
 
-        await admin.from('drivers').upsert({
-          id: uid,
-          license_number: license_number !== undefined ? license_number.trim() : currentDriver?.license_number || 'DL-PENDING',
-          national_id: national_id !== undefined ? (national_id?.trim() || null) : currentDriver?.national_id,
-          assigned_vehicle_id: currentDriver?.assigned_vehicle_id ?? null,
-          status: resolvedDriverStatus,
-          avatar_url: avatar_url !== undefined ? (avatar_url ? avatar_url.trim() : null) : currentDriver?.avatar_url,
-          updated_at: new Date().toISOString(),
-        });
+      const { error: driverUpsertErr } = await admin.from('drivers').upsert({
+        id: uid,
+        license_number: cleanLicense,
+        national_id: national_id !== undefined ? (national_id?.trim() || null) : currentDriver?.national_id,
+        assigned_vehicle_id: targetVehicleId,
+        status: resolvedDriverStatus,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (driverUpsertErr) {
+        console.error('[PATCH /api/admin/users] Driver upsert error:', driverUpsertErr);
+        return NextResponse.json(
+          { success: false, error: `Failed to update chauffeur profile: ${driverUpsertErr.message}` },
+          { status: 500 }
+        );
       }
     }
 
@@ -689,10 +771,21 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    let updatedDriver = null;
+    if (effectiveRole === 'driver') {
+      const { data: dData } = await admin
+        .from('drivers')
+        .select('*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*)')
+        .eq('id', uid)
+        .maybeSingle();
+      updatedDriver = dData;
+    }
+
     return NextResponse.json({
       success: true,
       message: `User "${updatedProfile.full_name}" updated successfully.`,
       user: updatedProfile,
+      driver: updatedDriver,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Server error while updating user';
@@ -720,9 +813,20 @@ export async function DELETE(req: NextRequest) {
     // Check user's role and existing profile
     const { data: targetProfile } = await admin
       .from('profiles')
-      .select('id, role, full_name')
+      .select('id, role, full_name, is_super_admin')
       .eq('id', uid)
       .maybeSingle();
+
+    if (targetProfile?.is_super_admin === true) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Critical Security Protection: The Super Administrator account is permanent and cannot be deleted.',
+        },
+        { status: 403 }
+      );
+    }
 
     const userRole = targetProfile?.role || 'user';
 

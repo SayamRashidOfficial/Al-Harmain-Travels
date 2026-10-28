@@ -14,7 +14,7 @@ interface RouteGuardProps {
 
 export default function RouteGuard({ children, allowedRoles }: RouteGuardProps) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const { isAuthenticated, userRole, currentUser, isAuthLoading } = useApp();
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
 

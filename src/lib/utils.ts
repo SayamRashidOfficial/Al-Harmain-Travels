@@ -10,16 +10,96 @@ export function formatCurrency(amount: number | string | undefined | null, curre
   return `${num.toFixed(2)} ${currency}`;
 }
 
-export function formatDateTime(isoString?: string | null): string {
+export const SAUDI_TIMEZONE = 'Asia/Riyadh';
+
+/**
+ * Standardized ISO 8601 pickup timestamp builder with explicit Saudi Arabia timezone offset (+03:00).
+ * Prevents UTC drift when users select dates and times for journeys in Saudi Arabia.
+ */
+export function createScheduledPickupTimestamp(dateStr: string, timeStr: string): string {
+  if (!dateStr) return new Date().toISOString();
+  const cleanTime = timeStr && timeStr.trim().length >= 4 ? timeStr.trim() : '12:00';
+  const timeWithSeconds = cleanTime.length === 5 ? `${cleanTime}:00` : cleanTime;
+  return `${dateStr}T${timeWithSeconds}+03:00`;
+}
+
+/**
+ * Returns current date formatted as YYYY-MM-DD in Saudi Arabia timezone (Asia/Riyadh).
+ * Use for datepicker min attributes and initial date values.
+ */
+export function getSaudiCurrentDateString(now: Date = new Date()): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: SAUDI_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(now);
+}
+
+/**
+ * Returns current time formatted as HH:mm in Saudi Arabia timezone (Asia/Riyadh),
+ * optionally offset by specified minutes.
+ */
+export function getSaudiCurrentTimeString(offsetMinutes: number = 60, now: Date = new Date()): string {
+  const target = new Date(now.getTime() + offsetMinutes * 60 * 1000);
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: SAUDI_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  return formatter.format(target);
+}
+
+export function formatDateTime(
+  isoString?: string | null,
+  options?: Intl.DateTimeFormatOptions & { timeZone?: string }
+): string {
   if (!isoString) return '—';
   const date = new Date(isoString);
-  return new Intl.DateTimeFormat('en-GB', {
+  if (isNaN(date.getTime())) return '—';
+  const formatted = new Intl.DateTimeFormat('en-GB', {
+    timeZone: SAUDI_TIMEZONE,
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
+    ...options,
+  }).format(date);
+  return formatted.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
+}
+
+/**
+ * Formats time-only clock string (e.g. "02:30 PM") in Saudi Arabia timezone (Asia/Riyadh).
+ */
+export function formatPickupClock(isoString?: string | null): string {
+  if (!isoString) return 'Immediate';
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return 'Immediate';
+  const formatted = new Intl.DateTimeFormat('en-GB', {
+    timeZone: SAUDI_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date);
+  return formatted.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
+}
+
+/**
+ * Formats date-only string (e.g. "30 Oct 2026") in Saudi Arabia timezone (Asia/Riyadh).
+ */
+export function formatPickupDate(isoString?: string | null): string {
+  if (!isoString) return '—';
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: SAUDI_TIMEZONE,
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   }).format(date);
 }
 

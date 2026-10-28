@@ -22,7 +22,7 @@ interface AdminMobileSidebarProps {
 }
 
 export default function AdminMobileSidebar({ isOpen, onClose }: AdminMobileSidebarProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const { currentUser, signOut } = useApp();
   const { dir, isRTL, t } = useLanguage();
 

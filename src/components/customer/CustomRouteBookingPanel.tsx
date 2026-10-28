@@ -35,6 +35,7 @@ import {
   MessageSquare,
   CheckCheck,
   Loader2,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -59,6 +60,8 @@ export interface CustomRouteBookingPanelProps {
   setPassengerPhone: (val: string) => void;
   passengerCount: number;
   setPassengerCount: (val: number) => void;
+  bookingType?: 'immediate' | 'scheduled';
+  setBookingType?: (val: 'immediate' | 'scheduled') => void;
   journeyDate: string;
   setJourneyDate: (val: string) => void;
   journeyTime: string;
@@ -166,6 +169,8 @@ export default function CustomRouteBookingPanel({
   setPassengerPhone,
   passengerCount,
   setPassengerCount,
+  bookingType = 'scheduled',
+  setBookingType,
   journeyDate,
   setJourneyDate,
   journeyTime,
@@ -893,40 +898,91 @@ export default function CustomRouteBookingPanel({
                 </div>
               </div>
 
-              {/* Schedule: Date, Time & Pax Count */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <div>
-                  <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">Pickup Date *</label>
-                  <input
-                    type="date"
-                    required
-                    min={todayDateString}
-                    value={journeyDate}
-                    onChange={(e) => setJourneyDate(e.target.value)}
-                    className="w-full px-3 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs focus:outline-none focus:border-amber-500"
-                  />
+              {/* Ride Timing & Dispatch Option: Book Now vs Schedule Pickup */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider">
+                  Ride Timing &amp; Dispatch Option <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-surface border border-base">
+                  <button
+                    type="button"
+                    onClick={() => setBookingType?.('immediate')}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      bookingType === 'immediate'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'text-secondary hover:text-primary hover:bg-page'
+                    }`}
+                  >
+                    <Zap className="w-3.5 h-3.5 fill-current" />
+                    <span>Book Now (ASAP)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookingType?.('scheduled')}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      bookingType === 'scheduled'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'text-secondary hover:text-primary hover:bg-page'
+                    }`}
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Schedule Pickup</span>
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">Pickup Time *</label>
-                  <input
-                    type="time"
-                    required
-                    value={journeyTime}
-                    onChange={(e) => setJourneyTime(e.target.value)}
-                    className="w-full px-3 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs focus:outline-none focus:border-amber-500"
-                  />
+              </div>
+
+              {bookingType === 'immediate' ? (
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 text-xs flex items-start gap-2.5">
+                  <Zap className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 fill-amber-500/20" />
+                  <div className="space-y-1">
+                    <p className="font-bold text-amber-950">Immediate Custom Chauffeur Dispatch</p>
+                    <p className="text-[11px] text-amber-900 leading-snug">
+                      Your custom route request will be reviewed and assigned immediately by central dispatch upon submission.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">Passengers</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={selectedVehicleObj?.capacityPax || 14}
-                    value={passengerCount}
-                    onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
-                    className="w-full px-3 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs text-center font-bold focus:outline-none focus:border-amber-500"
-                  />
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">Pickup Date *</label>
+                      <input
+                        type="date"
+                        required={bookingType === 'scheduled'}
+                        min={todayDateString}
+                        value={journeyDate}
+                        onChange={(e) => setJourneyDate(e.target.value)}
+                        className="w-full px-3 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">Pickup Time (Saudi AST) *</label>
+                      <input
+                        type="time"
+                        required={bookingType === 'scheduled'}
+                        value={journeyTime}
+                        onChange={(e) => setJourneyTime(e.target.value)}
+                        className="w-full px-3 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted italic">
+                    * All scheduled pickup times operate on Saudi Arabia Standard Time (AST, UTC+3).
+                  </p>
                 </div>
+              )}
+
+              {/* Passengers Count */}
+              <div>
+                <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">Total Passengers</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={selectedVehicleObj?.capacityPax || 14}
+                  value={passengerCount}
+                  onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
+                  className="w-full sm:w-1/3 px-3 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs text-center font-bold focus:outline-none focus:border-amber-500"
+                />
               </div>
 
               {/* Round Trip Return Schedule Card */}
@@ -1060,7 +1116,9 @@ export default function CustomRouteBookingPanel({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-base/60 text-[10.5px]">
                   <div>
                     <span className="text-muted text-[9.5px] block">Departure</span>
-                    <span className="font-semibold text-primary">{journeyDate} at {journeyTime}</span>
+                    <span className="font-semibold text-primary">
+                      {bookingType === 'immediate' ? 'Book Now (Immediate ASAP)' : `${journeyDate} at ${journeyTime} (AST)`}
+                    </span>
                   </div>
                   {tripType === 'round_trip' && (
                     <div>

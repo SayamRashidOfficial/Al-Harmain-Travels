@@ -15,23 +15,11 @@ import {
   XCircle,
   Eye,
   EyeOff,
-  Loader2,
-  ChevronDown,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AuthShell from '@/components/auth/AuthShell';
 
-const COUNTRY_CODES = [
-  { code: '+966', name: 'Saudi Arabia', flag: '🇸🇦', placeholder: '50 123 4567' },
-  { code: '+92', name: 'Pakistan', flag: '🇵🇰', placeholder: '300 1234567' },
-  { code: '+971', name: 'UAE', flag: '🇦🇪', placeholder: '50 123 4567' },
-  { code: '+44', name: 'United Kingdom', flag: '🇬🇧', placeholder: '7911 123456' },
-  { code: '+1', name: 'USA / Canada', flag: '🇺🇸', placeholder: '202 555 0123' },
-  { code: '+90', name: 'Turkey', flag: '🇹🇷', placeholder: '532 123 4567' },
-  { code: '+62', name: 'Indonesia', flag: '🇮🇩', placeholder: '812 3456 7890' },
-  { code: '+60', name: 'Malaysia', flag: '🇲🇾', placeholder: '12 345 6789' },
-  { code: '+20', name: 'Egypt', flag: '🇪🇬', placeholder: '10 1234 5678' },
-];
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -39,8 +27,7 @@ export default function SignUpPage() {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
-  const [localPhone, setLocalPhone] = useState('');
+  const [phoneInput, setPhoneInput] = useState('+966 ');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -85,9 +72,9 @@ export default function SignUpPage() {
       setErrorMsg('Please provide a valid email address.');
       return;
     }
-    const cleanPhoneDigits = localPhone.replace(/\D/g, '');
-    if (cleanPhoneDigits.length < 7 || cleanPhoneDigits.length > 12) {
-      setErrorMsg('Please enter a valid phone number for the selected country.');
+    const trimmedPhone = phoneInput.trim();
+    if (!/^\+\d{1,4}[\s\-]?\d{5,14}$/.test(trimmedPhone)) {
+      setErrorMsg('Please enter a valid phone number with country code (e.g. +966 50 123 4567).');
       return;
     }
     if (strengthScore < 3 || password.length < 8) {
@@ -103,7 +90,7 @@ export default function SignUpPage() {
       return;
     }
 
-    const fullPhone = `${selectedCountry.code} ${localPhone.trim()}`;
+    const fullPhone = phoneInput.trim();
 
     try {
       setIsLoading(true);
@@ -194,36 +181,21 @@ export default function SignUpPage() {
             <span>Phone Number (WhatsApp Active)</span>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Chauffeur dispatch sync</span>
           </label>
-          <div className="flex gap-2">
-            <div className="relative w-36 shrink-0">
-              <select
-                value={selectedCountry.code}
-                onChange={(e) => {
-                  const found = COUNTRY_CODES.find((c) => c.code === e.target.value);
-                  if (found) setSelectedCountry(found);
-                }}
-                className="w-full h-11 pl-3 pr-8 rounded-xl bg-input/70 border border-base text-primary text-xs font-medium focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 cursor-pointer appearance-none transition-all"
-              >
-                {COUNTRY_CODES.map((c) => (
-                  <option key={c.code} value={c.code} className="bg-card text-primary py-1">
-                    {c.flag} {c.code} ({c.name})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-muted absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-
-            <div className="relative flex-1 group/field">
-              <Phone className="w-4 h-4 text-muted group-focus-within/field:text-emerald-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors duration-200" />
-              <input
-                type="tel"
-                required
-                placeholder={selectedCountry.placeholder}
-                value={localPhone}
-                onChange={(e) => setLocalPhone(e.target.value)}
-                className="field-input pl-10 h-11 text-xs sm:text-sm bg-input/70 group-hover/field:border-emerald-500/40 transition-all duration-200"
-              />
-            </div>
+          <div className="relative group/field">
+            <Phone className="w-4 h-4 text-muted group-focus-within/field:text-emerald-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors duration-200" />
+            <input
+              type="tel"
+              required
+              placeholder="+966 50 123 4567"
+              value={phoneInput}
+              onChange={(e) => {
+                let val = e.target.value;
+                // Ensure it starts with +
+                if (val && !val.startsWith('+')) val = '+' + val;
+                setPhoneInput(val);
+              }}
+              className="field-input pl-10 h-11 text-xs sm:text-sm bg-input/70 group-hover/field:border-emerald-500/40 transition-all duration-200"
+            />
           </div>
           <span className="text-[10px] text-muted mt-1 block">
             Trip telemetry and driver arrival notifications will be sent directly via WhatsApp &amp; SMS.

@@ -47,6 +47,23 @@ export async function DELETE(req: NextRequest) {
     const adminClient = getSupabaseAdmin();
     const uid = userId.trim();
 
+    // Check if user is Super Admin
+    const { data: targetProfile } = await adminClient
+      .from('profiles')
+      .select('id, is_super_admin')
+      .eq('id', uid)
+      .maybeSingle();
+
+    if (targetProfile?.is_super_admin === true) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Critical Security Protection: The Super Administrator account is permanent and cannot be deleted.',
+        },
+        { status: 403 }
+      );
+    }
+
     // ---- Step 1: Call admin_delete_user RPC for full cascade clean-up ----
     const { data: rpcData, error: rpcError } = await adminClient.rpc(
       'admin_delete_user',

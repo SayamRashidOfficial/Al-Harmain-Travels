@@ -97,9 +97,12 @@ export function calculateDriverEarnings({
   let totalDeductions = 0;
 
   const rideTransactions: DriverTransaction[] = eligibleBookings.map((b) => {
-    const rawFare = Number(b.final_fare ?? b.confirmed_fare ?? b.estimated_fare ?? 0);
-    const extraCharges = chargesByBookingId.get(b.id) || 0;
-    const rideGross = rawFare + extraCharges;
+    const rawFare = Number(b.final_fare ?? b.confirmed_fare ?? b.fixed_fare_amount ?? b.estimated_fare ?? 0);
+    const bookingExtraCharges = Array.isArray(b.additional_charges)
+      ? b.additional_charges.reduce((acc: number, c: any) => acc + Number(c?.amount || 0), 0)
+      : 0;
+    const extraCharges = (chargesByBookingId.get(b.id) || 0) + bookingExtraCharges;
+    const rideGross = (isNaN(rawFare) ? 0 : rawFare) + (isNaN(extraCharges) ? 0 : extraCharges);
 
     // Commission deduction using existing rule
     const deduction = commissionRate > 0

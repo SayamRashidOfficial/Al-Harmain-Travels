@@ -36,8 +36,51 @@ export function calculateDriverCompletedRides(bookings: Booking[], driverId: str
   return bookings.filter(
     (b) =>
       b.assigned_driver_id === driverId &&
-      (b.status === 'trip_completed' || b.status === 'completed' || b.status === 'payment_completed')
+      (b.status === 'trip_completed' ||
+        b.status === 'completed' ||
+        b.status === 'payment_completed' ||
+        b.status === 'ride_completed')
   ).length;
+}
+
+/**
+ * Calculates a driver's total earnings from real bookings.
+ * Evaluates completed missions taking into account final_fare, confirmed_fare, fixed_fare_amount,
+ * estimated_fare, and any additional charges.
+ */
+export function calculateDriverTotalEarnings(
+  bookings: Booking[],
+  driverId: string,
+  commissionRate: number = 0
+): number {
+  if (!bookings || !driverId) return 0;
+
+  const completed = bookings.filter(
+    (b) =>
+      b.assigned_driver_id === driverId &&
+      (b.status === 'trip_completed' ||
+        b.status === 'completed' ||
+        b.status === 'payment_completed' ||
+        b.status === 'ride_completed')
+  );
+
+  const gross = completed.reduce((sum, b) => {
+    const rawFare = Number(
+      b.final_fare ?? b.confirmed_fare ?? b.fixed_fare_amount ?? b.estimated_fare ?? 0
+    );
+    const extraCharges = Array.isArray(b.additional_charges)
+      ? b.additional_charges.reduce((acc: number, c: any) => acc + Number(c?.amount || 0), 0)
+      : 0;
+    const itemTotal = (isNaN(rawFare) ? 0 : rawFare) + (isNaN(extraCharges) ? 0 : extraCharges);
+    return sum + itemTotal;
+  }, 0);
+
+  if (commissionRate > 0) {
+    const deduction = Math.round(gross * (commissionRate / 100) * 100) / 100;
+    return Math.max(0, gross - deduction);
+  }
+
+  return gross;
 }
 
 /**
@@ -151,9 +194,9 @@ export async function fetchDriverDetails(
       supabaseClient.from('ratings_feedback').select('rating').eq('driver_id', driverId),
       supabaseClient
         .from('bookings')
-        .select('id', { count: 'exact', head: true })
+        .select('id, final_fare, confirmed_fare, fixed_fare_amount, estimated_fare, status')
         .eq('assigned_driver_id', driverId)
-        .in('status', ['trip_completed', 'completed', 'payment_completed']),
+        .in('status', ['trip_completed', 'completed', 'payment_completed', 'ride_completed']),
       supabaseClient.from('vehicles').select('*'),
       supabaseClient.from('rate_vehicle_types').select('*'),
     ]);
@@ -177,7 +220,12 @@ export async function fetchDriverDetails(
           )
         : null;
 
-    const totalCompletedRides = completedRidesRes.count ?? 0;
+    const completedBookings = completedRidesRes.data || [];
+    const totalCompletedRides = completedBookings.length || (completedRidesRes.count ?? 0);
+    const calculatedEarnings = completedBookings.reduce((sum: number, b: any) => {
+      const fare = Number(b.final_fare ?? b.confirmed_fare ?? b.fixed_fare_amount ?? b.estimated_fare ?? 0);
+      return sum + (isNaN(fare) ? 0 : fare);
+    }, 0);
     const resolvedVehicle = resolveDriverVehicle(
       d.assigned_vehicle_id,
       rateVehRes.data || [],
@@ -193,6 +241,7 @@ export async function fetchDriverDetails(
       rating: avgRating,
       rating_count: validRatings.length,
       total_rides: totalCompletedRides,
+      total_earnings: calculatedEarnings > 0 ? calculatedEarnings : Number(d.total_earnings || 0),
       assigned_vehicle: resolvedVehicle,
       vehicle: resolvedVehicle,
     };

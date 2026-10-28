@@ -19,6 +19,8 @@ import {
   Radio,
   MapPin,
   Inbox,
+  Calendar,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -247,11 +249,19 @@ export default function AdminDispatchPage() {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="font-medium text-slate-800">
-                        {formatDateTime(booking.scheduled_at || booking.created_at)}
+                      <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                        {booking.booking_type === 'immediate' ? (
+                          <span className="text-amber-800 inline-flex items-center gap-1">
+                            <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500/20" /> Immediate / ASAP
+                          </span>
+                        ) : (
+                          <span className="text-emerald-800 inline-flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-emerald-600" /> {booking.scheduled_at ? formatDateTime(booking.scheduled_at) : '—'}
+                          </span>
+                        )}
                       </div>
-                      <div className="text-slate-400 text-[11px]">
-                        Vehicle: {booking.vehicle_type || 'Standard'}
+                      <div className="text-slate-400 text-[11px] mt-0.5">
+                        Vehicle: {booking.vehicle_type || 'Standard'} &bull; Requested: {formatDateTime(booking.created_at)}
                       </div>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-slate-900">

@@ -11,6 +11,7 @@ import {
   RecentLocation,
   SavedPlaceType,
   FixedFareRate,
+  PaymentAccount,
 } from '@/types';
 import {
   resolveFixedFare,
@@ -24,6 +25,8 @@ import {
   getVehicleLabel,
   getServiceLabel,
   getVehicleCapacity,
+  getAirportTerminalLocation,
+  getAirportTerminalTarget,
 } from '@/lib/fixed-fare';
 import { useApp } from '@/context/AppContext';
 import {
@@ -55,11 +58,15 @@ import {
   Navigation,
   Building2,
   Star,
+  Zap,
   Bookmark,
   Home,
   Briefcase,
   Plus,
   ExternalLink,
+  Smartphone,
+  Wallet,
+  CreditCard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -193,6 +200,8 @@ export interface FixedFareBookingPanelProps {
   setPassengerPhone: (phone: string) => void;
   passengerCount: number;
   setPassengerCount: (count: number) => void;
+  bookingType?: 'immediate' | 'scheduled';
+  setBookingType?: (type: 'immediate' | 'scheduled') => void;
   journeyDate: string;
   setJourneyDate: (date: string) => void;
   journeyTime: string;
@@ -209,6 +218,8 @@ export interface FixedFareBookingPanelProps {
   onRemovePaymentFile: () => void;
   onConfirmBooking: (e: React.FormEvent) => Promise<void>;
   isSubmitting: boolean;
+  selectedPaymentAccount?: PaymentAccount | null;
+  onSelectPaymentAccount?: (account: PaymentAccount) => void;
 
   // Step 6: Submitted
   confirmedBookingRef: string | null;
@@ -262,6 +273,8 @@ export default function FixedFareBookingPanel({
   setPassengerPhone,
   passengerCount,
   setPassengerCount,
+  bookingType = 'scheduled',
+  setBookingType,
   journeyDate,
   setJourneyDate,
   journeyTime,
@@ -278,8 +291,23 @@ export default function FixedFareBookingPanel({
   isSubmitting,
   confirmedBookingRef,
   activeRates: propActiveRates,
+  selectedPaymentAccount,
+  onSelectPaymentAccount,
 }: FixedFareBookingPanelProps) {
-  const { fixedFareRates, rateVehicles, rateRoutes, rateTerminals } = useApp();
+  const { fixedFareRates, rateVehicles, rateRoutes, rateTerminals, activePaymentAccounts, isPaymentAccountsLoading } = useApp();
+
+  // Active payment account selection fallback
+  const effectiveAccount = useMemo(() => {
+    if (selectedPaymentAccount) return selectedPaymentAccount;
+    const defaultAcc = activePaymentAccounts.find((a) => a.is_default);
+    return defaultAcc || activePaymentAccounts[0] || null;
+  }, [selectedPaymentAccount, activePaymentAccounts]);
+
+  React.useEffect(() => {
+    if (!selectedPaymentAccount && effectiveAccount && onSelectPaymentAccount) {
+      onSelectPaymentAccount(effectiveAccount);
+    }
+  }, [selectedPaymentAccount, effectiveAccount, onSelectPaymentAccount]);
 
   // Compute active rates: prioritize passed prop or fetch from global store
   const activeRates = useMemo(() => {
@@ -297,6 +325,11 @@ export default function FixedFareBookingPanel({
     if (!selectedService) return [];
     return getActiveTerminalsForService(selectedService, activeRates, rateTerminals);
   }, [selectedService, activeRates, rateTerminals]);
+
+  // Determine whether terminal applies to pickup (e.g. Jeddah -> Makkah) or destination (e.g. Makkah -> Jeddah)
+  const terminalTarget = useMemo(() => {
+    return selectedService ? getAirportTerminalTarget(selectedService, rateRoutes) : null;
+  }, [selectedService, rateRoutes]);
 
   // Build service options list: dynamically populated from rateRoutes and active rates
   const displayedServices = useMemo(() => {
@@ -380,12 +413,6 @@ export default function FixedFareBookingPanel({
   const workPlace = useMemo(() => savedPlaces.find((p) => p.type === 'work'), [savedPlaces]);
   const customPlaces = useMemo(() => savedPlaces.filter((p) => p.type === 'custom'), [savedPlaces]);
 
-  // Dynamic Max capacity for current vehicle
-  const currentVehicleObj = useMemo(() => {
-    return rateVehicles?.find((v) => v.id === selectedVehicle || v.category === selectedVehicle);
-  }, [rateVehicles, selectedVehicle]);
-
-  const currentMaxPax = currentVehicleObj?.seating_capacity || (selectedVehicle ? (VEHICLE_CAPACITY[selectedVehicle]?.passengers || 7) : 7);
 
   // Dynamic available vehicle categories list
   const displayVehicles = useMemo(() => {
@@ -643,7 +670,7 @@ export default function FixedFareBookingPanel({
                       key={t.code}
                       type="button"
                       disabled={!isAvailable}
-                      onClick={() => onSelectTerminal(t.code)}
+                      onClick={() => onSelectTerminal(isSelected ? null : t.code)}
                       className={`p-2 rounded-lg border flex flex-col items-center justify-center text-center transition-all cursor-pointer ${!isAvailable
                         ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-500'
                         : isSelected
@@ -661,103 +688,133 @@ export default function FixedFareBookingPanel({
                 })}
               </div>
 
-              {!selectedTerminal && (
+              {!selectedTerminal ? (
                 <p className="text-[10.5px] text-amber-900 font-semibold flex items-center gap-1 pt-0.5">
                   <AlertCircle className="w-3 h-3 shrink-0 text-amber-600" />
-                  Please select your arrival or departure terminal at Jeddah Airport.
+                  {terminalTarget === 'destination'
+                    ? 'Please select your departure terminal at Jeddah Airport.'
+                    : 'Please select your arrival or departure terminal at Jeddah Airport.'}
+                </p>
+              ) : (
+                <p className="text-[10.5px] text-emerald-800 font-semibold flex items-center gap-1 pt-0.5">
+                  <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-600" />
+                  {terminalTarget === 'destination'
+                    ? 'Terminal selected & set as destination. Click again to deselect.'
+                    : 'Terminal selected & set as pickup location. Click again to deselect.'}
                 </p>
               )}
             </div>
           )}
 
           {/* Pickup Location Box */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Pickup Location {isZiyarat && '(Hotel / Residence)'}
-              </span>
+          {needsTerminal && terminalTarget === 'pickup' && selectedTerminal ? (
+            <div className="space-y-1.5 p-3 rounded-xl bg-emerald-50/70 border border-emerald-300/80 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                  Pickup Location
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700" />
+                  Auto-Set from Terminal
+                </span>
+              </div>
 
-              <button
-                type="button"
-                onClick={onUseCurrentLocation}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer active:scale-95"
-              >
-                <Crosshair className="w-3 h-3 text-emerald-500" />
-                <span>Use Live GPS</span>
-              </button>
-            </div>
-
-            <div className="relative group">
-              <div className="absolute left-2.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                <div className="w-6 h-6 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center shadow-sm">
-                  <MapPin className="w-3 h-3" />
+              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-card border border-emerald-200">
+                <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Plane className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900 leading-tight">
+                      {TERMINAL_LABELS[selectedTerminal] || selectedTerminal}
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-semibold">
+                      (KAIA Airport)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-medium truncate mt-0.5" title={pickup?.address}>
+                    {pickup?.address || 'King Abdulaziz International Airport, Jeddah'}
+                  </p>
                 </div>
               </div>
 
-              <input
-                type="text"
-                readOnly
-                onClick={() => onOpenSearch('pickup')}
-                value={pickup?.address || ''}
-                placeholder="Search pickup: hotel, landmark, airport…"
-                className="w-full pl-10 pr-8 py-2 rounded-xl bg-input border border-base text-primary font-medium text-xs h-9 sm:h-9.5 focus:outline-none focus:border-emerald-500 cursor-pointer transition-all shadow-sm placeholder:text-muted truncate hover:border-strong"
-              />
-
-              {pickup && (
-                <button
-                  type="button"
-                  onClick={onClearPickup}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted hover:text-rose-500 hover:bg-elevated transition-colors"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <p className="text-[10.5px] text-emerald-800 font-medium flex items-center gap-1">
+                <Check className="w-3 h-3 text-emerald-600 shrink-0 stroke-[2.5]" />
+                <span>Selected terminal is serving as your VIP pickup location. No manual entry needed.</span>
+              </p>
             </div>
-          </div>
-
-          {/* Destination Box (if not Ziyarat) */}
-          {!isZiyarat && (
+          ) : needsTerminal && terminalTarget === 'pickup' && !selectedTerminal ? (
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  Destination
+                <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Pickup Location
                 </span>
-
-                <button
-                  type="button"
-                  onClick={() => onToggleInteractiveMode(interactiveMode === 'destination' ? 'none' : 'destination')}
-                  className={`text-[9.5px] font-semibold flex items-center gap-1 px-2 py-0.5 rounded-full border transition-all cursor-pointer ${interactiveMode === 'destination'
-                    ? 'bg-amber-500/15 border-amber-500/50 text-amber-600 dark:text-amber-400 font-bold'
-                    : 'bg-elevated border-base text-muted hover:text-primary'
-                    }`}
-                >
-                  <MapPin className="w-2.5 h-2.5" />
-                  <span>{interactiveMode === 'destination' ? 'Pinning Mode' : 'Pick on Map'}</span>
-                </button>
+                <span className="text-[9.5px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  Select Terminal Above
+                </span>
               </div>
 
               <div className="relative group">
                 <div className="absolute left-2.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
                   <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shadow-sm">
-                    <Navigation className="w-3 h-3" />
+                    <Plane className="w-3 h-3" />
                   </div>
                 </div>
 
                 <input
                   type="text"
                   readOnly
-                  onClick={() => onOpenSearch('destination')}
-                  value={destination?.address || ''}
-                  placeholder="Search destination: holy mosque, hotel, city…"
-                  className="w-full pl-10 pr-8 py-2 rounded-xl bg-input border border-base text-primary font-medium text-xs h-9 sm:h-9.5 focus:outline-none focus:border-amber-500 cursor-pointer transition-all shadow-sm placeholder:text-muted truncate hover:border-strong"
+                  onClick={() => toast.info('Please select Terminal 1, H, or N above to automatically set your pickup location.')}
+                  value=""
+                  placeholder="Select an airport terminal above to automatically set pickup…"
+                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-dashed border-amber-300 text-slate-600 font-medium text-xs h-9 sm:h-9.5 cursor-pointer transition-all shadow-sm placeholder:text-amber-800/70"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Pickup Location {terminalTarget === 'destination' ? '(Hotel / Residence in Makkah)' : isZiyarat ? '(Hotel / Residence)' : ''}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={onUseCurrentLocation}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer active:scale-95"
+                >
+                  <Crosshair className="w-3 h-3 text-emerald-500" />
+                  <span>Use Live GPS</span>
+                </button>
+              </div>
+
+              <div className="relative group">
+                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center shadow-sm">
+                    <MapPin className="w-3 h-3" />
+                  </div>
+                </div>
+
+                <input
+                  type="text"
+                  readOnly
+                  onClick={() => onOpenSearch('pickup')}
+                  value={pickup?.address || ''}
+                  placeholder={
+                    terminalTarget === 'destination'
+                      ? 'Search pickup: hotel, residence, holy mosque in Makkah…'
+                      : 'Search pickup: hotel, landmark, airport…'
+                  }
+                  className="w-full pl-10 pr-8 py-2 rounded-xl bg-input border border-base text-primary font-medium text-xs h-9 sm:h-9.5 focus:outline-none focus:border-emerald-500 cursor-pointer transition-all shadow-sm placeholder:text-muted truncate hover:border-strong"
                 />
 
-                {destination && (
+                {pickup && (
                   <button
                     type="button"
-                    onClick={onClearDestination}
+                    onClick={onClearPickup}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted hover:text-rose-500 hover:bg-elevated transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -765,6 +822,125 @@ export default function FixedFareBookingPanel({
                 )}
               </div>
             </div>
+          )}
+
+          {/* Destination Box (if not Ziyarat) */}
+          {!isZiyarat && (
+            needsTerminal && terminalTarget === 'destination' && selectedTerminal ? (
+              <div className="space-y-1.5 p-3 rounded-xl bg-amber-50/70 border border-amber-300/80 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-amber-900 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+                    Destination
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-amber-700" />
+                    Auto-Set from Terminal
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5 p-2 rounded-lg bg-card border border-amber-200">
+                  <div className="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Plane className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-900 leading-tight">
+                        {TERMINAL_LABELS[selectedTerminal] || selectedTerminal}
+                      </span>
+                      <span className="text-[10px] text-amber-700 font-semibold">
+                        (KAIA Airport)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 font-medium truncate mt-0.5" title={destination?.address}>
+                      {destination?.address || 'King Abdulaziz International Airport, Jeddah'}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-[10.5px] text-amber-900 font-medium flex items-center gap-1">
+                  <Check className="w-3 h-3 text-amber-600 shrink-0 stroke-[2.5]" />
+                  <span>Selected departure terminal is serving as your VIP destination. No manual entry needed.</span>
+                </p>
+              </div>
+            ) : needsTerminal && terminalTarget === 'destination' && !selectedTerminal ? (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    Destination
+                  </span>
+                  <span className="text-[9.5px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    Select Terminal Above
+                  </span>
+                </div>
+
+                <div className="relative group">
+                  <div className="absolute left-2.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                    <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shadow-sm">
+                      <Plane className="w-3 h-3" />
+                    </div>
+                  </div>
+
+                  <input
+                    type="text"
+                    readOnly
+                    onClick={() => toast.info('Please select Terminal 1, H, or N above to automatically set your destination terminal.')}
+                    value=""
+                    placeholder="Select an airport terminal above to automatically set destination…"
+                    className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-dashed border-amber-300 text-slate-600 font-medium text-xs h-9 sm:h-9.5 cursor-pointer transition-all shadow-sm placeholder:text-amber-800/70"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    Destination
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => onToggleInteractiveMode(interactiveMode === 'destination' ? 'none' : 'destination')}
+                    className={`text-[9.5px] font-semibold flex items-center gap-1 px-2 py-0.5 rounded-full border transition-all cursor-pointer ${interactiveMode === 'destination'
+                      ? 'bg-amber-500/15 border-amber-500/50 text-amber-600 dark:text-amber-400 font-bold'
+                      : 'bg-elevated border-base text-muted hover:text-primary'
+                      }`}
+                  >
+                    <MapPin className="w-2.5 h-2.5" />
+                    <span>{interactiveMode === 'destination' ? 'Pinning Mode' : 'Pick on Map'}</span>
+                  </button>
+                </div>
+
+                <div className="relative group">
+                  <div className="absolute left-2.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                    <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shadow-sm">
+                      <Navigation className="w-3 h-3" />
+                    </div>
+                  </div>
+
+                  <input
+                    type="text"
+                    readOnly
+                    onClick={() => onOpenSearch('destination')}
+                    value={destination?.address || ''}
+                    placeholder="Search destination: holy mosque, hotel, city…"
+                    className="w-full pl-10 pr-8 py-2 rounded-xl bg-input border border-base text-primary font-medium text-xs h-9 sm:h-9.5 focus:outline-none focus:border-amber-500 cursor-pointer transition-all shadow-sm placeholder:text-muted truncate hover:border-strong"
+                  />
+
+                  {destination && (
+                    <button
+                      type="button"
+                      onClick={onClearDestination}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted hover:text-rose-500 hover:bg-elevated transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
           )}
 
           {/* Ziyarat Tour Info Banner */}
@@ -780,8 +956,8 @@ export default function FixedFareBookingPanel({
             </div>
           )}
 
-          {/* Saved Places Shortcuts */}
-          {(homePlace || workPlace || customPlaces.length > 0) && !isZiyarat && (
+          {/* Saved Places Shortcuts (for manual pickup routes) */}
+          {(homePlace || workPlace || customPlaces.length > 0) && !isZiyarat && terminalTarget !== 'pickup' && (
             <div className="pt-1.5 border-t border-base/70">
               <div className="text-[9.5px] font-bold text-muted uppercase tracking-widest mb-1 flex items-center gap-1.5">
                 <Bookmark className="w-3 h-3 text-amber-500" />
@@ -835,7 +1011,13 @@ export default function FixedFareBookingPanel({
           <div className="pt-1.5">
             <button
               type="button"
-              disabled={(!isZiyarat && !pickup) || (needsTerminal && !selectedTerminal)}
+              disabled={
+                needsTerminal
+                  ? (terminalTarget === 'destination'
+                      ? (!pickup || !selectedTerminal)
+                      : (!selectedTerminal || (!isZiyarat && !destination)))
+                  : (!pickup || (!isZiyarat && !destination))
+              }
               onClick={onConfirmRoute}
               className="w-full py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 text-white hover:from-emerald-500 hover:to-emerald-500 flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
             >
@@ -1065,56 +1247,89 @@ export default function FixedFareBookingPanel({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div>
-              <label className="block mb-1 text-[10px] font-bold text-secondary uppercase tracking-wider">
-                Journey Date <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <Calendar className="w-3.5 h-3.5 text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="date"
-                  required
-                  value={journeyDate}
-                  onChange={(e) => setJourneyDate(e.target.value)}
-                  className="w-full pl-8 pr-2 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs focus:outline-none focus:border-emerald-500 font-medium"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block mb-1 text-[10px] font-bold text-secondary uppercase tracking-wider">
-                Pickup Time <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <Clock className="w-3.5 h-3.5 text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="time"
-                  required
-                  value={journeyTime}
-                  onChange={(e) => setJourneyTime(e.target.value)}
-                  className="w-full pl-8 pr-2 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs focus:outline-none focus:border-emerald-500 font-medium"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block mb-1 text-[10px] font-bold text-secondary uppercase tracking-wider">
-                Passengers (Max {currentMaxPax})
-              </label>
-              <div className="relative">
-                <Users className="w-3.5 h-3.5 text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="number"
-                  min={1}
-                  max={currentMaxPax}
-                  value={passengerCount}
-                  onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
-                  className="w-full pl-8 pr-2.5 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs text-center font-bold focus:outline-none focus:border-emerald-500"
-                />
-              </div>
+          {/* Ride Timing & Dispatch Option: Book Now vs Schedule Pickup */}
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider">
+              Ride Timing &amp; Dispatch Option <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-surface border border-base">
+              <button
+                type="button"
+                onClick={() => setBookingType?.('immediate')}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  bookingType === 'immediate'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-secondary hover:text-primary hover:bg-page'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                <span>Book Now (ASAP)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setBookingType?.('scheduled')}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  bookingType === 'scheduled'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-secondary hover:text-primary hover:bg-page'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Schedule Pickup</span>
+              </button>
             </div>
           </div>
+
+          {bookingType === 'immediate' ? (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-start gap-2.5">
+              <Zap className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 fill-amber-500/20" />
+              <div>
+                <p className="font-bold text-amber-950">Immediate VIP Chauffeur Dispatch</p>
+                <p className="text-[11px] text-amber-900 mt-0.5">
+                  Your ride will be dispatched immediately upon booking confirmation. No advance date scheduling needed.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block mb-1 text-[10px] font-bold text-secondary uppercase tracking-wider">
+                    Journey Date <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Calendar className="w-3.5 h-3.5 text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="date"
+                      required={bookingType === 'scheduled'}
+                      value={journeyDate}
+                      onChange={(e) => setJourneyDate(e.target.value)}
+                      className="w-full pl-8 pr-2 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs focus:outline-none focus:border-emerald-500 font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-[10px] font-bold text-secondary uppercase tracking-wider">
+                    Pickup Time (Saudi AST) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Clock className="w-3.5 h-3.5 text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="time"
+                      required={bookingType === 'scheduled'}
+                      value={journeyTime}
+                      onChange={(e) => setJourneyTime(e.target.value)}
+                      className="w-full pl-8 pr-2 py-1.5 h-8.5 sm:h-9 rounded-lg bg-input border border-base text-primary text-xs focus:outline-none focus:border-emerald-500 font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted italic">
+                * All scheduled pickup times operate on Saudi Arabia Standard Time (AST, UTC+3).
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block mb-1 text-[10px] font-bold text-secondary uppercase tracking-wider">
@@ -1142,7 +1357,7 @@ export default function FixedFareBookingPanel({
               type="submit"
               className="btn-primary flex-[2] py-2.5 text-xs rounded-xl flex items-center justify-center gap-2 font-bold cursor-pointer"
             >
-              <span>Continue to Summary &amp; Payment</span>
+              <span>Continue to Payment</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -1171,7 +1386,7 @@ export default function FixedFareBookingPanel({
             <div className="flex items-center justify-between text-slate-700 text-[11px] border-b border-base/60 pb-1.5">
               <span className="font-extrabold text-slate-900 uppercase tracking-wider">VIP Itinerary Overview</span>
               <span className="font-bold text-slate-900">
-                {journeyDate} at {journeyTime}
+                {bookingType === 'immediate' ? 'Book Now (Immediate ASAP)' : `${journeyDate} at ${journeyTime} (AST)`}
               </span>
             </div>
 
@@ -1189,10 +1404,6 @@ export default function FixedFareBookingPanel({
               <div>
                 <span className="text-slate-600 font-bold block text-[10px] uppercase">Chauffeur Vehicle</span>
                 <span className="font-bold text-slate-900 truncate block">{VEHICLE_LABELS[selectedVehicle]}</span>
-              </div>
-              <div>
-                <span className="text-slate-600 font-bold block text-[10px] uppercase">Passengers</span>
-                <span className="font-bold text-slate-900">{passengerCount} Pax</span>
               </div>
             </div>
 
@@ -1237,66 +1448,173 @@ export default function FixedFareBookingPanel({
             )}
           </div>
 
-          {/* Corporate Bank Payment Details */}
-          <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-300 space-y-2 text-xs">
-            <div className="flex items-center justify-between text-amber-950 font-black">
-              <span className="flex items-center gap-1.5 text-xs">
-                <Building2 className="w-3.5 h-3.5 text-amber-700" />
-                Bank Transfer / Mobile Pay Details
-              </span>
-              <span className="text-[9.5px] font-mono font-bold uppercase bg-amber-100 text-amber-950 px-2 py-0.5 rounded-full border border-amber-300">
-                Official Account
-              </span>
+          {/* Dynamic Corporate Bank / Mobile Payment Details */}
+          {isPaymentAccountsLoading ? (
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500 animate-pulse">
+              Loading verified payment accounts...
             </div>
-
-            <p className="text-[11px] text-slate-800 font-medium">
-              Transfer <strong className="font-black text-slate-950">{farePreview?.found ? formatFareSAR(farePreview.fare) : 'the fare amount'}</strong> to
-              our official verified business account:
-            </p>
-
-            <div className="p-2.5 rounded-lg bg-white border border-slate-200 font-mono text-[11px] space-y-1.5 shadow-2xs">
-              <div className="flex justify-between items-center text-slate-800 font-medium">
-                <span>Bank:</span>
-                <strong className="text-slate-950 font-bold">Al Rajhi Bank / SNB</strong>
+          ) : activePaymentAccounts.length === 0 ? (
+            <div className="p-4 rounded-xl bg-amber-50/90 border border-amber-300 text-xs text-amber-950 space-y-2">
+              <div className="flex items-center gap-2 font-bold text-amber-900">
+                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>No Payment Accounts Configured</span>
               </div>
-              <div className="flex justify-between items-center text-slate-800 font-medium">
-                <span>Account Name:</span>
-                <strong className="text-slate-950 font-bold truncate max-w-[160px]">Al Harmain VIP Transport</strong>
-              </div>
-              <div className="flex justify-between items-center text-slate-800 font-medium gap-2 pt-1 border-t border-slate-200">
-                <span className="shrink-0 font-bold text-slate-900">IBAN:</span>
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-amber-950 font-black break-all select-all text-right text-[11px]">
-                    SA44 8000 0456 6080 1012 3456
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopyText('SA4480000456608010123456', 'IBAN')}
-                    className="p-1 rounded hover:bg-slate-100 text-slate-600 hover:text-amber-700 transition-colors shrink-0"
-                    title="Copy IBAN"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex justify-between items-center text-slate-800 font-medium gap-2">
-                <span className="shrink-0 font-bold text-slate-900">STC Pay / Urpay:</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-emerald-950 font-black select-all text-[11px]">
-                    +966 54 888 1234
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopyText('+966548881234', 'STC Pay')}
-                    className="p-1 rounded hover:bg-slate-100 text-slate-600 hover:text-emerald-700 transition-colors shrink-0"
-                    title="Copy Phone"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
+              <p className="text-[11.5px] text-amber-900 leading-relaxed">
+                Official electronic payment details are currently undergoing administrative verification. Please contact our 24/7 VIP Concierge or administration team at <strong>bookings@alharmaintravels.com</strong> to finalize your booking directly.
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-300 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between text-amber-950 font-black">
+                <span className="flex items-center gap-1.5 text-xs">
+                  <Building2 className="w-3.5 h-3.5 text-amber-700" />
+                  Official Business Payment Accounts
+                </span>
+                <span className="text-[9.5px] font-mono font-bold uppercase bg-amber-100 text-amber-950 px-2 py-0.5 rounded-full border border-amber-300">
+                  Verified Corporate Treasury
+                </span>
+              </div>
+
+              <p className="text-[11px] text-slate-800 font-medium">
+                Transfer <strong className="font-black text-slate-950">{farePreview?.found ? formatFareSAR(farePreview.fare) : 'the fare amount'}</strong> to
+                one of our verified official business accounts:
+              </p>
+
+              {/* Multiple Account Selector Tabs (if > 1 active accounts) */}
+              {activePaymentAccounts.length > 1 && (
+                <div className="space-y-1">
+                  <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block">
+                    Select Payment Account:
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {activePaymentAccounts.map((acc) => {
+                      const isSelected = effectiveAccount?.id === acc.id;
+                      return (
+                        <button
+                          key={acc.id}
+                          type="button"
+                          onClick={() => onSelectPaymentAccount?.(acc)}
+                          className={`p-2 rounded-lg border text-left flex items-center justify-between gap-1.5 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-amber-100/90 border-amber-400 text-amber-950 shadow-2xs font-bold ring-1 ring-amber-400'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 font-medium'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {acc.payment_method_type === 'bank_transfer' ? (
+                              <Building2 className="w-3.5 h-3.5 shrink-0 text-amber-700" />
+                            ) : acc.payment_method_type === 'stc_pay' || acc.payment_method_type === 'urpay' ? (
+                              <Smartphone className="w-3.5 h-3.5 shrink-0 text-purple-600" />
+                            ) : (
+                              <Wallet className="w-3.5 h-3.5 shrink-0 text-slate-600" />
+                            )}
+                            <span className="truncate text-[11px]">{acc.provider_name}</span>
+                          </div>
+                          {acc.is_default && (
+                            <span title="Preferred default">
+                              <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Selected Account Details Card */}
+              {effectiveAccount && (
+                <div className="p-2.5 rounded-lg bg-white border border-slate-200 font-mono text-[11px] space-y-2 shadow-2xs">
+                  <div className="flex justify-between items-center text-slate-800 font-medium">
+                    <span className="font-sans text-[11px] text-slate-600">Provider:</span>
+                    <div className="flex items-center gap-1.5 font-sans">
+                      <strong className="text-slate-950 font-bold">{effectiveAccount.provider_name}</strong>
+                      {effectiveAccount.is_default && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300">
+                          Preferred
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center text-slate-800 font-medium">
+                    <span className="font-sans text-[11px] text-slate-600">Account Name:</span>
+                    <strong className="text-slate-950 font-bold truncate max-w-[200px]">
+                      {effectiveAccount.account_holder_name}
+                    </strong>
+                  </div>
+
+                  {/* Saudi IBAN */}
+                  {effectiveAccount.iban && (
+                    <div className="flex justify-between items-center text-slate-800 font-medium gap-2 pt-1 border-t border-slate-200">
+                      <span className="shrink-0 font-bold text-slate-900 font-sans">IBAN:</span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-amber-950 font-black break-all select-all text-right text-[11px]">
+                          {effectiveAccount.iban}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(effectiveAccount.iban!, 'IBAN')}
+                          className="p-1 rounded hover:bg-slate-100 text-slate-600 hover:text-amber-700 transition-colors shrink-0 cursor-pointer"
+                          title="Copy IBAN"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Account Number */}
+                  {effectiveAccount.account_number && (
+                    <div className="flex justify-between items-center text-slate-800 font-medium gap-2 pt-1 border-t border-slate-200">
+                      <span className="shrink-0 font-bold text-slate-900 font-sans">Account #:</span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-slate-950 font-black select-all text-right text-[11px]">
+                          {effectiveAccount.account_number}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(effectiveAccount.account_number!, 'Account Number')}
+                          className="p-1 rounded hover:bg-slate-100 text-slate-600 hover:text-emerald-700 transition-colors shrink-0 cursor-pointer"
+                          title="Copy Account Number"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mobile Wallet Number */}
+                  {effectiveAccount.wallet_number && (
+                    <div className="flex justify-between items-center text-slate-800 font-medium gap-2 pt-1 border-t border-slate-200">
+                      <span className="shrink-0 font-bold text-slate-900 font-sans">Wallet Number:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-emerald-950 font-black select-all text-[11px]">
+                          {effectiveAccount.wallet_number}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(effectiveAccount.wallet_number!, 'Wallet Number')}
+                          className="p-1 rounded hover:bg-slate-100 text-slate-600 hover:text-emerald-700 transition-colors shrink-0 cursor-pointer"
+                          title="Copy Wallet Number"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Special Payment Instructions */}
+                  {effectiveAccount.instructions && (
+                    <div className="p-2 rounded bg-amber-50/70 border border-amber-200 text-amber-950 font-sans text-[10.5px] leading-tight">
+                      <strong className="font-bold">Instructions: </strong>
+                      <span>{effectiveAccount.instructions}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Payment Proof File Upload */}
           <div className="space-y-1.5">
@@ -1381,7 +1699,7 @@ export default function FixedFareBookingPanel({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !paymentFile}
+              disabled={isSubmitting || !paymentFile || activePaymentAccounts.length === 0}
               className="btn-primary flex-[2] py-2.5 text-xs rounded-xl flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-md cursor-pointer active:scale-[0.99]"
             >
               {isSubmitting ? (
@@ -1389,6 +1707,8 @@ export default function FixedFareBookingPanel({
                   <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-950/30 border-t-slate-950 animate-spin" />
                   <span>Submitting Booking…</span>
                 </>
+              ) : activePaymentAccounts.length === 0 ? (
+                <span>Official Account Required</span>
               ) : (
                 <>
                   <CheckCircle2 className="w-3.5 h-3.5" />

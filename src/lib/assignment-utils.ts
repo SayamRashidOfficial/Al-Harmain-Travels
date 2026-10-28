@@ -1,10 +1,16 @@
 import { Booking, BookingStatus } from '@/types';
+import { SAUDI_TIMEZONE } from './utils';
 
 /**
  * Extract a reliable timestamp for a booking.
- * Prefers `scheduled_at`; falls back to `created_at` or current time.
+ * For scheduled rides, prefers `scheduled_at`.
+ * For immediate rides or fallback, uses `created_at` or current time.
  */
 export function getBookingPickupTimestamp(booking: Booking | Partial<Booking>): number {
+  if (booking.booking_type !== 'immediate' && booking.scheduled_at) {
+    const t = new Date(booking.scheduled_at).getTime();
+    if (!isNaN(t)) return t;
+  }
   if (booking.scheduled_at) {
     const t = new Date(booking.scheduled_at).getTime();
     if (!isNaN(t)) return t;
@@ -14,6 +20,38 @@ export function getBookingPickupTimestamp(booking: Booking | Partial<Booking>): 
     if (!isNaN(t)) return t;
   }
   return Date.now();
+}
+
+/**
+ * Returns midnight bounds for Today, Tomorrow, and Day After in Saudi Arabia timezone (Asia/Riyadh).
+ * Guarantees that drivers and dispatchers everywhere experience the exact same operational calendar days.
+ */
+export function getSaudiDayBounds(now: Date = new Date()): {
+  startOfToday: number;
+  startOfTomorrow: number;
+  startOfDayAfter: number;
+} {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: SAUDI_TIMEZONE,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  });
+  const parts = formatter.formatToParts(now);
+  const year = Number(parts.find((p) => p.type === 'year')?.value);
+  const month = Number(parts.find((p) => p.type === 'month')?.value);
+  const day = Number(parts.find((p) => p.type === 'day')?.value);
+
+  // Midnight (00:00:00 AST) in UTC milliseconds (AST is UTC+3)
+  const midnightTodayUtc = Date.UTC(year, month - 1, day, 0, 0, 0) - 3 * 60 * 60 * 1000;
+  const startOfTomorrow = midnightTodayUtc + 24 * 60 * 60 * 1000;
+  const startOfDayAfter = startOfTomorrow + 24 * 60 * 60 * 1000;
+
+  return {
+    startOfToday: midnightTodayUtc,
+    startOfTomorrow,
+    startOfDayAfter,
+  };
 }
 
 /**
@@ -237,21 +275,25 @@ export function checkDriverOverlap(
     // Check if the time intervals overlap
     if (Math.max(candidateStart, existingStart) < Math.min(candidateEnd, existingEnd)) {
       const startTimeFormatted = new Intl.DateTimeFormat('en-GB', {
+        timeZone: SAUDI_TIMEZONE,
         hour: '2-digit',
         minute: '2-digit',
         day: '2-digit',
         month: 'short',
-      }).format(new Date(existingStart));
+        hour12: true,
+      }).format(new Date(existingStart)).replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
 
       const endTimeFormatted = new Intl.DateTimeFormat('en-GB', {
+        timeZone: SAUDI_TIMEZONE,
         hour: '2-digit',
         minute: '2-digit',
-      }).format(new Date(existingEnd));
+        hour12: true,
+      }).format(new Date(existingEnd)).replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
 
       return {
         hasOverlap: true,
         conflictingBooking: b,
-        message: `Overlaps with assignment #${b.booking_reference} (${startTimeFormatted} - ${endTimeFormatted} with ${bufferMinutes}m turnaround).`,
+        message: `Overlaps with assignment #${b.booking_reference} (${startTimeFormatted} - ${endTimeFormatted} AST with ${bufferMinutes}m turnaround).`,
       };
     }
   }
@@ -308,26 +350,36 @@ export function categorizeDriverAssignments(
   // Find active assignment if any (status in ACTIVE_MISSION_STATUSES)
   const activeAssignment = sortedUpcoming.find((b) => isBookingActive(b.status)) || null;
 
+  // The roster (today, tomorrow, upcoming in Assigned VIP Journeys) should only display
+  // rides that are awaiting driver acceptance or locked, NEVER an active/accepted mission.
+  // Accepted and active missions appear exclusively in the Active VIP Mission section.
+  const rosterAssignments = sortedUpcoming.filter(
+    (b) => !isBookingActive(b.status) && b.id !== activeAssignment?.id
+  );
+
   // Single actionable assignment rule:
-  // If there is an active assignment, ONLY that active assignment is actionable.
-  // If no assignment is active, the earliest uncompleted assignment (first in sorted list) is actionable.
+  // If there is an active assignment, ONLY that active assignment is actionable (no roster trips may be accepted/started).
+  // If no assignment is active, the earliest uncompleted assignment in the roster is actionable for acceptance.
   let actionableAssignmentId: string | null = null;
   if (activeAssignment) {
-    actionableAssignmentId = activeAssignment.id;
-  } else if (sortedUpcoming.length > 0) {
-    actionableAssignmentId = sortedUpcoming[0].id;
+    actionableAssignmentId = null;
+  } else if (rosterAssignments.length > 0) {
+    actionableAssignmentId = rosterAssignments[0].id;
   }
 
-  // Date partition
+  // Date partition (only unaccepted / locked assignments belong in the roster tabs)
   const today: Booking[] = [];
   const tomorrow: Booking[] = [];
   const upcoming: Booking[] = [];
 
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const startOfTomorrow = startOfToday + 24 * 60 * 60 * 1000;
-  const startOfDayAfter = startOfTomorrow + 24 * 60 * 60 * 1000;
+  const { startOfTomorrow, startOfDayAfter } = getSaudiDayBounds(now);
 
-  for (const b of sortedUpcoming) {
+  for (const b of rosterAssignments) {
+    if (b.booking_type === 'immediate') {
+      // Immediate on-demand trips awaiting driver acceptance belong in Today
+      today.push(b);
+      continue;
+    }
     const pickupTime = getBookingPickupTimestamp(b);
     if (pickupTime < startOfTomorrow) {
       // Anything today or past due that is still uncompleted belongs in Today

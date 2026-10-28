@@ -129,7 +129,7 @@ export default function AdminUsersPage() {
   } = useApp();
 
   // Filters & State
-  const [activeRoleTab, setActiveRoleTab] = useState<'all' | 'customer' | 'dispatcher' | 'driver' | 'admin'>('all');
+  const [activeRoleTab, setActiveRoleTab] = useState<'all' | 'customer' | 'dispatcher' | 'driver'>('all');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'deactivated'>('all');
   const [verificationFilter, setVerificationFilter] = useState<'all' | 'verified' | 'unverified'>('all');
@@ -486,7 +486,7 @@ export default function AdminUsersPage() {
   const fetchUsersPage = useCallback(async () => {
     setIsTableLoading(true);
     try {
-      let query = supabase.from('profiles').select('*', { count: 'exact' });
+      let query = supabase.from('profiles').select('*', { count: 'exact' }).neq('is_super_admin', true);
 
       // 1. Role Filter
       if (activeRoleTab !== 'all') {
@@ -575,6 +575,7 @@ export default function AdminUsersPage() {
 
       // Resilient local fallback from AppContext usersList
       const filtered = usersList.filter((u) => {
+        if (u.is_super_admin) return false;
         if (activeRoleTab !== 'all' && u.role !== activeRoleTab) return false;
         if (statusFilter !== 'all' && u.status !== statusFilter) return false;
         if (verificationFilter === 'verified' && !u.email_verified) return false;
@@ -641,7 +642,7 @@ export default function AdminUsersPage() {
   }, [fetchUsersPage]);
 
   // Reset page to 1 when search, filters, or page size change
-  const handleRoleTabChange = (tab: 'all' | 'customer' | 'dispatcher' | 'driver' | 'admin') => {
+  const handleRoleTabChange = (tab: 'all' | 'customer' | 'dispatcher' | 'driver') => {
     setActiveRoleTab(tab);
     setCurrentPage(1);
   };
@@ -1227,7 +1228,6 @@ export default function AdminUsersPage() {
             { id: 'customer', label: 'Customers', count: metrics.customers },
             { id: 'dispatcher', label: 'Staff / Dispatchers', count: metrics.dispatchers },
             { id: 'driver', label: 'Fleet Drivers', count: metrics.driverProfiles },
-            { id: 'admin', label: 'Administrators', count: metrics.admins },
           ].map((tab) => {
             const isActive = activeRoleTab === tab.id;
             return (
@@ -1905,7 +1905,7 @@ export default function AdminUsersPage() {
               <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
                 <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
                   <CheckCircle2 className="w-5 h-5" />
-                  <span>Account Successfully Created in Supabase!</span>
+                  <span>Account Successfully Created</span>
                 </div>
                 <p className="text-xs text-secondary leading-relaxed">
                   The account for <strong>{createdCredentials.name}</strong> ({createdCredentials.role.toUpperCase()}) is active and email verified. Provide these login credentials to the user:
@@ -1955,7 +1955,7 @@ export default function AdminUsersPage() {
                 <div>
                   <label className="type-label block mb-1.5">Select Account Role *</label>
                   <div className="grid grid-cols-4 gap-2">
-                    {(['driver', 'dispatcher', 'customer', 'admin'] as UserRole[]).map((r) => (
+                    {(['driver', 'dispatcher', 'customer'] as UserRole[]).map((r) => (
                       <button
                         key={r}
                         type="button"
@@ -2244,7 +2244,6 @@ export default function AdminUsersPage() {
                     <option value="customer">Customer / Pilgrim</option>
                     <option value="dispatcher">Dispatcher / Staff</option>
                     <option value="driver">Fleet Driver</option>
-                    <option value="admin">System Administrator</option>
                   </select>
                 </div>
 

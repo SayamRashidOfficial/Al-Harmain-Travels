@@ -17,6 +17,7 @@ import {
   Receipt,
   Route,
   Wallet,
+  Building2,
   Star,
   Bell,
   BarChart3,
@@ -120,6 +121,12 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         icon: Receipt,
       },
       {
+        href: '/admin/payment-accounts',
+        label: 'Payment Accounts',
+        subtitle: 'Bank & Wallet Master',
+        icon: Building2,
+      },
+      {
         href: '/admin/routes',
         label: 'Routes & Areas',
         subtitle: 'Service Zones',
@@ -192,8 +199,8 @@ interface AdminDashboardShellProps {
 }
 
 export default function AdminDashboardShell({ children }: AdminDashboardShellProps) {
-  const pathname = usePathname();
-  const { currentUser, signOut, bookings, drivers } = useApp();
+  const pathname = usePathname() || '';
+  const { currentUser, signOut, bookings, drivers, notifications } = useApp();
   const { dir, isRTL, t } = useLanguage();
 
   const [isHovered, setIsHovered] = useState(false);
@@ -239,6 +246,10 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
       (b) => b.payment_status === 'pending' && b.payment_screenshot_url
     ).length;
   }, [bookings]);
+
+  const unreadNotifsCount = useMemo(() => {
+    return notifications.filter((n) => !n.read).length;
+  }, [notifications]);
 
   // Mobile Bottom Navigation Bar Links (5 primary modules)
   const mobileNavLinks = [
@@ -296,6 +307,7 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
   const getItemBadge = (item: AdminNavItem): number | string | null | undefined => {
     if (item.href === '/admin' && pendingCount > 0) return pendingCount;
     if (item.href === '/admin/payments' && pendingPaymentsCount > 0) return pendingPaymentsCount;
+    if (item.href === '/admin/notifications' && unreadNotifsCount > 0) return unreadNotifsCount;
     return item.badge;
   };
 

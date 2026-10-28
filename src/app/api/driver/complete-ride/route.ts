@@ -191,18 +191,25 @@ export async function POST(req: NextRequest) {
 
       const nextDriverStatus = hasOtherAssignments ? 'assigned' : 'available';
 
-      // Count total completed rides for driver
-      const { count: completedCount } = await supabaseAdmin
+      // Count total completed rides and total earnings for driver
+      const { data: driverCompletedBookings } = await supabaseAdmin
         .from('bookings')
-        .select('id', { count: 'exact', head: true })
+        .select('final_fare, confirmed_fare, fixed_fare_amount, estimated_fare, status')
         .eq('assigned_driver_id', effectiveDriverId)
         .in('status', ['completed', 'trip_completed', 'ride_completed', 'payment_completed']);
+
+      const completedCount = driverCompletedBookings?.length ?? 1;
+      const totalEarningsSum = (driverCompletedBookings || []).reduce((sum: number, b: any) => {
+        const fare = Number(b.final_fare ?? b.confirmed_fare ?? b.fixed_fare_amount ?? b.estimated_fare ?? 0);
+        return sum + (isNaN(fare) ? 0 : fare);
+      }, 0);
 
       await supabaseAdmin
         .from('drivers')
         .update({
           status: nextDriverStatus,
-          total_rides: completedCount ?? 1,
+          total_rides: completedCount,
+          total_earnings: totalEarningsSum,
           updated_at: now,
         })
         .eq('id', effectiveDriverId);

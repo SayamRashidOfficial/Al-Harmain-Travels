@@ -22,7 +22,7 @@ function AuthCallbackContent() {
     const processAuth = async () => {
       try {
         // 1. Check if Supabase sent error in URL params
-        const urlError = searchParams.get('error_description') || searchParams.get('error');
+        const urlError = searchParams?.get('error_description') || searchParams?.get('error');
         if (urlError) {
           if (!isCancelled) {
             setStatus('error');
@@ -32,15 +32,15 @@ function AuthCallbackContent() {
         }
 
         // 1b. Check if this is a password recovery attempt
-        const typeParam = searchParams.get('type') as EmailOtpType | null;
-        const nextParam = searchParams.get('next');
+        const typeParam = searchParams?.get('type') as EmailOtpType | null;
+        const nextParam = searchParams?.get('next');
         const isRecovery =
           typeParam === 'recovery' ||
           nextParam === '/reset-password' ||
           (typeof window !== 'undefined' && window.location.hash.includes('type=recovery'));
 
         // 2. Check for PKCE exchange code (?code=...)
-        const code = searchParams.get('code');
+        const code = searchParams?.get('code');
         if (code) {
           const { data: codeData, error: codeErr } = await supabase.auth.exchangeCodeForSession(code);
           if (codeErr) {
@@ -62,7 +62,7 @@ function AuthCallbackContent() {
         }
 
         // 3. Check for Token Hash verification (?token_hash=...&type=...)
-        const tokenHash = searchParams.get('token_hash');
+        const tokenHash = searchParams?.get('token_hash');
         if (tokenHash) {
           const { data: otpData, error: otpErr } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,

@@ -22,7 +22,7 @@ interface CustomerMobileSidebarProps {
 }
 
 export default function CustomerMobileSidebar({ isOpen, onClose }: CustomerMobileSidebarProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const { currentUser, signOut } = useApp();
   const { dir, isRTL, t } = useLanguage();
 

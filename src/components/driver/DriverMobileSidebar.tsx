@@ -25,7 +25,7 @@ interface DriverMobileSidebarProps {
 }
 
 export default function DriverMobileSidebar({ isOpen, onClose }: DriverMobileSidebarProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const { currentUser, userRole, drivers, bookings, signOut } = useApp();
   const { dir, isRTL, t } = useLanguage();
 

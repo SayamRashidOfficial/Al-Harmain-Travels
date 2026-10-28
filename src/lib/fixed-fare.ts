@@ -20,6 +20,7 @@ import type {
   RateServiceType,
   RateRoute,
   RateTerminal,
+  LocationPoint,
 } from '@/types';
 
 // ─── Canonical Rate Table ──────────────────────────────────────────────────
@@ -138,6 +139,74 @@ export const CANONICAL_RATE_TERMINALS: RateTerminal[] = [
   { id: 'all_terminals', name: 'All Terminals', code: 'all_terminals', route_id: 'intercity_jeddah_makkah', description: 'Uniform fare for all KAIA terminals', is_active: true, display_order: 4 },
 ];
 
+/**
+ * Standard King Abdulaziz International Airport (KAIA) Terminal pickup locations.
+ * Includes precise GPS coordinates and official Saudi address strings for Google Maps.
+ */
+export const JEDDAH_AIRPORT_TERMINAL_LOCATIONS: Record<string, LocationPoint> = {
+  terminal_1: {
+    address: 'King Abdulaziz International Airport - Terminal 1, Jeddah',
+    latitude: 21.6826,
+    longitude: 39.1564,
+    placeId: 'jed-airport-t1',
+  },
+  terminal_h: {
+    address: 'King Abdulaziz International Airport - Terminal H (Hajj & Umrah), Jeddah',
+    latitude: 21.6980,
+    longitude: 39.1610,
+    placeId: 'jed-airport-hajj',
+  },
+  terminal_n: {
+    address: 'King Abdulaziz International Airport - North Terminal, Jeddah',
+    latitude: 21.7058,
+    longitude: 39.1481,
+    placeId: 'jed-airport-north',
+  },
+  all_terminals: {
+    address: 'King Abdulaziz International Airport (KAIA), Jeddah',
+    latitude: 21.6826,
+    longitude: 39.1564,
+    placeId: 'jed-airport-t1',
+  },
+};
+
+/**
+ * Resolves the official pickup LocationPoint for an airport terminal.
+ * Supports standard codes ('terminal_1', 'terminal_h', 'terminal_n') as well as
+ * dynamic rateTerminals configured in the Admin Rate Master.
+ */
+export function getAirportTerminalLocation(
+  terminalCode: TerminalCode | string | null,
+  rateTerminals?: RateTerminal[]
+): LocationPoint | null {
+  if (!terminalCode) return null;
+  const normalized = String(terminalCode).toLowerCase().trim();
+
+  if (JEDDAH_AIRPORT_TERMINAL_LOCATIONS[normalized]) {
+    return { ...JEDDAH_AIRPORT_TERMINAL_LOCATIONS[normalized] };
+  }
+
+  // Check dynamic rate terminals
+  if (rateTerminals && rateTerminals.length > 0) {
+    const matched = rateTerminals.find(
+      (t) => t.code?.toLowerCase() === normalized || t.id?.toLowerCase() === normalized
+    );
+    if (matched) {
+      if (JEDDAH_AIRPORT_TERMINAL_LOCATIONS[matched.code]) {
+        return { ...JEDDAH_AIRPORT_TERMINAL_LOCATIONS[matched.code] };
+      }
+      return {
+        address: `${matched.name}, King Abdulaziz International Airport, Jeddah`,
+        latitude: 21.6826,
+        longitude: 39.1564,
+        placeId: `terminal-${matched.code || matched.id}`,
+      };
+    }
+  }
+
+  return null;
+}
+
 /** Services that require an airport terminal selection */
 export const TERMINAL_REQUIRED_SERVICES: ServiceType[] = [
   'intercity_jeddah_makkah',
@@ -179,6 +248,58 @@ export function isAirportRoute(serviceType: string, rateRoutes?: RateRoute[]): b
     return true;
   }
   return false;
+}
+
+export type AirportTerminalTarget = 'pickup' | 'destination' | null;
+
+/**
+ * Determines whether the airport terminal serves as the pickup location (origin)
+ * or destination for a given service route.
+ * E.g.:
+ * - Jeddah → Makkah: airport is PICKUP (arrival terminal)
+ * - Makkah → Jeddah: airport is DESTINATION (departure terminal)
+ */
+export function getAirportTerminalTarget(
+  serviceType: string | null | undefined,
+  rateRoutes?: RateRoute[]
+): AirportTerminalTarget {
+  if (!serviceType) return null;
+  if (!isAirportRoute(serviceType, rateRoutes)) return null;
+
+  // 1. Check live admin rateRoutes origin and destination names
+  if (rateRoutes && rateRoutes.length > 0) {
+    const matched = rateRoutes.find((r) => r.id === serviceType);
+    if (matched) {
+      const orig = (matched.origin_name || '').toLowerCase();
+      const dest = (matched.destination_name || '').toLowerCase();
+
+      const isOrigAirport = orig.includes('airport') || orig.includes('kaia') || orig.includes('matar') || orig.includes('terminal');
+      const isDestAirport = dest.includes('airport') || dest.includes('kaia') || dest.includes('matar') || dest.includes('terminal');
+
+      if (isDestAirport && !isOrigAirport) return 'destination';
+      if (isOrigAirport && !isDestAirport) return 'pickup';
+
+      // If both or neither explicitly contain airport keyword, check city orientation
+      if (dest.includes('jeddah') && !orig.includes('jeddah')) return 'destination';
+      if (orig.includes('jeddah') && !dest.includes('jeddah')) return 'pickup';
+    }
+  }
+
+  // 2. Canonical service types check
+  const lower = serviceType.toLowerCase().trim();
+  if (lower === 'intercity_makkah_jeddah') return 'destination';
+  if (lower === 'intercity_jeddah_makkah') return 'pickup';
+
+  // 3. Fallback based on naming patterns
+  if (lower.includes('to_jeddah') || lower.includes('to_airport') || lower.includes('makkah_to_jeddah')) {
+    return 'destination';
+  }
+  if (lower.includes('from_jeddah') || lower.includes('from_airport') || lower.includes('jeddah_to_')) {
+    return 'pickup';
+  }
+
+  // Default for airport routes: default to pickup
+  return 'pickup';
 }
 
 export interface RateConflictResult {
