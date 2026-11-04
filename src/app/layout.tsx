@@ -95,6 +95,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="auto" className="light">
       <head>
+        <meta name="msvalidate.01" content="4213E221CD0EABFB91B4A63482E36652" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
