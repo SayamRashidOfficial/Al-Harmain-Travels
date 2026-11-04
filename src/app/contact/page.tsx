@@ -66,7 +66,7 @@ export default function ContactPage() {
           {/* Contact Details & Office Locations */}
           <div className="lg:col-span-5 space-y-8">
             <div className="p-8 rounded-3xl bg-card border border-base space-y-6">
-              <h3 className="text-xl font-bold text-primary">Central Operations Hub</h3>
+              <h2 className="text-xl font-bold text-primary">Central Operations Hub</h2>
 
               <div className="space-y-4 text-sm">
                 <div className="flex items-start gap-3">
@@ -119,7 +119,7 @@ export default function ContactPage() {
 
             {/* Regional Branches */}
             <div className="p-8 rounded-3xl bg-card border border-base space-y-6">
-              <h3 className="text-xl font-bold text-primary">Our Regional Stations</h3>
+              <h2 className="text-xl font-bold text-primary">Our Regional Stations</h2>
               
               <div className="space-y-4 text-sm">
                 <div className="flex items-start gap-3">
@@ -164,7 +164,7 @@ export default function ContactPage() {
           {/* Interactive Form */}
           <div className="lg:col-span-7">
             <div className="p-8 sm:p-10 rounded-3xl bg-card border border-base shadow-2xl">
-              <h3 className="type-section-title !text-2xl mb-2">Send an Inquiry</h3>
+              <h2 className="type-section-title !text-2xl mb-2">Send an Inquiry</h2>
               <p className="text-muted text-xs sm:text-sm mb-6">
                 Fill out the form below. Our customer care desk responds swiftly to all inquiries and quotation requests.
               </p>
@@ -174,7 +174,7 @@ export default function ContactPage() {
                   <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 rounded-full flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
-                  <h4 className="text-xl font-bold text-primary">Inquiry Sent Successfully</h4>
+                  <h3 className="text-xl font-bold text-primary">Inquiry Sent Successfully</h3>
                   <p className="text-secondary text-xs max-w-md mx-auto">
                     We have received your message. Our operations team will reach out via WhatsApp or email shortly.
                   </p>

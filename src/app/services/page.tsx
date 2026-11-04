@@ -75,9 +75,9 @@ export default function ServicesPage() {
                 {/* Content */}
                 <div className="p-6 flex-1 flex flex-col justify-between space-y-5">
                   <div>
-                    <h3 className="text-xl font-bold text-primary group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">
+                    <h2 className="text-xl font-bold text-primary group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">
                       {service.title}
-                    </h3>
+                    </h2>
                     <p className="text-muted text-xs sm:text-sm mt-2 leading-relaxed">
                       {service.description}
                     </p>

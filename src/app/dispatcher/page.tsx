@@ -127,7 +127,7 @@ export default function DispatcherRadarPage() {
             <span className="text-xs uppercase font-bold text-emerald-600 dark:text-emerald-400">Operations Control</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
           </div>
-          <h2 className="type-page-title mt-1">Live Fleet Dispatch Radar</h2>
+          <h1 className="type-page-title mt-1">Live Fleet Dispatch Radar</h1>
           <p className="text-xs text-secondary">
             Real-time telemetry across Makkah, Madinah, and King Abdulaziz Airport corridors.
           </p>

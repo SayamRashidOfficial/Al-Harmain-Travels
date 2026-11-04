@@ -724,9 +724,9 @@ export default function HomePage() {
                             <Icon className={`w-4 h-4 text-amber-300 transition-transform duration-300 ease-out ${item.iconHoverClass}`} />
                           </div>
                           <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-[#0d2e23] tracking-tight leading-tight truncate transition-colors duration-200 group-hover/item:text-[#0b4736]">
+                            <p className="text-xs font-bold text-[#0d2e23] tracking-tight leading-tight truncate transition-colors duration-200 group-hover/item:text-[#0b4736]">
                               {item.title}
-                            </h4>
+                            </p>
                             <p className="text-[10.5px] xs:text-[11px] text-[#22362b] mt-0.5 truncate font-medium transition-colors duration-200 group-hover/item:text-[#0d2e23]">
                               {item.subtitle}
                             </p>
@@ -856,9 +856,9 @@ export default function HomePage() {
 
                         {/* Vehicle Title & Specs */}
                         <div className="space-y-1">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                          <h3 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
                             {car.name}
-                          </h4>
+                          </h3>
                           <p className="text-[11px] text-slate-700 font-semibold">
                             {car.capacity}
                           </p>
@@ -907,9 +907,9 @@ export default function HomePage() {
 
                         {/* Vehicle Title & Specs */}
                         <div className="space-y-1">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                          <h3 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
                             {car.name}
-                          </h4>
+                          </h3>
                           <p className="text-[11px] text-slate-700 font-semibold">
                             {car.capacity}
                           </p>

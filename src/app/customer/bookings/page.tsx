@@ -485,9 +485,9 @@ export default function CustomerBookingsPage() {
       {/* Title & Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-base p-4 sm:p-5 rounded-2xl shadow-lg">
         <div>
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-primary">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-primary">
             {t('bookings.title', 'My VIP Rides & Bookings')}
-          </h2>
+          </h1>
           <p className="text-xs text-muted mt-0.5">
             {t('bookings.subtitle', 'Track verification progress, driver assignments, and booking receipts.')}
           </p>

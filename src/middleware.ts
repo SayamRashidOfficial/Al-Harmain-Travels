@@ -27,8 +27,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(`https://${host}${pathname}${search}`, 301);
   }
 
-  // 3. Early return for search engine discovery assets (sitemap, robots)
-  if (pathname === '/sitemap.xml' || pathname === '/robots.txt') {
+  // 3. Early return for search engine discovery assets (sitemap, robots, verification files)
+  if (
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt' ||
+    pathname === '/BingSiteAuth.xml'
+  ) {
     return NextResponse.next();
   }
 
