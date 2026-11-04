@@ -125,7 +125,7 @@ export default function DispatcherNewBookingPage() {
 
   // ─── Vehicle & Passengers State ───────────────────────────────────────────
   const [selectedCategory, setSelectedCategory] = useState<VehicleCategory>('gmc');
-  const [passengerCount, setPassengerCount] = useState<number>(3);
+  const [passengerCount, setPassengerCount] = useState<number>(1);
 
   // ─── Travel Schedule State ────────────────────────────────────────────────
   const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled'>('immediate');

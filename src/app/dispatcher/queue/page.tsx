@@ -42,6 +42,7 @@ import {
   Layers,
   DollarSign,
   MessageSquare,
+  MessageCircle,
   Star,
   Building2,
   Copy,
@@ -50,10 +51,10 @@ import {
   Info,
   ExternalLink,
   Luggage,
-  Users,
   Banknote,
   Receipt,
   Calendar,
+  Loader2,
 } from 'lucide-react';
 import { TableSkeletonRows } from '@/components/ui/DataStateSkeletons';
 import { toast } from 'sonner';
@@ -332,11 +333,16 @@ export default function DispatcherQueuePage() {
     if (!rejectModalBooking) return;
     setIsRejecting(true);
     try {
-      await rejectBooking(rejectModalBooking.id, bookingRejectReason.trim());
+      const finalReason =
+        bookingRejectReason === 'other'
+          ? customRejectReason.trim() || 'Vehicle or route unavailable for requested schedule'
+          : bookingRejectReason.trim();
+      await rejectBooking(rejectModalBooking.id, finalReason);
       setRejectModalBooking(null);
-      toast.info(`Booking ${rejectModalBooking.booking_reference} rejected.`);
+      setCustomRejectReason('');
+      toast.info(`Booking ${rejectModalBooking.booking_reference} declined.`);
     } catch {
-      toast.error('Failed to reject booking.');
+      toast.error('Failed to decline booking.');
     } finally {
       setIsRejecting(false);
     }
@@ -899,17 +905,17 @@ export default function DispatcherQueuePage() {
           <table className="w-full text-left text-xs text-secondary border-collapse">
             <thead className="bg-surface/90 text-slate-800 uppercase font-bold text-[10.5px] tracking-wider border-b border-base sticky top-0 z-10 backdrop-blur-xs">
               <tr>
-                <th className="py-3.5 px-3.5 whitespace-nowrap">Booking Ref</th>
-                <th className="py-3.5 px-3.5 whitespace-nowrap">Customer</th>
+                <th className="py-3.5 px-3.5 whitespace-nowrap min-w-[190px]">Booking Ref</th>
+                <th className="py-3.5 px-3.5 whitespace-nowrap min-w-[185px]">Customer</th>
                 <th className="py-3.5 px-3.5 min-w-[210px]">Pickup Location</th>
                 <th className="py-3.5 px-3.5 min-w-[210px]">Destination</th>
                 <th className="py-3.5 px-3.5 whitespace-nowrap">Scheduled Date/Time</th>
-                <th className="py-3.5 px-3.5 whitespace-nowrap">Vehicle &amp; Pax</th>
+                <th className="py-3.5 px-3.5 whitespace-nowrap">Vehicle</th>
                 <th className="py-3.5 px-3.5 whitespace-nowrap text-right">Fare (SAR)</th>
                 <th className="py-3.5 px-3.5 whitespace-nowrap">Payment</th>
                 <th className="py-3.5 px-3.5 whitespace-nowrap">Ride Status</th>
                 <th className="py-3.5 px-3.5 whitespace-nowrap">Assigned Driver</th>
-                <th className="py-3.5 px-3.5 whitespace-nowrap text-center">Actions</th>
+                <th className="py-3.5 px-3.5 whitespace-nowrap text-center min-w-[180px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-base">
@@ -983,30 +989,32 @@ export default function DispatcherQueuePage() {
                       </td>
 
                       {/* 2. Customer & Contact */}
-                      <td className="py-3 px-3.5 align-top">
-                        <p className="font-bold text-primary truncate max-w-[140px]" title={b.passenger_name}>
+                      <td className="py-3 px-3.5 align-top min-w-[185px]">
+                        <p className="font-bold text-primary truncate max-w-[175px]" title={b.passenger_name}>
                           {b.passenger_name}
                         </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <a
-                            href={`tel:${b.passenger_phone}`}
-                            className="text-emerald-700 hover:text-emerald-800 hover:underline text-[11px] font-mono flex items-center gap-0.5"
-                            title="Call customer"
-                          >
-                            <PhoneCall className="w-3 h-3 text-emerald-600" />
-                            <span>{b.passenger_phone}</span>
-                          </a>
-                          <a
-                            href={`https://wa.me/${b.passenger_phone.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-emerald-700 hover:text-emerald-800 text-[10px] flex items-center gap-0.5 font-bold bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300 transition-colors"
-                            title="Chat on WhatsApp"
-                          >
-                            <MessageSquare className="w-2.5 h-2.5 text-emerald-600" />
-                            <span>WhatsApp</span>
-                          </a>
-                        </div>
+                        {b.passenger_phone ? (
+                          <div className="mt-1 flex items-center gap-1.5 whitespace-nowrap">
+                            <a
+                              href={`tel:${b.passenger_phone}`}
+                              className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-slate-800 hover:text-emerald-700 hover:underline transition-colors whitespace-nowrap shrink-0"
+                              title={`Call ${b.passenger_name} (${b.passenger_phone})`}
+                            >
+                              <PhoneCall className="w-3 h-3 text-emerald-600 shrink-0" />
+                              <span className="whitespace-nowrap tabular-nums">{b.passenger_phone}</span>
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(b.passenger_phone, 'Phone number')}
+                              className="text-muted hover:text-primary p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer"
+                              title="Copy phone number"
+                            >
+                              <Copy className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-muted italic mt-0.5">No phone provided</p>
+                        )}
                       </td>
 
                       {/* 3. Pickup Location */}
@@ -1102,15 +1110,11 @@ export default function DispatcherQueuePage() {
                         )}
                       </td>
 
-                      {/* 6. Vehicle & Pax */}
+                      {/* 6. Vehicle */}
                       <td className="py-3 px-3.5 whitespace-nowrap align-top">
                         <p className="font-bold text-primary truncate max-w-[150px]" title={vehicleDisplay}>
                           {vehicleDisplay}
                         </p>
-                        <div className="flex items-center gap-1 mt-0.5 text-secondary text-[11px]">
-                          <Users className="w-3 h-3 text-slate-500" />
-                          <span>{b.passenger_count || 1} Guests</span>
-                        </div>
                       </td>
 
                       {/* 7. Exact Fare in SAR */}
@@ -1183,96 +1187,123 @@ export default function DispatcherQueuePage() {
                       </td>
 
                       {/* 11. Actions */}
-                      <td className="py-3 px-3.5 whitespace-nowrap text-center align-top">
-                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                          {/* Primary Action: View Complete Booking Details Modal */}
+                      <td className="py-3 px-3.5 whitespace-nowrap text-center align-middle">
+                        <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                          {/* Primary Action: View Complete Booking Details Modal (Eye icon only) */}
                           <button
                             type="button"
                             onClick={() => setViewBookingModal(b)}
-                            className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-surface hover:bg-slate-200 text-slate-800 border border-base shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+                            className="p-1.5 rounded-xl bg-surface hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-base shadow-xs transition-colors flex items-center justify-center cursor-pointer shrink-0"
                             title="View complete booking details"
+                            aria-label="View complete booking details"
                           >
-                            <Eye className="w-3.5 h-3.5 text-slate-600" />
-                            <span>Details</span>
+                            <Eye className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                           </button>
 
-                          {/* Contextual Action: Custom Route Quote */}
+                          {/* Contextual Action: Custom Route Quote & Decline */}
                           {b.status === 'pending_review' && (
-                            <div className="flex items-center gap-1">
+                            <>
                               <button
+                                type="button"
                                 onClick={() => {
                                   setQuoteModalBooking(b);
                                   setQuoteFareAmount(b.confirmed_fare ? String(b.confirmed_fare) : '');
                                   setQuoteNotes(b.dispatcher_notes || '');
                                 }}
-                                className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow transition-all flex items-center gap-1 cursor-pointer"
+                                className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0"
                                 title="Set Custom Fare & Confirm"
                               >
-                                <DollarSign className="w-3 h-3" /> Quote
+                                <DollarSign className="w-3.5 h-3.5 shrink-0" />
+                                <span>Quote</span>
                               </button>
                               <button
+                                type="button"
                                 onClick={() => {
                                   setRejectModalBooking(b);
                                   setBookingRejectReason('Vehicle or route unavailable for requested schedule');
+                                  setCustomRejectReason('');
                                 }}
-                                className="px-2 py-1 rounded-xl text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 transition-colors flex items-center gap-1 cursor-pointer"
+                                className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0"
                                 title="Decline / Reject Custom Booking"
                               >
-                                <XCircle className="w-3 h-3" />
+                                <XCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                                <span>Decline</span>
                               </button>
-                            </div>
+                            </>
                           )}
 
-                          {/* Contextual Action: Payment Verification */}
+                          {/* Contextual Action: Payment Verification & Reject */}
                           {b.status === 'pending_verification' && (
-                            <button
-                              onClick={() => {
-                                setVerifyModalBooking(b);
-                                setShowRejectForm(false);
-                              }}
-                              className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow transition-colors flex items-center gap-1 cursor-pointer"
-                              title="Verify or Reject Payment Proof"
-                            >
-                              <ShieldAlert className="w-3 h-3" /> Review
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setVerifyModalBooking(b);
+                                  setShowRejectForm(false);
+                                }}
+                                className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                                title="Review & Verify Payment Proof"
+                              >
+                                <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                                <span>Review</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setVerifyModalBooking(b);
+                                  setShowRejectForm(true);
+                                }}
+                                className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                                title="Reject Payment Proof"
+                              >
+                                <XCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                                <span>Reject</span>
+                              </button>
+                            </>
                           )}
 
                           {/* Contextual Action: Driver Assignment */}
                           {b.status === 'confirmed' && (
-                            <div className="flex items-center gap-1">
+                            <>
                               <button
+                                type="button"
                                 onClick={() => {
                                   setAssignModalBooking(b);
                                   setIsReassignMode(false);
                                   setSelectedDriverId(activeFleetDrivers[0]?.id || '');
                                 }}
-                                className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition-colors flex items-center gap-1 cursor-pointer"
+                                className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0"
                                 title="Assign an available driver"
                               >
-                                <UserCheck className="w-3 h-3" /> Assign
+                                <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                                <span>Assign</span>
                               </button>
                               <button
+                                type="button"
                                 onClick={() => autoAssignDriver(b.id)}
-                                className="p-1 rounded-xl text-[11px] bg-surface hover:bg-amber-500 hover:text-slate-950 text-amber-600 border border-base transition-colors cursor-pointer"
+                                className="px-2 py-1 rounded-xl text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 hover:border-amber-300 shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0"
                                 title="Auto-match nearest available driver"
                               >
-                                <Zap className="w-3.5 h-3.5" />
+                                <Zap className="w-3.5 h-3.5 shrink-0 text-amber-600 fill-amber-500/20" />
+                                <span>Auto</span>
                               </button>
-                            </div>
+                            </>
                           )}
 
                           {/* Contextual Action: Driver Reassignment */}
                           {b.status === 'driver_assigned' && (
                             <button
+                              type="button"
                               onClick={() => {
                                 setAssignModalBooking(b);
                                 setIsReassignMode(true);
                                 setSelectedDriverId(activeFleetDrivers[0]?.id || '');
                               }}
-                              className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-card hover:bg-surface border border-base text-secondary hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-card hover:bg-surface border border-base text-secondary hover:text-primary transition-all flex items-center gap-1 cursor-pointer shadow-xs shrink-0"
                               title="Reassign to a different chauffeur"
                             >
-                              <RefreshCw className="w-3 h-3 text-cyan-600" /> Reassign
+                              <RefreshCw className="w-3.5 h-3.5 shrink-0 text-cyan-600" />
+                              <span>Reassign</span>
                             </button>
                           )}
 
@@ -1285,10 +1316,10 @@ export default function DispatcherQueuePage() {
                                   <button
                                     type="button"
                                     onClick={() => setSelectedReviewBooking({ booking: b, rating: bRating })}
-                                    className="px-2 py-0.5 rounded-xl text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 transition-colors cursor-pointer"
+                                    className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 hover:border-amber-300 flex items-center gap-1 transition-all cursor-pointer shadow-xs shrink-0"
                                     title="Click to view passenger review"
                                   >
-                                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                                    <Star className="w-3.5 h-3.5 shrink-0 fill-amber-500 text-amber-500" />
                                     <span>{bRating.rating}.0 ★</span>
                                   </button>
                                 );
@@ -1437,10 +1468,11 @@ export default function DispatcherQueuePage() {
                       <span className="text-muted block text-[11px]">Primary Phone</span>
                       <a
                         href={`tel:${b.passenger_phone}`}
-                        className="text-emerald-700 hover:underline font-mono font-bold block mt-0.5 flex items-center gap-1"
+                        className="text-emerald-700 hover:underline font-mono font-bold mt-0.5 inline-flex items-center gap-1.5 whitespace-nowrap"
+                        title="Click to call"
                       >
-                        <PhoneCall className="w-3.5 h-3.5 text-emerald-600" />
-                        {b.passenger_phone}
+                        <PhoneCall className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="whitespace-nowrap tabular-nums">{b.passenger_phone}</span>
                       </a>
                     </div>
                     <div>
@@ -1449,9 +1481,9 @@ export default function DispatcherQueuePage() {
                         href={`https://wa.me/${b.passenger_phone.replace(/[^0-9]/g, '')}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 mt-0.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-[11px] shadow-xs transition-colors"
+                        className="inline-flex items-center gap-1.5 mt-0.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-[11px] shadow-xs transition-colors whitespace-nowrap shrink-0"
                       >
-                        <MessageSquare className="w-3 h-3" />
+                        <MessageCircle className="w-3.5 h-3.5 shrink-0" />
                         Open WhatsApp
                       </a>
                     </div>
@@ -1873,18 +1905,35 @@ export default function DispatcherQueuePage() {
                   )}
 
                   {b.status === 'pending_review' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewBookingModal(null);
-                        setQuoteModalBooking(b);
-                        setQuoteFareAmount(b.confirmed_fare ? String(b.confirmed_fare) : '');
-                        setQuoteNotes(b.dispatcher_notes || '');
-                      }}
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5"
-                    >
-                      <DollarSign className="w-4 h-4" /> Quote Fare
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewBookingModal(null);
+                          setRejectModalBooking(b);
+                          setBookingRejectReason('Vehicle or route unavailable for requested schedule');
+                          setCustomRejectReason('');
+                        }}
+                        className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                        title="Decline / Reject Custom Booking"
+                      >
+                        <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>Decline Request</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewBookingModal(null);
+                          setQuoteModalBooking(b);
+                          setQuoteFareAmount(b.confirmed_fare ? String(b.confirmed_fare) : '');
+                          setQuoteNotes(b.dispatcher_notes || '');
+                        }}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <DollarSign className="w-4 h-4 shrink-0" />
+                        <span>Quote Fare</span>
+                      </button>
+                    </>
                   )}
 
                   {b.status === 'confirmed' && (
@@ -2534,18 +2583,20 @@ export default function DispatcherQueuePage() {
                 <div className="flex items-center gap-2">
                   <a
                     href={`tel:${quoteModalBooking.passenger_phone}`}
-                    className="text-emerald-700 hover:underline flex items-center gap-1 font-mono text-[11px]"
+                    className="text-emerald-700 hover:underline inline-flex items-center gap-1 font-mono text-[11px] whitespace-nowrap"
+                    title="Click to call"
                   >
-                    <PhoneCall className="w-3 h-3" />
-                    <span>{quoteModalBooking.passenger_phone}</span>
+                    <PhoneCall className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span className="whitespace-nowrap tabular-nums">{quoteModalBooking.passenger_phone}</span>
                   </a>
                   <a
                     href={`https://wa.me/${quoteModalBooking.passenger_phone.replace(/[^0-9]/g, '')}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold flex items-center gap-1 hover:bg-emerald-100"
+                    className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold inline-flex items-center gap-1 hover:bg-emerald-100 whitespace-nowrap shrink-0 transition-colors"
+                    title="Chat on WhatsApp"
                   >
-                    <MessageSquare className="w-2.5 h-2.5" />
+                    <MessageCircle className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
                     <span>WhatsApp</span>
                   </a>
                 </div>
@@ -2605,22 +2656,48 @@ export default function DispatcherQueuePage() {
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-base">
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-base">
               <button
                 type="button"
-                onClick={() => setQuoteModalBooking(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-surface text-secondary hover:text-primary transition-colors cursor-pointer"
+                onClick={() => {
+                  const currentBooking = quoteModalBooking;
+                  setQuoteModalBooking(null);
+                  setRejectModalBooking(currentBooking);
+                  setBookingRejectReason('Vehicle or route unavailable for requested schedule');
+                  setCustomRejectReason('');
+                }}
+                className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 cursor-pointer"
+                title="Decline / Reject this booking request instead"
               >
-                Cancel
+                <XCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>Decline request instead</span>
               </button>
-              <button
-                type="submit"
-                disabled={isQuoting}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg disabled:opacity-50 flex items-center gap-1.5 transition-all cursor-pointer"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{isQuoting ? 'Confirming...' : 'Confirm Fare & Release Quote'}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQuoteModalBooking(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-surface text-secondary hover:text-primary transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isQuoting}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg disabled:opacity-50 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  {isQuoting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      <span>Confirming...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>Confirm Fare &amp; Release Quote</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -2630,31 +2707,36 @@ export default function DispatcherQueuePage() {
       {/* 7. REJECT CUSTOM BOOKING MODAL                                           */}
       {/* ────────────────────────────────────────────────────────────────────────── */}
       {rejectModalBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleRejectBookingSubmit}
             className="bg-card border border-base rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl"
           >
             <div className="flex items-center justify-between border-b border-base pb-3">
-              <div className="flex items-center gap-2">
-                <XCircle className="w-5 h-5 text-rose-600" />
-                <h3 className="type-card-title">Decline Custom Booking Request</h3>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                  <XCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="type-card-title text-slate-900 font-bold">Decline / Reject Booking</h3>
+                  <p className="text-[11px] text-muted">Decline this custom booking request with an explanation</p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setRejectModalBooking(null)}
-                className="text-muted hover:text-primary transition-colors cursor-pointer"
+                className="text-muted hover:text-primary transition-colors cursor-pointer p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="bg-surface p-3 rounded-xl border border-base text-xs space-y-1">
-              <div>
+              <div className="flex items-center justify-between">
                 <span className="text-muted">Booking Reference: </span>
                 <span className="font-mono font-bold text-amber-950">{rejectModalBooking.booking_reference}</span>
               </div>
-              <div>
+              <div className="flex items-center justify-between">
                 <span className="text-muted">Passenger: </span>
                 <span className="font-bold text-primary">{rejectModalBooking.passenger_name}</span>
               </div>
@@ -2672,23 +2754,48 @@ export default function DispatcherQueuePage() {
                 <option value="Customer requested cancellation via phone/WhatsApp">Customer requested cancellation via phone/WhatsApp</option>
                 <option value="Fare could not be agreed upon with customer">Fare could not be agreed upon with customer</option>
                 <option value="Duplicate or test booking request">Duplicate or test booking request</option>
+                <option value="other">Other reason (specify below)</option>
               </select>
             </div>
+
+            {bookingRejectReason === 'other' && (
+              <div className="space-y-1 text-xs">
+                <label className="font-semibold text-secondary">Specific Reason</label>
+                <input
+                  type="text"
+                  required
+                  value={customRejectReason}
+                  onChange={(e) => setCustomRejectReason(e.target.value)}
+                  placeholder="Enter specific reason for declining..."
+                  className="w-full bg-input border border-base rounded-xl px-3 py-2 text-xs text-primary focus:outline-none focus:border-rose-500"
+                />
+              </div>
+            )}
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-base">
               <button
                 type="button"
                 onClick={() => setRejectModalBooking(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-surface text-secondary hover:text-primary cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-surface text-secondary hover:text-primary transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isRejecting}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow disabled:opacity-50 cursor-pointer"
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md disabled:opacity-50 flex items-center gap-1.5 transition-all cursor-pointer"
               >
-                {isRejecting ? 'Declining...' : 'Decline Booking'}
+                {isRejecting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    <span>Declining...</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4 shrink-0" />
+                    <span>Decline Booking</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

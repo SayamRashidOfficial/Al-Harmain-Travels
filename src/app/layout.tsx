@@ -20,9 +20,16 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Al Harmain Travels — Premium Taxi & Umrah Booking',
+  metadataBase: new URL('https://alharmaintravels.com'),
+  title: {
+    default: 'Al Harmain Travels — Premium Taxi & Umrah Booking',
+    template: '%s | Al Harmain Travels',
+  },
   description:
     'VIP chauffeur transfers across Makkah, Madinah, and Jeddah. Book airport pickups, Haram transfers, and pilgrimage journeys in minutes.',
+  alternates: {
+    canonical: 'https://alharmaintravels.com',
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -38,6 +45,45 @@ export const metadata: Metadata = {
     ],
     shortcut: '/logo.png',
     apple: '/logo.png',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://alharmaintravels.com',
+    siteName: 'Al Harmain Travels',
+    title: 'Al Harmain Travels — Premium Taxi & Umrah Booking',
+    description:
+      'VIP chauffeur transfers across Makkah, Madinah, and Jeddah. Book airport pickups, Haram transfers, and pilgrimage journeys in minutes.',
+    images: [
+      {
+        url: '/images/hero_kaaba.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Al Harmain Travels VIP Chauffeur Fleet in Saudi Arabia',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Al Harmain Travels — Premium Taxi & Umrah Booking',
+    description:
+      'VIP chauffeur transfers across Makkah, Madinah, and Jeddah. Book airport pickups, Haram transfers, and pilgrimage journeys in minutes.',
+    images: ['/images/hero_kaaba.jpg'],
+  },
+  // Explicitly permit search engine crawling for all public-facing pages.
+  // Private portal layouts (admin, dispatcher, driver, customer) each
+  // override this with robots: { index: false, follow: false }.
+  robots: {
+    index: true,
+    follow: true,
+    nocache: false,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 

@@ -302,7 +302,7 @@ export default function CustomerHomePage() {
   // Additional Passenger Details & Schedule
   const [passengerName, setPassengerName] = useState<string>(currentUser.full_name || 'Al Harmain Guest');
   const [passengerPhone, setPassengerPhone] = useState<string>(currentUser.phone || '');
-  const [passengerCount, setPassengerCount] = useState<number>(3);
+  const [passengerCount, setPassengerCount] = useState<number>(1);
   const [bookingType, setBookingType] = useState<BookingType>('scheduled');
   const [customBookingType, setCustomBookingType] = useState<BookingType>('scheduled');
   const [journeyDate, setJourneyDate] = useState<string>(() => getSaudiCurrentDateString());
