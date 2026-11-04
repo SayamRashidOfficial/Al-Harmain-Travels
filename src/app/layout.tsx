@@ -6,6 +6,7 @@ import { LanguageProvider } from '@/context/LanguageContext';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AuthRecoveryListener from '@/components/auth/AuthRecoveryListener';
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { Toaster } from 'sonner';
 
 export const viewport: Viewport = {
@@ -100,6 +101,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body suppressHydrationWarning className="min-h-screen flex flex-col antialiased selection:bg-emerald-500 selection:text-white bg-[var(--background)] text-[var(--foreground)] font-sans text-body">
+        <GoogleAnalytics />
         <AppProvider>
           <ThemeProvider>
             <LanguageProvider>

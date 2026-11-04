@@ -24,6 +24,7 @@ import {
 import { VehicleType } from '@/types';
 import { useApp } from '@/context/AppContext';
 import CinematicTexture from '@/components/cinematic/CinematicTexture';
+import { trackBookNowClick, trackBookingStarted } from '@/lib/analytics';
 
 interface FleetOption {
   type: VehicleType;
@@ -151,6 +152,15 @@ export default function PublicBookingPage() {
   // Submit Handler: seamlessly links with the customer planner
   const handleSubmitBooking = (e: React.FormEvent) => {
     e.preventDefault();
+    trackBookNowClick({
+      location: 'booking_page_form',
+      label: 'Proceed to Customer Booking',
+      vehicle_type: selectedVehicle,
+    });
+    trackBookingStarted({
+      vehicle_type: selectedVehicle,
+      booking_method: 'booking_page',
+    });
     try {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(

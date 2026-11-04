@@ -238,7 +238,7 @@ export default function IntroAnimation() {
               })}
             </span>
           ))}
-        </h1>
+        </h2>
 
         {/* Elegant Tagline */}
         <div className="intro-tagline">

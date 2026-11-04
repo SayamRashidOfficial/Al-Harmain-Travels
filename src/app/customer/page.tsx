@@ -94,6 +94,7 @@ import {
   Star,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { trackBookingStarted, trackBookingSubmitted } from '@/lib/analytics';
 
 // Dynamically import BookingMap with SSR disabled (Leaflet requires window)
 const BookingMap = dynamic(() => import('@/components/map/BookingMap'), {
@@ -724,6 +725,10 @@ export default function CustomerHomePage() {
 
   // Service selection → advance to route step
   const handleServiceSelect = (service: ServiceType) => {
+    trackBookingStarted({
+      service_type: service,
+      booking_method: 'fixed',
+    });
     setSelectedService(service);
     setSelectedTerminal(null);
     setSelectedVehicle(null);
@@ -908,6 +913,15 @@ export default function CustomerHomePage() {
 
       setConfirmedBookingRef(booking.booking_reference);
       setBookingStep('submitted');
+      trackBookingSubmitted({
+        booking_reference: booking.booking_reference,
+        service_type: selectedService,
+        vehicle_category: selectedVehicle,
+        booking_type: bookingType,
+        booking_method: 'fixed',
+        total_fare: fareData?.fare,
+        currency: 'SAR',
+      });
       toast.success(`Booking ${booking.booking_reference} submitted for payment verification!`);
     } catch {
       toast.dismiss('booking-upload');
@@ -1087,6 +1101,14 @@ export default function CustomerHomePage() {
       });
 
       setCustomConfirmedRef(booking.booking_reference);
+      trackBookingSubmitted({
+        booking_reference: booking.booking_reference,
+        service_type: 'custom_route',
+        vehicle_category: selectedCustomVehicle,
+        booking_type: customBookingType,
+        booking_method: 'custom',
+        currency: 'SAR',
+      });
       toast.success(`Custom booking ${booking.booking_reference} submitted for dispatcher review!`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to submit custom booking request.');
@@ -1230,7 +1252,13 @@ export default function CustomerHomePage() {
 
         <button
           type="button"
-          onClick={() => setBookingMethod('custom')}
+          onClick={() => {
+            setBookingMethod('custom');
+            trackBookingStarted({
+              service_type: 'custom_route',
+              booking_method: 'custom',
+            });
+          }}
           className={`p-2.5 sm:p-3 rounded-lg border text-left rtl:text-right transition-all flex items-start gap-2.5 cursor-pointer ${bookingMethod === 'custom'
               ? 'bg-gradient-to-r from-amber-500/15 to-amber-500/5 border-amber-500/50 shadow-sm text-primary'
               : 'bg-surface/50 border-transparent hover:bg-surface text-secondary hover:text-primary'

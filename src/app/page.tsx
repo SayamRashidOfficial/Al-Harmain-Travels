@@ -23,6 +23,7 @@ import CinematicDestinations from '@/components/cinematic/CinematicDestinations'
 import CinematicTexture from '@/components/cinematic/CinematicTexture';
 import IntroAnimation from '@/components/intro/IntroAnimation';
 import AlHarmainStandard from '@/components/home/AlHarmainStandard';
+import { trackBookNowClick, trackBookingStarted } from '@/lib/analytics';
 
 /* ── Vehicle Fleet Data ── */
 interface VehicleFleetItem {
@@ -324,6 +325,15 @@ export default function HomePage() {
   // Booking Submit Handler: Preserves existing booking logic, sessionStorage, and /customer route
   const handlePlanJourneySubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    trackBookNowClick({
+      location: 'home_floating_booking_bar',
+      label: 'Find My Ride',
+      vehicle_type: selectedVehicle,
+    });
+    trackBookingStarted({
+      vehicle_type: selectedVehicle,
+      booking_method: 'homepage_planner',
+    });
     try {
       if (typeof window !== 'undefined') {
         const passengerCount = parseInt(passengers, 10) || 3;
@@ -428,6 +438,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => {
+                  trackBookNowClick({ location: 'hero_plan_journey', label: 'Plan Your Journey' });
                   const el = document.getElementById('booking-form');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}

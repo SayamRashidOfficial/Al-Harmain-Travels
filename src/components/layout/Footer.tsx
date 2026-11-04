@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import CinematicTexture from '@/components/cinematic/CinematicTexture';
 import BrandLogo from '@/components/ui/BrandLogo';
+import { trackBookNowClick } from '@/lib/analytics';
 
 export default function Footer() {
   const pathname = usePathname() || '';
@@ -207,6 +208,11 @@ export default function Footer() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
+                    onClick={() => {
+                      if (link.href === '/customer') {
+                        trackBookNowClick({ location: 'footer', label: link.label });
+                      }
+                    }}
                     className="text-emerald-100/75 hover:text-white hover:translate-x-1 inline-flex items-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
                   >
                     {link.label}
