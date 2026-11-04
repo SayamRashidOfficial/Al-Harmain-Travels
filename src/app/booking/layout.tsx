@@ -17,10 +17,11 @@ export const metadata: Metadata = {
       'Reserve private luxury chauffeur transfers across Makkah, Madinah, and Jeddah. Airport pickups, Haram executive transfers, and pilgrimage journeys in premium GMC Yukon, Camry, and VIP Vans.',
     images: [
       {
-        url: '/images/hero_kaaba.jpg',
+        url: 'https://alharmaintravels.com/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Al Harmain Travels VIP Booking',
+        alt: 'Book VIP Chauffeur & Umrah Taxi Transfers — Al Harmain Travels',
+        type: 'image/jpeg',
       },
     ],
   },
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
     title: 'Book VIP Chauffeur & Umrah Taxi Transfers | Al Harmain Travels',
     description:
       'Reserve private luxury chauffeur transfers across Makkah, Madinah, and Jeddah. Airport pickups, Haram executive transfers, and pilgrimage journeys in premium GMC Yukon, Camry, and VIP Vans.',
-    images: ['/images/hero_kaaba.jpg'],
+    images: ['https://alharmaintravels.com/og-image.jpg'],
   },
   robots: {
     index: true,

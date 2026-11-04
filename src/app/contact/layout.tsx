@@ -17,10 +17,11 @@ export const metadata: Metadata = {
       'Get in touch with Al Harmain Travels 24/7 VIP concierge. Reach our dispatch headquarters for bespoke Umrah transfers, fleet inquiries, and booking assistance.',
     images: [
       {
-        url: '/images/dest_makkah.jpg',
+        url: 'https://alharmaintravels.com/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Contact Al Harmain Travels VIP Concierge',
+        alt: 'Contact Al Harmain Travels 24/7 VIP Concierge & Support',
+        type: 'image/jpeg',
       },
     ],
   },
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
     title: 'Contact Support & Booking Inquiries | Al Harmain Travels',
     description:
       'Get in touch with Al Harmain Travels 24/7 VIP concierge. Reach our dispatch headquarters for bespoke Umrah transfers, fleet inquiries, and booking assistance.',
-    images: ['/images/dest_makkah.jpg'],
+    images: ['https://alharmaintravels.com/og-image.jpg'],
   },
   robots: {
     index: true,

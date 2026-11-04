@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Al Harmain',
+    title: 'Al Harmain Travels',
   },
   formatDetection: {
     telephone: true,
@@ -57,10 +57,11 @@ export const metadata: Metadata = {
       'VIP chauffeur transfers across Makkah, Madinah, and Jeddah. Book airport pickups, Haram transfers, and pilgrimage journeys in minutes.',
     images: [
       {
-        url: '/images/hero_kaaba.jpg',
+        url: 'https://alharmaintravels.com/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Al Harmain Travels VIP Chauffeur Fleet in Saudi Arabia',
+        alt: 'Al Harmain Travels — Premium VIP Chauffeur & Umrah Taxi Transfers',
+        type: 'image/jpeg',
       },
     ],
   },
@@ -69,7 +70,7 @@ export const metadata: Metadata = {
     title: 'Al Harmain Travels — Premium Taxi & Umrah Booking',
     description:
       'VIP chauffeur transfers across Makkah, Madinah, and Jeddah. Book airport pickups, Haram transfers, and pilgrimage journeys in minutes.',
-    images: ['/images/hero_kaaba.jpg'],
+    images: ['https://alharmaintravels.com/og-image.jpg'],
   },
   // Explicitly permit search engine crawling for all public-facing pages.
   // Private portal layouts (admin, dispatcher, driver, customer) each

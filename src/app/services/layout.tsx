@@ -17,10 +17,11 @@ export const metadata: Metadata = {
       'Explore Al Harmain Travels VIP chauffeur packages, luxury GMC Yukon & sedan fleet, intercity transfers between Makkah, Madinah, and Jeddah airport pickups.',
     images: [
       {
-        url: '/images/fleet_yukon.jpg',
+        url: 'https://alharmaintravels.com/og-image.jpg',
         width: 1200,
         height: 630,
         alt: 'Al Harmain Travels Luxury Vehicle Fleet & Chauffeur Services',
+        type: 'image/jpeg',
       },
     ],
   },
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
     title: 'Chauffeur & Umrah Services, Luxury Fleet | Al Harmain Travels',
     description:
       'Explore Al Harmain Travels VIP chauffeur packages, luxury GMC Yukon & sedan fleet, intercity transfers between Makkah, Madinah, and Jeddah airport pickups.',
-    images: ['/images/fleet_yukon.jpg'],
+    images: ['https://alharmaintravels.com/og-image.jpg'],
   },
   robots: {
     index: true,

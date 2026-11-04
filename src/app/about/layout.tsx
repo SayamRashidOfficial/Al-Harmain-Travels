@@ -17,10 +17,11 @@ export const metadata: Metadata = {
       'Discover the legacy, mission, and luxury chauffeur standards of Al Harmain Travels. Premium Umrah and executive pilgrimage transfers across Saudi Arabia.',
     images: [
       {
-        url: '/images/dest_madinah.jpg',
+        url: 'https://alharmaintravels.com/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Al Harmain Travels Heritage & Fleet',
+        alt: 'About Al Harmain Travels — Luxury VIP Pilgrimage Transfers',
+        type: 'image/jpeg',
       },
     ],
   },
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
     title: 'About Us | Al Harmain Travels',
     description:
       'Discover the legacy, mission, and luxury chauffeur standards of Al Harmain Travels. Premium Umrah and executive pilgrimage transfers across Saudi Arabia.',
-    images: ['/images/dest_madinah.jpg'],
+    images: ['https://alharmaintravels.com/og-image.jpg'],
   },
   robots: {
     index: true,
