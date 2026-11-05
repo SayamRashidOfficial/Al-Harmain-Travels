@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -230,109 +230,118 @@ export default function CinematicDestinations({
         }
       });
 
-      // Create Scrubbed Timeline:
-      // Total scroll distance = 100vh per transition + outro
+      // Create Scrubbed Timeline with Generous Holds so slides never rush past
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: containerRef.current,
           start: 'top top',
           end: 'bottom bottom',
           pin: stageRef.current,
-          scrub: 1.0, // Smooth lag
+          scrub: 1.6, // Soft, luxurious, relaxing scrub response
           anticipatePin: 1,
           onUpdate: (self) => {
             const p = self.progress;
             setScrollProgress(p);
             if (p > 0.02) setHasScrolled(true);
 
-            // Determine active panel index (0, 1, 2, or 3 for outro)
-            const panelStep = 1 / (totalPanels + 0.5);
-            const activeIdx = Math.min(Math.floor(p / panelStep), totalPanels - 1);
+            // Determine active panel index (0: Makkah, 1: Madinah, 2: Jeddah, 3: Outro)
+            let activeIdx = 0;
+            if (p >= 0.84) {
+              activeIdx = 3;
+            } else if (p >= 0.54) {
+              activeIdx = 2;
+            } else if (p >= 0.23) {
+              activeIdx = 1;
+            } else {
+              activeIdx = 0;
+            }
             setActivePanelIndex(activeIdx);
           },
         },
       });
 
-      // Easing: cubic-bezier(0.76, 0, 0.24, 1) or power2.inOut
-      const easeCurve = 'power2.inOut';
+      // Easing: soft power1.inOut curve for gentle, gradual transitions without sudden jerks
+      const easeCurve = 'power1.inOut';
 
-      // ── WIPE 1: Makkah -> Madinah ──
+      // ── WIPE 1: Makkah -> Madinah (with relaxed hold pause at start) ──
       tl.to(
         titles[0],
-        { yPercent: -40, opacity: 0, duration: 0.5, ease: 'power2.in' },
-        0.15
+        { yPercent: -40, opacity: 0, duration: 0.55, ease: 'power1.in' },
+        0.90
       );
       tl.to(
         images[0],
-        { yPercent: -12, scale: 1.08, duration: 1.0, ease: easeCurve },
-        0.2
+        { yPercent: -12, scale: 1.08, duration: 1.2, ease: easeCurve },
+        0.90
       );
       tl.to(
         panels[1],
-        { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.0, ease: easeCurve },
-        0.2
+        { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.2, ease: easeCurve },
+        0.90
       );
       tl.to(
         images[1],
-        { scale: 1.0, duration: 1.0, ease: easeCurve },
-        0.2
+        { scale: 1.0, duration: 1.2, ease: easeCurve },
+        0.90
       );
       tl.to(
         titles[1],
-        { yPercent: 0, opacity: 1, duration: 0.6, ease: 'power2.out' },
-        0.45
-      );
-
-      // ── WIPE 2: Madinah -> Jeddah ──
-      tl.to(
-        titles[1],
-        { yPercent: -40, opacity: 0, duration: 0.5, ease: 'power2.in' },
-        1.15
-      );
-      tl.to(
-        images[1],
-        { yPercent: -12, scale: 1.08, duration: 1.0, ease: easeCurve },
-        1.2
-      );
-      tl.to(
-        panels[2],
-        { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.0, ease: easeCurve },
-        1.2
-      );
-      tl.to(
-        images[2],
-        { scale: 1.0, duration: 1.0, ease: easeCurve },
-        1.2
-      );
-      tl.to(
-        titles[2],
-        { yPercent: 0, opacity: 1, duration: 0.6, ease: 'power2.out' },
+        { yPercent: 0, opacity: 1, duration: 0.65, ease: 'power1.out' },
         1.45
       );
 
-      // ── OUTRO WIPE: Jeddah -> Dark Navy Compass Screen ──
+      // ── WIPE 2: Madinah -> Jeddah (with relaxed 1.2s hold pause) ──
+      tl.to(
+        titles[1],
+        { yPercent: -40, opacity: 0, duration: 0.55, ease: 'power1.in' },
+        3.30
+      );
+      tl.to(
+        images[1],
+        { yPercent: -12, scale: 1.08, duration: 1.2, ease: easeCurve },
+        3.30
+      );
+      tl.to(
+        panels[2],
+        { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.2, ease: easeCurve },
+        3.30
+      );
+      tl.to(
+        images[2],
+        { scale: 1.0, duration: 1.2, ease: easeCurve },
+        3.30
+      );
+      tl.to(
+        titles[2],
+        { yPercent: 0, opacity: 1, duration: 0.65, ease: 'power1.out' },
+        3.85
+      );
+
+      // ── OUTRO WIPE: Jeddah -> Dark Navy Compass Screen (with relaxed 1.2s hold pause) ──
       if (outroPanel) {
         tl.to(
           titles[2],
-          { yPercent: -40, opacity: 0, duration: 0.5, ease: 'power2.in' },
-          2.15
+          { yPercent: -40, opacity: 0, duration: 0.55, ease: 'power1.in' },
+          5.70
         );
         tl.to(
           images[2],
-          { yPercent: -12, scale: 1.08, duration: 1.0, ease: easeCurve },
-          2.2
+          { yPercent: -12, scale: 1.08, duration: 1.2, ease: easeCurve },
+          5.70
         );
         tl.to(
           outroPanel,
-          { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.0, ease: easeCurve },
-          2.2
+          { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.2, ease: easeCurve },
+          5.70
         );
         tl.fromTo(
           '.outro-content',
           { y: 30, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.7, ease: 'power2.out' },
-          2.5
+          { y: 0, opacity: 1, duration: 0.75, ease: 'power1.out' },
+          6.25
         );
+        // Generous outro hold before unpinning
+        tl.to({}, { duration: 0.6 }, 6.80);
       }
     }, containerRef);
 
@@ -472,7 +481,7 @@ export default function CinematicDestinations({
       className="relative bg-[#06101e] text-white selection:bg-[#d4af37] selection:text-[#06101e] w-full touch-pan-y"
       style={{
         // Total height provides enough scrub distance for smooth yacht-brand wiped transitions
-        minHeight: `${(totalPanels + 1) * 100}vh`,
+        minHeight: `${(totalPanels + 3.5) * 100}vh`,
       }}
     >
       {/* ─────────────────────────────────────────────────────────────
@@ -626,7 +635,7 @@ export default function CinematicDestinations({
           {/* Bottom-Left: Large Destination Title (clamp(3rem, 9vw, 9rem)) with Line-Mask Reveal */}
           <div className="max-w-2xl overflow-hidden pointer-events-auto">
             {DESTINATIONS_DATA.map((dest, idx) => {
-              const isActive = activePanelIndex === idx && scrollProgress < 0.8;
+              const isActive = activePanelIndex === idx && scrollProgress < 0.84;
               return (
                 <div
                   key={`title-${dest.id}`}

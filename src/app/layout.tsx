@@ -7,6 +7,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AuthRecoveryListener from '@/components/auth/AuthRecoveryListener';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
+import SmoothScrollProvider from '@/components/layout/SmoothScrollProvider';
 import { Toaster } from 'sonner';
 
 export const viewport: Viewport = {
@@ -106,16 +107,18 @@ export default function RootLayout({
         <AppProvider>
           <ThemeProvider>
             <LanguageProvider>
-              <AuthRecoveryListener />
-              <a href="#main-content" className="skip-link">
-                Skip to main content
-              </a>
-              <Navbar />
-              <main id="main-content" className="flex-1 w-full pt-16 sm:pt-20">
-                {children}
-              </main>
-              <Footer />
-              <Toaster position="top-right" richColors theme="system" closeButton />
+              <SmoothScrollProvider>
+                <AuthRecoveryListener />
+                <a href="#main-content" className="skip-link">
+                  Skip to main content
+                </a>
+                <Navbar />
+                <main id="main-content" className="flex-1 w-full pt-16 sm:pt-20">
+                  {children}
+                </main>
+                <Footer />
+                <Toaster position="top-right" richColors theme="light" closeButton visibleToasts={3} duration={4500} />
+              </SmoothScrollProvider>
             </LanguageProvider>
           </ThemeProvider>
         </AppProvider>

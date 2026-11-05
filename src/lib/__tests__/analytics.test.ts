@@ -14,7 +14,7 @@ describe('Google Analytics 4 Utility (src/lib/analytics.ts)', () => {
 
   beforeEach(() => {
     mockGtag = vi.fn();
-    window.gtag = mockGtag;
+    window.gtag = mockGtag as unknown as typeof window.gtag;
     window.dataLayer = [];
   });
 

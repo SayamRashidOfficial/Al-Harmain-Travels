@@ -100,6 +100,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      // Prevent Webpack PackFileCacheStrategy from failing on large buffer allocation
+      config.cache = {
+        type: 'filesystem',
+        maxMemoryGenerations: 1,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -39,12 +39,8 @@ export default function RouteGuard({ children, allowedRoles }: RouteGuardProps) 
       return;
     }
 
-    // 3. Enforce email verification
-    if (currentUser && currentUser.email && !currentUser.email_verified) {
-      toast.error('Please verify your email address before accessing your account.');
-      router.replace(`/verify-email?email=${encodeURIComponent(currentUser.email)}`);
-      return;
-    }
+    // 3. Optional email verification: unverified users have full access to their dashboard,
+    // verification is strictly optional and managed within their profile/dashboard.
 
     // 4. Check if user's verified database role is permitted
     if (!allowedRoles.includes(userRole)) {

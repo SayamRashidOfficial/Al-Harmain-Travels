@@ -379,7 +379,6 @@ export default function DispatcherQueuePage() {
     setModalOpen(false);
     setCustName('');
     setCustPhone('');
-    toast.success(`Booking ${booking.booking_reference} registered and auto-dispatched!`);
   };
 
   const handleAssignSubmit = async (e: React.FormEvent) => {

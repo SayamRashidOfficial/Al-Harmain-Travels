@@ -164,6 +164,9 @@ export default function CustomerBookingsPage() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       const uid = session?.user?.id;
       if (uid) {
+        if (uid !== authenticatedUserId) {
+          setBookings([]);
+        }
         setAuthenticatedUserId(uid);
         fetchBookings(uid, false);
       } else {
@@ -193,6 +196,9 @@ export default function CustomerBookingsPage() {
           filter: `customer_id=eq.${authenticatedUserId}`,
         },
         async (payload) => {
+          if (payload.new && (payload.new as any).customer_id && (payload.new as any).customer_id !== authenticatedUserId) {
+            return;
+          }
           if (payload.eventType === 'INSERT') {
             // Fetch newly created booking with full driver & vehicle relations
             const { data: fullBooking } = await supabase

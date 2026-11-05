@@ -68,6 +68,7 @@ import {
   initNotificationAudio,
   NotificationSoundOptions,
 } from '@/lib/notification-sound';
+import { showDedupedToast } from '@/lib/notification-toast';
 
 // Location write throttling map (driverId -> last written payload & timestamp)
 const locationThrottleMap = new Map<
@@ -106,6 +107,7 @@ interface AppContextType {
     phone: string;
     password: string;
   }) => Promise<{ success: boolean; requiresVerification?: boolean; email?: string; error?: string }>;
+  sendVerificationEmail: (email?: string) => Promise<{ success: boolean; message?: string; verificationLink?: string; error?: string }>;
   resendEmailConfirmation: (email?: string) => Promise<{ success: boolean; error?: string }>;
   checkEmailVerification: () => Promise<boolean>;
   signIn: (email: string, password?: string) => Promise<{ success: boolean; role?: UserRole; requiresVerification?: boolean; email?: string; error?: string }>;
@@ -511,8 +513,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         : Promise.resolve({ data: [], error: null });
 
       let notifsQuery;
+      let bookingsQuery;
       if (!isValidUser) {
         notifsQuery = Promise.resolve({ data: [], error: null });
+        bookingsQuery = Promise.resolve({ data: [], error: null });
       } else {
         const activeRole = userRoleRef.current;
         const activeProfileRole = currentUserRef.current?.role;
@@ -526,17 +530,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           notifsQuery = supabase
             .from('notifications')
             .select('*')
-            .or(`user_id.eq.${effectiveUserId},role.in.('admin','dispatcher'),user_id.is.null`)
+            .or(`user_id.eq.${effectiveUserId},role.in.('admin','dispatcher'),and(role.is.null,user_id.is.null)`)
             .order('created_at', { ascending: false })
             .limit(50);
         } else {
           notifsQuery = supabase
             .from('notifications')
             .select('*')
-            .eq('user_id', effectiveUserId)
+            .or(`user_id.eq.${effectiveUserId},and(role.eq.${activeRole || activeProfileRole || 'customer'},user_id.is.null)`)
             .order('created_at', { ascending: false })
             .limit(50);
         }
+
+        let bQuery = supabase.from('bookings').select(`
+          *,
+          driver:drivers(*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*), location:driver_locations(*)),
+          payments(*)
+        `).order('created_at', { ascending: false });
+
+        if (!isStaff) {
+          if (activeRole === 'driver' || activeProfileRole === 'driver') {
+            bQuery = bQuery.eq('assigned_driver_id', effectiveUserId);
+          } else {
+            // Customer role - strictly isolate to authenticated customer
+            bQuery = bQuery.eq('customer_id', effectiveUserId);
+          }
+        }
+        bookingsQuery = bQuery;
       }
 
       const [
@@ -573,11 +593,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           assigned_vehicle:rate_vehicle_types(*),
           location:driver_locations(*)
         `),
-        supabase.from('bookings').select(`
-          *,
-          driver:drivers(*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*), location:driver_locations(*)),
-          payments(*)
-        `).order('created_at', { ascending: false }),
+        bookingsQuery,
         supabase.from('fixed_fare_rates').select('*').order('created_at', { ascending: true }),
         supabase.from('rate_vehicle_types').select('*').order('display_order', { ascending: true }),
         supabase.from('rate_service_types').select('*').order('display_order', { ascending: true }),
@@ -917,6 +933,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         if (payload.new && 'id' in payload.new) {
           const updated = payload.new as any;
+          const currentRole = userRoleRef.current;
+          const currentUid = currentUserRef.current?.id;
+          const isStaff = currentRole === 'admin' || currentRole === 'dispatcher';
+
+          // Strict Data Privacy: Customers and drivers must never ingest other users' bookings into local state
+          if (!isStaff && currentUid && currentUid !== 'guest') {
+            if (currentRole === 'customer' && updated.customer_id && updated.customer_id !== currentUid) {
+              return;
+            }
+            if (currentRole === 'driver' && updated.assigned_driver_id && updated.assigned_driver_id !== currentUid) {
+              return;
+            }
+          }
+
           const currentDrivers = driversRef.current;
           const currentUsers = usersListRef.current;
           const attachedCustomer = updated.customer_id
@@ -1211,40 +1241,79 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const n = payload.new as any;
           const activeUser = currentUserRef.current;
           const activeRole = userRoleRef.current;
+          const effectiveRole = activeUser?.role || activeRole;
 
           // Target verification
-          const isTargetUser = Boolean(n.user_id && activeUser?.id && n.user_id === activeUser.id);
-          const isStaff =
-            activeUser?.role === 'admin' ||
-            activeUser?.role === 'dispatcher' ||
-            activeRole === 'admin' ||
-            activeRole === 'dispatcher';
-          const isStaffBroadcast = isStaff && (!n.user_id || n.role === 'admin' || n.role === 'dispatcher');
+          const isStaff = effectiveRole === 'admin' || effectiveRole === 'dispatcher';
+          const isDriver = effectiveRole === 'driver';
+          const isCustomer = effectiveRole === 'customer';
 
-          if (!isTargetUser && !isStaffBroadcast) {
+          let isRelevant = false;
+          if (n.user_id) {
+            isRelevant = Boolean(activeUser?.id && n.user_id === activeUser.id);
+          } else {
+            if (!n.role) {
+              isRelevant = true; // global broadcast
+            } else if (n.role === 'admin' || n.role === 'dispatcher') {
+              isRelevant = isStaff;
+            } else if (n.role === 'driver') {
+              isRelevant = isDriver;
+            } else if (n.role === 'customer') {
+              isRelevant = isCustomer;
+            }
+          }
+
+          if (!isRelevant) {
             return;
           }
 
-          // Play sound for genuinely newly received real-time notification
-          playNotificationSound({
-            id: n.id,
-            bookingId: n.booking_id,
-            title: n.title,
-            message: n.message,
-          });
+          const isFresh = !n.created_at || Math.abs(Date.now() - new Date(n.created_at).getTime()) < 30000;
+
+          // Sound & transient toast outside of state updater to prevent StrictMode / re-render duplicates
+          if (!n.read && isFresh) {
+            playNotificationSound({
+              id: n.id,
+              bookingId: n.booking_id,
+              title: n.title,
+              message: n.message,
+            });
+
+            showDedupedToast({
+              title: n.title,
+              message: n.message,
+              type: (n.type as any) || 'info',
+              bookingId: n.booking_id,
+            });
+          }
 
           setNotifications((prev) => {
-            // Deduplicate by ID
+            // Deduplicate by DB ID
             if (prev.some((item) => item.id === n.id)) return prev;
 
-            // Deduplicate by booking_id + title within 10 seconds
+            // If an optimistic temp notification exists matching title & message, update its ID
+            const tempIdx = prev.findIndex(
+              (item) => item.id.startsWith('notif-') && item.title === n.title && item.message === n.message
+            );
+            if (tempIdx !== -1) {
+              const updated = [...prev];
+              updated[tempIdx] = {
+                ...updated[tempIdx],
+                id: n.id,
+                timestamp: n.created_at || updated[tempIdx].timestamp,
+                booking_id: n.booking_id || updated[tempIdx].booking_id,
+              };
+              return updated;
+            }
+
+            // Deduplicate by booking_id + title within 15 seconds
+            const nowTime = new Date(n.created_at || Date.now()).getTime();
             if (
               n.booking_id &&
               prev.some(
                 (item) =>
                   item.booking_id === n.booking_id &&
                   item.title === n.title &&
-                  Math.abs(new Date(item.timestamp).getTime() - new Date(n.created_at).getTime()) < 10000
+                  Math.abs(new Date(item.timestamp).getTime() - nowTime) < 15000
               )
             ) {
               return prev;
@@ -1261,17 +1330,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               user_id: n.user_id,
               booking_id: n.booking_id,
             };
-
-            // Display transient Sonner toast for fresh unread notifications
-            if (!n.read) {
-              if (n.type === 'success') {
-                toast.success(n.title, { description: n.message });
-              } else if (n.type === 'warning') {
-                toast.warning(n.title, { description: n.message });
-              } else {
-                toast.info(n.title, { description: n.message });
-              }
-            }
 
             return [newItem, ...prev];
           });
@@ -1410,6 +1468,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         const session = sessionData?.session;
         if (session?.user && isMounted) {
+          // Single Source of Truth: query auth user directly from Supabase Auth server
+          const { data: authUserData } = await supabase.auth.getUser();
+          const authUser = authUserData?.user || session.user;
+          const isConfirmed = Boolean(
+            authUser?.email_confirmed_at &&
+            typeof authUser.email_confirmed_at === 'string' &&
+            authUser.email_confirmed_at.trim().length > 0 &&
+            !isNaN(Date.parse(authUser.email_confirmed_at))
+          );
+
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
@@ -1426,7 +1494,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               return;
             }
 
-            const isConfirmed = !!session.user.email_confirmed_at || !!profile.email_verified;
             const validLang = (profile as any)?.preferred_language === 'ar' ? 'ar' : 'en';
             const updatedProfile: Profile = {
               ...(profile as Profile),
@@ -1452,7 +1519,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
                 email: session.user.email || '',
                 phone: session.user.user_metadata?.phone || '',
-                email_verified: !!session.user.email_confirmed_at,
+                email_verified: isConfirmed,
                 phone_verified: !!session.user.user_metadata?.phone_verified,
                 status: 'active',
                 created_at: session.user.created_at || new Date().toISOString(),
@@ -1504,11 +1571,48 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setCurrentUser(FALLBACK_GUEST_PROFILE);
         setUserRole('customer');
         syncRoleCookie(null);
+        setBookings([]);
+        setDrivers([]);
+        setEmergencyContacts([]);
+        setSavedPlaces([]);
+        setRecentLocations([]);
+        setNotifications([]);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('aht_user_role');
+          localStorage.removeItem('aht_demo_user');
+          localStorage.removeItem('alharmain_customer_selected_track_booking');
+          localStorage.removeItem('alharmain_customer_destination');
+          localStorage.removeItem('alharmain_customer_pickup');
+          sessionStorage.removeItem('alharmain_customer_destination');
+          sessionStorage.removeItem('alharmain_customer_pickup');
+          sessionStorage.removeItem('alharmain_customer_planner');
+        }
         setIsAuthLoading(false);
         return;
       }
 
       if (session?.user) {
+        if (currentUserRef.current?.id && currentUserRef.current.id !== session.user.id) {
+          // Immediately purge stale customer data when switching accounts
+          setBookings([]);
+          setEmergencyContacts([]);
+          setSavedPlaces([]);
+          setRecentLocations([]);
+          setNotifications([]);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('alharmain_customer_selected_track_booking');
+          }
+        }
+        // Single Source of Truth: obtain fresh auth user directly from Supabase Auth server
+        const { data: authUserData } = await supabase.auth.getUser();
+        const authUser = authUserData?.user || session.user;
+        const isConfirmed = Boolean(
+          authUser?.email_confirmed_at &&
+          typeof authUser.email_confirmed_at === 'string' &&
+          authUser.email_confirmed_at.trim().length > 0 &&
+          !isNaN(Date.parse(authUser.email_confirmed_at))
+        );
+
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -1523,7 +1627,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             setUserRole('customer');
             syncRoleCookie(null);
           } else {
-            const isConfirmed = !!session.user.email_confirmed_at || !!profile.email_verified;
             const validLang = (profile as any)?.preferred_language === 'ar' ? 'ar' : 'en';
             const updatedProfile: Profile = {
               ...(profile as Profile),
@@ -1568,7 +1671,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Sign In via Supabase Auth
+  // Sign In via Supabase Auth (Direct Login Without Mandatory Email Verification)
   const signIn = async (
     email: string,
     password?: string
@@ -1579,11 +1682,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      let { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
       });
 
+      // Handle accounts where email confirmation is not yet completed in GoTrue
       if (error) {
         const errMsg = error.message || '';
         const isUnconfirmed =
@@ -1592,41 +1696,37 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           errMsg.toLowerCase().includes('email_not_confirmed');
 
         if (isUnconfirmed) {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('aht_pending_verification_email', cleanEmail);
+          try {
+            const resolveRes = await fetch('/api/auth/resolve-unconfirmed-login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: cleanEmail, password }),
+            });
+            const resolveJson = await resolveRes.json();
+            if (resolveRes.ok && resolveJson.success && resolveJson.session) {
+              await supabase.auth.setSession(resolveJson.session);
+              data = { user: resolveJson.session.user, session: resolveJson.session };
+              error = null;
+            } else if (resolveJson.error) {
+              return { success: false, error: resolveJson.error };
+            }
+          } catch (resolveErr) {
+            console.warn('[signIn] Could not sign in unconfirmed account:', resolveErr);
           }
-          return {
-            success: false,
-            requiresVerification: true,
-            email: cleanEmail,
-            error: 'Your email address is not verified yet. Please check your inbox for the confirmation link or resend it.',
-          };
         }
 
-        return {
-          success: false,
-          error: errMsg || 'Invalid email or password. Please verify your credentials.',
-        };
+        if (error) {
+          return {
+            success: false,
+            error: errMsg || 'Invalid email or password. Please verify your credentials.',
+          };
+        }
       }
 
-      if (!data.user) {
+      if (!data?.user) {
         return {
           success: false,
           error: 'No user account found. Please check your credentials or register.',
-        };
-      }
-
-      // Check if user has confirmed email
-      const isEmailConfirmed = !!data.user.email_confirmed_at;
-      if (!isEmailConfirmed) {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('aht_pending_verification_email', cleanEmail);
-        }
-        return {
-          success: false,
-          requiresVerification: true,
-          email: cleanEmail,
-          error: 'Please verify your email address before signing in. Check your inbox for the confirmation link.',
         };
       }
 
@@ -1647,7 +1747,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           full_name: userMetaName,
           email: cleanEmail,
           phone: data.user.user_metadata?.phone || '',
-          email_verified: !!data.user.email_confirmed_at,
+          email_verified: Boolean(data.user.user_metadata?.email_verified),
           phone_verified: !!data.user.user_metadata?.phone_verified,
           status: 'active',
           created_at: data.user.created_at || new Date().toISOString(),
@@ -1678,17 +1778,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         };
       }
 
-      // Ensure profile in database has email_verified set to true
-      if (!profile.email_verified) {
-        await supabase
-          .from('profiles')
-          .update({ email_verified: true, updated_at: new Date().toISOString() })
-          .eq('id', data.user.id);
-        profile.email_verified = true;
-      }
+      // Single Source of Truth: Check actual Supabase Auth email_confirmed_at
+      const { data: freshAuth } = await supabase.auth.getUser();
+      const authUserRecord = freshAuth?.user || data?.user;
+      const isConfirmed = Boolean(
+        authUserRecord?.email_confirmed_at &&
+        typeof authUserRecord.email_confirmed_at === 'string' &&
+        authUserRecord.email_confirmed_at.trim().length > 0 &&
+        !isNaN(Date.parse(authUserRecord.email_confirmed_at))
+      );
 
       const validLang = (profile as any)?.preferred_language === 'ar' ? 'ar' : 'en';
       profile.preferred_language = validLang;
+      profile.email_verified = isConfirmed;
+
       setUserRole(profile.role);
       setCurrentUser(profile);
       setIsAuthenticated(true);
@@ -1706,7 +1809,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Sign Up Customer via Supabase Auth
+  // Sign Up Customer via Dedicated Server API (Direct registration without email confirmation requirement)
   const signUpCustomer = async (data: {
     fullName: string;
     email: string;
@@ -1717,165 +1820,71 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const cleanPhone = data.phone.trim();
 
     try {
-      const emailRedirectTo = typeof window !== 'undefined'
-        ? `${window.location.origin}/callback`
-        : undefined;
-
-      // ─── Step 1: Pre-check auth.users via server-side API ───────────────────────
-      // This is the key fix: checking BOTH auth.users and public.profiles before
-      // attempting signUp. The browser client cannot query auth.users directly.
-      let checkResult: {
-        existsInAuth: boolean;
-        authId: string | null;
-        emailConfirmed: boolean;
-        existsInProfiles: boolean;
-        profileVerified: boolean;
-        isOrphaned: boolean;
-      } | null = null;
-
-      try {
-        const checkRes = await fetch('/api/auth/check-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: cleanEmail }),
-        });
-        if (checkRes.ok) {
-          const checkJson = await checkRes.json();
-          if (checkJson.success) {
-            checkResult = checkJson;
-          }
-        }
-      } catch (checkErr) {
-        // Non-fatal: if the check API fails, fall through to standard signUp flow
-        console.warn('[signUpCustomer] check-user API unavailable, proceeding with signUp:', checkErr);
-      }
-
-      if (checkResult) {
-        // Case A: Fully verified existing user in both auth and profiles
-        if (checkResult.existsInAuth && checkResult.emailConfirmed && checkResult.existsInProfiles && checkResult.profileVerified) {
-          return {
-            success: false,
-            error: 'An account with this email is already registered and verified. Please sign in instead.',
-          };
-        }
-
-        // Case B: Unconfirmed existing user in auth (with or without a profile row)
-        // Re-send confirmation email without creating a duplicate auth user.
-        if (checkResult.existsInAuth && !checkResult.emailConfirmed) {
-          const { error: resendErr } = await supabase.auth.resend({
-            type: 'signup',
-            email: cleanEmail,
-            options: { emailRedirectTo },
-          });
-
-          setVerificationState({
-            fullName: data.fullName.trim(),
-            email: cleanEmail,
-            phone: cleanPhone,
-            emailVerified: false,
-            emailSentAt: Date.now(),
-          });
-
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('aht_pending_verification_email', cleanEmail);
-          }
-
-          if (resendErr) {
-            toast.warning('Account exists but is unverified. Could not resend — please try again shortly.');
-          } else {
-            toast.info('Account already exists but was unverified. We resent your confirmation link.');
-          }
-
-          return {
-            success: true,
-            requiresVerification: true,
-            email: cleanEmail,
-          };
-        }
-
-        // Case C: Orphaned auth.users row (user was deleted but auth wasn't cleaned up).
-        // Delete the stale auth row so a fresh sign up can proceed.
-        if (checkResult.isOrphaned && checkResult.authId) {
-          try {
-            await fetch('/api/admin/delete-user', {
-              method: 'DELETE',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: checkResult.authId }),
-            });
-          } catch (orphanCleanErr) {
-            console.warn('[signUpCustomer] Could not clean orphaned auth user, proceeding anyway:', orphanCleanErr);
-          }
-        }
-      }
-
-      // ─── Step 2: Execute fresh Supabase Auth signUp ──────────────────────────────
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: data.password,
-        options: {
-          emailRedirectTo,
-          data: {
-            full_name: data.fullName.trim(),
-            phone: cleanPhone,
-            role: 'customer',
-          },
-        },
+      // 1. Create user via server-side API (creates user in auth and profiles with email_verified: false)
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: data.fullName.trim(),
+          email: cleanEmail,
+          phone: cleanPhone,
+          password: data.password,
+        }),
       });
 
-      if (signUpError) {
-        if (
-          signUpError.message.toLowerCase().includes('already registered') ||
-          signUpError.message.toLowerCase().includes('already been registered') ||
-          signUpError.message.toLowerCase().includes('user already exists')
-        ) {
-          return { success: false, error: 'An account with this email already exists. Please sign in.' };
-        }
-        return { success: false, error: signUpError.message };
-      }
-
-      if (!authData.user) {
-        return { success: false, error: 'Registration failed. Please try again.' };
-      }
-
-      // ─── Step 3: Handle Supabase's "existing account" signal ─────────────────────
-      // Supabase returns an empty identities array when it silently detects an
-      // already-registered email. This is a secondary safety net in case our
-      // pre-check missed something (e.g. race condition).
-      const isExistingAccount = !authData.user.identities || authData.user.identities.length === 0;
-      if (isExistingAccount) {
-        // The pre-check confirmed the user is in auth; this means they're confirmed.
+      const json = await res.json();
+      if (!res.ok || !json.success) {
         return {
           success: false,
-          error: 'An account with this email is already registered. Please sign in.',
+          error: json.error || 'Registration failed. Please check your information.',
         };
       }
 
-      const isAlreadyConfirmed = !!authData.user.email_confirmed_at;
-
-      const newVerificationState: VerificationState = {
-        fullName: data.fullName.trim(),
+      // 2. Immediately sign in with password so the user enters their dashboard directly
+      const signInRes = await supabase.auth.signInWithPassword({
         email: cleanEmail,
-        phone: cleanPhone,
-        emailVerified: isAlreadyConfirmed,
-        emailSentAt: Date.now(),
-      };
-      setVerificationState(newVerificationState);
+        password: data.password,
+      });
 
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('aht_pending_verification_email', cleanEmail);
-        localStorage.setItem('aht_pending_verification_name', data.fullName.trim());
+      if (!signInRes.data?.session) {
+        const resolveRes = await fetch('/api/auth/resolve-unconfirmed-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, password: data.password }),
+        });
+        const resolveJson = await resolveRes.json();
+        if (resolveJson.success && resolveJson.session) {
+          await supabase.auth.setSession(resolveJson.session);
+        }
       }
 
+      const newProfile: Profile = {
+        id: json.user.id,
+        role: 'customer',
+        full_name: data.fullName.trim(),
+        email: cleanEmail,
+        phone: cleanPhone,
+        email_verified: false, // Explicitly Unverified initially
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      setCurrentUser(newProfile);
+      setUserRole('customer');
+      setIsAuthenticated(true);
+      syncRoleCookie('customer');
+
       addNotification(
-        'Account Registered',
-        `Verification email dispatched to ${cleanEmail}. Please verify your email to access the customer dashboard.`,
-        'info',
+        'Welcome to Al Harmain Travels',
+        `Account created successfully. You can verify your email anytime in your profile.`,
+        'success',
         'customer'
       );
 
       return {
         success: true,
-        requiresVerification: !isAlreadyConfirmed,
+        requiresVerification: false,
         email: cleanEmail,
       };
     } catch (err: unknown) {
@@ -1884,92 +1893,76 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Resend confirmation email via Supabase
-  const resendEmailConfirmation = async (email?: string): Promise<{ success: boolean; error?: string }> => {
-    let targetEmail = email?.trim().toLowerCase() || verificationState?.email || '';
-    if (!targetEmail && typeof window !== 'undefined') {
-      targetEmail = localStorage.getItem('aht_pending_verification_email') || '';
-    }
-
+  // Optional Email Verification Dispatch
+  const sendVerificationEmail = async (
+    email?: string
+  ): Promise<{ success: boolean; message?: string; verificationLink?: string; error?: string }> => {
+    const targetEmail = (email || currentUser.email || '').trim().toLowerCase();
     if (!targetEmail) {
-      return { success: false, error: 'No email address available. Please re-enter your email or restart registration.' };
-    }
-
-    // Check if user is already verified
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('email_verified')
-      .eq('email', targetEmail)
-      .maybeSingle();
-
-    if (existingProfile?.email_verified) {
-      return {
-        success: false,
-        error: 'This account is already verified! Please proceed to Sign In.',
-      };
-    }
-
-    if (verificationState?.emailSentAt) {
-      const elapsed = (Date.now() - verificationState.emailSentAt) / 1000;
-      if (elapsed < 60) {
-        const wait = Math.ceil(60 - elapsed);
-        return { success: false, error: `Please wait ${wait} seconds before resending another confirmation email.` };
-      }
+      return { success: false, error: 'No registered email address found.' };
     }
 
     try {
-      const emailRedirectTo = typeof window !== 'undefined'
-        ? `${window.location.origin}/callback`
-        : undefined;
-
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: targetEmail,
-        options: {
-          emailRedirectTo,
-        },
+      const res = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
       });
 
-      if (error) {
-        return { success: false, error: error.message };
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        toast.error(json.error || 'Failed to dispatch verification email.');
+        return { success: false, error: json.error };
       }
 
-      setVerificationState((prev) =>
-        prev
-          ? { ...prev, emailSentAt: Date.now() }
-          : {
-            fullName: (typeof window !== 'undefined' && localStorage.getItem('aht_pending_verification_name')) || 'Customer',
-            email: targetEmail,
-            phone: '',
-            emailVerified: false,
-            emailSentAt: Date.now(),
-          }
+      toast.success(
+        json.message ||
+        'A verification email has been sent. Please check your inbox and click the confirmation link to verify your email address.'
       );
 
-      toast.success('Confirmation email resent. Please check your inbox.');
-      return { success: true };
+      // Ensure currentUser remains strictly unverified in local state
+      setCurrentUser((prev) => ({
+        ...prev,
+        email_verified: false,
+      }));
+
+      return {
+        success: true,
+        message: json.message,
+        verificationLink: json.verificationLink,
+      };
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to resend email.';
+      const msg = err instanceof Error ? err.message : 'Network error dispatching verification.';
+      toast.error(msg);
       return { success: false, error: msg };
     }
   };
 
-  // Poll Supabase session to check if email has been confirmed
+  // Resend confirmation email via optional verification flow
+  const resendEmailConfirmation = async (email?: string): Promise<{ success: boolean; error?: string }> => {
+    const res = await sendVerificationEmail(email);
+    return { success: res.success, error: res.error };
+  };
+
+  // Check if current user email has been verified - Single Source of Truth: Supabase Auth server
   const checkEmailVerification = async (): Promise<boolean> => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session?.user?.email_confirmed_at) {
-        setVerificationState((prev) => (prev ? { ...prev, emailVerified: true } : null));
-        return true;
-      }
+      const { data: { user: authUser }, error } = await supabase.auth.getUser();
+      if (error || !authUser) return false;
 
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData.user?.email_confirmed_at) {
-        setVerificationState((prev) => (prev ? { ...prev, emailVerified: true } : null));
-        return true;
-      }
+      const isVerified = Boolean(
+        authUser.email_confirmed_at &&
+        typeof authUser.email_confirmed_at === 'string' &&
+        authUser.email_confirmed_at.trim().length > 0 &&
+        !isNaN(Date.parse(authUser.email_confirmed_at))
+      );
 
-      return false;
+      setCurrentUser((prev) => ({
+        ...prev,
+        email_verified: isVerified,
+      }));
+
+      return isVerified;
     } catch {
       return false;
     }
@@ -1995,6 +1988,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('aht_user_role');
         localStorage.removeItem('aht_demo_user');
+        localStorage.removeItem('alharmain_customer_selected_track_booking');
+        localStorage.removeItem('alharmain_customer_destination');
+        localStorage.removeItem('alharmain_customer_pickup');
+        sessionStorage.removeItem('alharmain_customer_destination');
+        sessionStorage.removeItem('alharmain_customer_pickup');
+        sessionStorage.removeItem('alharmain_customer_planner');
         window.location.href = '/sign-in';
       }
       toast.info('You have been securely signed out.');
@@ -2511,9 +2510,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       booking_id: bookingId || null,
     };
 
-    const isForActiveUser =
-      (resolvedUserId && resolvedUserId === activeUser?.id) ||
-      ((activeRole === 'admin' || activeRole === 'dispatcher') && (role === 'admin' || role === 'dispatcher' || !resolvedUserId));
+    const effectiveRole = activeUser?.role || activeRole;
+    const isStaff = effectiveRole === 'admin' || effectiveRole === 'dispatcher';
+    const isDriver = effectiveRole === 'driver';
+    const isCustomer = effectiveRole === 'customer';
+
+    // Strict role eligibility check
+    const isTargetRole =
+      !role ||
+      (role === 'customer' && isCustomer) ||
+      (role === 'driver' && isDriver) ||
+      ((role === 'admin' || role === 'dispatcher') && isStaff);
+
+    const isForActiveUser = Boolean(
+      (resolvedUserId && activeUser?.id && resolvedUserId === activeUser.id) ||
+      (!resolvedUserId && isTargetRole)
+    );
 
     if (isForActiveUser) {
       // Play sound immediately for active user's newly created notification
@@ -2524,8 +2536,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         message,
       });
 
+      // Show deduplicated toast immediately for active user
+      showDedupedToast({
+        title,
+        message,
+        type: type === 'ride' ? 'info' : type,
+        bookingId,
+      });
+
       setNotifications((prev) => {
-        if (prev.some((item) => item.id === tempId || (bookingId && item.booking_id === bookingId && item.title === title))) {
+        if (
+          prev.some(
+            (item) =>
+              item.id === tempId ||
+              (bookingId && item.booking_id === bookingId && item.title === title)
+          )
+        ) {
           return prev;
         }
         return [newItem, ...prev];
@@ -4168,39 +4194,51 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         'New Booking Awaiting Verification',
         `Booking ${ref} submitted by ${data.passenger_name} with payment proof. Review in Queue.`,
         'info',
-        'dispatcher'
+        'dispatcher',
+        undefined,
+        newBooking.id
       );
       addNotification(
         'Booking Request Submitted',
         `Your booking (${ref}) is received and pending payment verification by our dispatch team.`,
         'success',
-        'customer'
+        'customer',
+        newBooking.customer_id || undefined,
+        newBooking.id
       );
     } else if (isCustom && !data.custom_fare) {
       addNotification(
         'New Custom Route Request',
         `Custom booking ${ref} submitted by ${data.passenger_name}. Awaiting fare quote and review.`,
         'info',
-        'dispatcher'
+        'dispatcher',
+        undefined,
+        newBooking.id
       );
       addNotification(
         'Custom Route Request Received',
         `Your booking request (${ref}) has been received. Our dispatcher will contact you to confirm vehicle availability, fare, and payment details.`,
         'success',
-        'customer'
+        'customer',
+        newBooking.customer_id || undefined,
+        newBooking.id
       );
     } else {
       addNotification(
         'New Confirmed Booking',
         `Booking ${ref} created for ${data.passenger_name} (${newBooking.vehicle_type.toUpperCase()}). Ready for driver assignment.`,
         'success',
-        'dispatcher'
+        'dispatcher',
+        undefined,
+        newBooking.id
       );
       addNotification(
         'Booking Confirmed',
         `Your trip ${ref} has been confirmed. A chauffeur will be assigned shortly.`,
         'success',
-        'customer'
+        'customer',
+        newBooking.customer_id || undefined,
+        newBooking.id
       );
     }
 
@@ -4430,15 +4468,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       'Payment Verified & Confirmed',
       `Booking ${booking.booking_reference} payment verified. Ready for driver assignment.`,
       'success',
-      'dispatcher'
+      'dispatcher',
+      undefined,
+      booking.id
     );
     addNotification(
       'Payment Verified',
       `Your payment for booking ${booking.booking_reference} has been verified! Assigning driver shortly.`,
       'success',
-      'customer'
+      'customer',
+      booking.customer_id || undefined,
+      booking.id
     );
-    toast.success(`Booking ${booking.booking_reference} payment verified!`);
   };
 
   // Driver confirms cash received from passenger
@@ -4706,15 +4747,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       'Booking Confirmed',
       `Booking ${booking.booking_reference} confirmed. Ready for driver assignment.`,
       'success',
-      'dispatcher'
+      'dispatcher',
+      undefined,
+      booking.id
     );
     addNotification(
       'Your Booking is Confirmed',
       `Booking ${booking.booking_reference} has been confirmed. Assigning an executive captain.`,
       'success',
-      'customer'
+      'customer',
+      booking.customer_id || undefined,
+      booking.id
     );
-    toast.success(`Booking ${booking.booking_reference} confirmed`);
   };
 
   // Staff assigns driver
@@ -4793,18 +4837,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     addNotification(
+      'Driver Assigned',
+      `Chauffeur ${selectedDriver.profile?.full_name} assigned to booking ${booking.booking_reference}.`,
+      'success',
+      'dispatcher',
+      undefined,
+      booking.id
+    );
+    addNotification(
       'New Trip Assigned',
       `Trip ${booking.booking_reference} has been assigned to you. Please review and accept.`,
       'ride',
-      'driver'
+      'driver',
+      selectedDriver.profile?.id || selectedDriver.id,
+      booking.id
     );
     addNotification(
       'Driver Assigned',
       `${selectedDriver.profile?.full_name || 'Captain'} has been assigned to your ride.`,
       'ride',
-      'customer'
+      'customer',
+      booking.customer_id || undefined,
+      booking.id
     );
-    toast.success(`Assigned to ${selectedDriver.profile?.full_name}`);
     return true;
   };
 
@@ -4893,18 +4948,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     addNotification(
+      'Driver Reassigned',
+      `Trip ${booking.booking_reference} reassigned to ${newDriver.profile?.full_name}.`,
+      'info',
+      'dispatcher',
+      undefined,
+      booking.id
+    );
+    addNotification(
       'Trip Reassigned',
       `Trip ${booking.booking_reference} reassigned to you. Please review and accept.`,
       'ride',
-      'driver'
+      'driver',
+      newDriver.profile?.id || newDriver.id,
+      booking.id
     );
     addNotification(
       'Captain Reassigned',
       `${newDriver.profile?.full_name || 'Captain'} is now assigned to your ride.`,
       'ride',
-      'customer'
+      'customer',
+      booking.customer_id || undefined,
+      booking.id
     );
-    toast.success(`Trip reassigned to ${newDriver.profile?.full_name}`);
     return true;
   };
 
@@ -5106,13 +5172,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       'Driver Accepted Ride',
       `Captain has accepted booking ${booking.booking_reference} and is preparing vehicle.`,
       'ride',
-      'customer'
+      'customer',
+      booking.customer_id || undefined,
+      booking.id
     );
     addNotification(
       'Trip Accepted by Driver',
       `Driver accepted booking ${booking.booking_reference}.`,
       'info',
-      'dispatcher'
+      'dispatcher',
+      undefined,
+      booking.id
     );
     toast.success('You have accepted the trip assignment.');
   };
@@ -5192,7 +5262,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       'Driver Rejected Assignment',
       `Captain declined booking ${booking.booking_reference} (${reason}). Reassign in Queue.`,
       'warning',
-      'dispatcher'
+      'dispatcher',
+      undefined,
+      booking.id
     );
     toast.info('Assignment declined. Booking returned to dispatch queue.');
   };
@@ -5385,7 +5457,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       labelMap[canonicalStatus] || 'Ride Update',
       `Booking ${booking.booking_reference}: ${labelMap[canonicalStatus] || canonicalStatus}`,
       'ride',
-      'customer'
+      'customer',
+      booking.customer_id || undefined,
+      booking.id
     );
     toast.success(labelMap[canonicalStatus] || `Ride status updated: ${canonicalStatus}`);
     return { success: true };
@@ -5525,9 +5599,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     addNotification(
       'Booking Cancelled',
       `Booking ${booking.booking_reference} was cancelled. Reason: ${reason}`,
-      'warning'
+      'warning',
+      'dispatcher',
+      undefined,
+      booking.id
     );
-    toast.info('Booking cancelled successfully.');
+    if (booking.customer_id) {
+      addNotification(
+        'Booking Cancelled',
+        `Your booking ${booking.booking_reference} was cancelled. Reason: ${reason}`,
+        'warning',
+        'customer',
+        booking.customer_id,
+        booking.id
+      );
+    }
   };
 
   const updateDriverStatus = async (driverId: string, status: DriverStatus) => {
@@ -6012,6 +6098,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         isAuthLoading,
         verificationState,
         signUpCustomer,
+        sendVerificationEmail,
         resendEmailConfirmation,
         checkEmailVerification,
         signIn,

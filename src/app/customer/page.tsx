@@ -189,7 +189,36 @@ export default function CustomerHomePage() {
     rateVehicles,
     rateRoutes,
     rateTerminals,
+    sendVerificationEmail,
   } = useApp();
+
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
+  const [verificationCooldown, setVerificationCooldown] = useState(0);
+  const [verificationSentNotice, setVerificationSentNotice] = useState<string | null>(null);
+
+  const handleVerifyEmail = async () => {
+    if (verificationCooldown > 0 || isSendingVerification) return;
+    setIsSendingVerification(true);
+    try {
+      const res = await sendVerificationEmail(currentUser.email || undefined);
+      if (res.success) {
+        setVerificationCooldown(60);
+        setVerificationSentNotice(
+          res.message || 'A verification email has been sent. Please check your inbox and click the confirmation link to verify your email address.'
+        );
+      }
+    } finally {
+      setIsSendingVerification(false);
+    }
+  };
+
+  useEffect(() => {
+    if (verificationCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setVerificationCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [verificationCooldown]);
 
   // Location & Selection State
   const [pickup, setPickup] = useState<LocationPoint | null>(null);
@@ -1155,13 +1184,81 @@ export default function CustomerHomePage() {
         </div>
       )}
 
+      {/* ── Optional Email Verification Banner ─────────────────────────────────── */}
+      {!currentUser.email_verified && currentUser.id && currentUser.id !== 'guest' && (
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                  {isRTL ? 'البريد الإلكتروني غير مؤكد' : 'Email Address Unverified'}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-800 border border-amber-500/30">
+                  {isRTL ? 'غير مؤكد' : 'Unverified'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5">
+                {verificationSentNotice ? (
+                  <span className="text-amber-900 font-medium">
+                    {verificationSentNotice}
+                  </span>
+                ) : isRTL ? (
+                  'يمكنك استخدام التطبيق وحجز الرحلات بحرية. أكد بريدك الإلكتروني لضمان استلام إيصالات الرحلات واسترداد الحساب.'
+                ) : (
+                  'You have full access to all booking features. Verify your email anytime to ensure official trip receipts and recovery.'
+                )}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleVerifyEmail}
+            disabled={isSendingVerification || verificationCooldown > 0}
+            className="self-start sm:self-center shrink-0 py-2 px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md shadow-amber-900/10 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isSendingVerification ? (
+              <>
+                <Clock className="w-3.5 h-3.5 animate-spin text-white" />
+                <span>{isRTL ? 'جاري الإرسال…' : 'Sending Link…'}</span>
+              </>
+            ) : verificationCooldown > 0 ? (
+              <>
+                <Clock className="w-3.5 h-3.5 text-white" />
+                <span>{isRTL ? `إعادة الإرسال (${verificationCooldown}ث)` : `Resend (${verificationCooldown}s)`}</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+                <span>{isRTL ? 'تأكيد البريد الآن' : 'Verify Email'}</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* ── Welcome Bar ────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold mb-1">
-            <Sparkles className="w-3 h-3 text-amber-600" />
-            {isRTL ? 'شركة الحرمين للنقل الفاخر' : 'Al Harmain Fixed-Fare Booking'}
-          </span>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold">
+              <Sparkles className="w-3 h-3 text-amber-600" />
+              {isRTL ? 'شركة الحرمين للنقل الفاخر' : 'Al Harmain Fixed-Fare Booking'}
+            </span>
+            {currentUser.email_verified ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                {isRTL ? 'موثق' : 'Verified'}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">
+                <AlertCircle className="w-3 h-3 text-amber-600" />
+                {isRTL ? 'غير مؤكد' : 'Unverified'}
+              </span>
+            )}
+          </div>
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
             {isRTL ? `إلى أين ترغب بالذهاب يا ${currentUser.full_name.split(' ')[0]}؟` : `Where would you like to go, ${currentUser.full_name.split(' ')[0]}?`}
           </h1>

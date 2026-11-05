@@ -40,6 +40,7 @@ export default function CustomerProfilePage() {
     uploadAvatar,
     changePassword,
     deleteUser,
+    sendVerificationEmail,
     emergencyContacts,
     addEmergencyContact,
     updateEmergencyContact,
@@ -48,6 +49,34 @@ export default function CustomerProfilePage() {
     bookings,
     isDataLoading,
   } = useApp();
+
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
+  const [verificationCooldown, setVerificationCooldown] = useState(0);
+  const [verificationSentNotice, setVerificationSentNotice] = useState<string | null>(null);
+
+  const handleVerifyEmail = async () => {
+    if (verificationCooldown > 0 || isSendingVerification) return;
+    setIsSendingVerification(true);
+    try {
+      const res = await sendVerificationEmail(currentUser.email || undefined);
+      if (res.success) {
+        setVerificationCooldown(60);
+        setVerificationSentNotice(
+          res.message || 'A verification email has been sent. Please check your inbox and click the confirmation link to verify your email address.'
+        );
+      }
+    } finally {
+      setIsSendingVerification(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (verificationCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setVerificationCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [verificationCooldown]);
 
   const { language, setLanguage, dir, isRTL, t } = useLanguage();
   const router = useRouter();
@@ -431,22 +460,57 @@ export default function CustomerProfilePage() {
 
               <div className="space-y-2.5 text-xs">
                 {/* Email Verification Card */}
-                <div className="p-3 rounded-xl bg-surface border border-base space-y-1">
+                <div className="p-3 rounded-xl bg-surface border border-base space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-secondary font-semibold flex items-center gap-1.5 text-[11px]">
                       <Mail className="w-3.5 h-3.5 text-emerald-500" />
                       {isRTL ? 'حالة البريد' : 'Email Status'}
                     </span>
-                    {currentUser.email_verified !== false ? (
-                      <span className="text-emerald-500 font-bold flex items-center gap-1 text-[10px]">
-                        <CheckCircle2 className="w-3 h-3" />
+                    {currentUser.email_verified ? (
+                      <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold flex items-center gap-1 text-[10px]">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                         {isRTL ? 'تم التحقق' : 'Verified'}
                       </span>
                     ) : (
-                      <span className="text-amber-500 font-bold text-[10px]">{isRTL ? 'غير مؤكد' : 'Unverified'}</span>
+                      <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 font-bold flex items-center gap-1 text-[10px]">
+                        <AlertCircle className="w-3 h-3 text-amber-600" />
+                        {isRTL ? 'غير مؤكد' : 'Unverified'}
+                      </span>
                     )}
                   </div>
                   <p className="text-[11px] text-muted truncate">{currentUser.email || (isRTL ? 'عميل موثق' : 'Verified Customer')}</p>
+
+                  {verificationSentNotice && !currentUser.email_verified && (
+                    <p className="text-[10px] text-amber-900 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 leading-relaxed font-medium">
+                      {verificationSentNotice}
+                    </p>
+                  )}
+
+                  {!currentUser.email_verified && (
+                    <button
+                      type="button"
+                      onClick={handleVerifyEmail}
+                      disabled={isSendingVerification || verificationCooldown > 0}
+                      className="w-full py-1.5 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {isSendingVerification ? (
+                        <>
+                          <Clock className="w-3 h-3 animate-spin text-amber-700" />
+                          <span>{isRTL ? 'جاري الإرسال…' : 'Sending Link…'}</span>
+                        </>
+                      ) : verificationCooldown > 0 ? (
+                        <>
+                          <Clock className="w-3 h-3 text-amber-700" />
+                          <span>{isRTL ? `إعادة الإرسال خلال ${verificationCooldown} ث` : `Resend in ${verificationCooldown}s`}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3 h-3 text-amber-700" />
+                          <span>{isRTL ? 'تأكيد البريد الإلكتروني' : 'Verify Email'}</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
 
                 {/* Phone Card */}
@@ -542,10 +606,22 @@ export default function CustomerProfilePage() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="type-label !mb-0">{t('profile.primaryEmail', 'Primary Email Address')}</label>
-                    <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      {t('profile.verifiedLocked', 'Verified & Locked')}
-                    </span>
+                    {currentUser.email_verified ? (
+                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        {t('profile.verifiedLocked', 'Verified & Locked')}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleVerifyEmail}
+                        disabled={isSendingVerification || verificationCooldown > 0}
+                        className="text-[10px] text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200 font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <AlertCircle className="w-3 h-3 text-amber-600" />
+                        <span>{verificationCooldown > 0 ? `Resend (${verificationCooldown}s)` : 'Unverified · Verify Now'}</span>
+                      </button>
+                    )}
                   </div>
                   <div className="relative">
                     <Mail className={`w-3.5 h-3.5 text-muted absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 pointer-events-none`} />

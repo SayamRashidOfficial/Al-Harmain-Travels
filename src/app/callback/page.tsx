@@ -39,6 +39,32 @@ function AuthCallbackContent() {
           nextParam === '/reset-password' ||
           (typeof window !== 'undefined' && window.location.hash.includes('type=recovery'));
 
+        // 1c. Check for custom signed verification token (?action=verify_email&token=... or ?token=...)
+        const tokenParam = searchParams?.get('token');
+        const actionParam = searchParams?.get('action');
+        if (tokenParam && (actionParam === 'verify_email' || !actionParam)) {
+          try {
+            const verifyRes = await fetch('/api/auth/verify-link', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: tokenParam }),
+            });
+            const verifyJson = await verifyRes.json();
+            if (verifyRes.ok && verifyJson.success) {
+              await handleSuccessfulVerification(verifyJson.user.id, verifyJson.user.email);
+              return;
+            } else {
+              if (!isCancelled) {
+                setStatus('error');
+                setErrorMsg(verifyJson.error || 'Verification link is invalid or has expired.');
+              }
+              return;
+            }
+          } catch (tokErr) {
+            console.error('Custom token verification failed:', tokErr);
+          }
+        }
+
         // 2. Check for PKCE exchange code (?code=...)
         const code = searchParams?.get('code');
         if (code) {
@@ -87,6 +113,13 @@ function AuthCallbackContent() {
         }
 
         // 4. Check for active session or hash fragment processed by client
+        const hash = typeof window !== 'undefined' ? window.location.hash : '';
+        const isEmailConfirmationHash =
+          hash.includes('type=signup') ||
+          hash.includes('type=email_change') ||
+          hash.includes('type=invite') ||
+          hash.includes('confirmation_token');
+
         const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
         if (sessionErr) {
           if (!isCancelled) {
@@ -101,8 +134,26 @@ function AuthCallbackContent() {
             router.replace('/reset-password');
             return;
           }
-          await handleSuccessfulVerification(sessionData.session.user.id, sessionData.session.user.email);
-          return;
+
+          // Fetch fresh user from server to verify actual email_confirmed_at
+          const { data: freshUser } = await supabase.auth.getUser();
+          const isConfirmed = Boolean(
+            freshUser.user?.email_confirmed_at &&
+            typeof freshUser.user.email_confirmed_at === 'string' &&
+            freshUser.user.email_confirmed_at.trim().length > 0
+          );
+
+          if (isConfirmed || isEmailConfirmationHash) {
+            await handleSuccessfulVerification(sessionData.session.user.id, sessionData.session.user.email);
+            return;
+          } else {
+            // User is signed in but email has NOT been confirmed
+            if (!isCancelled) {
+              setStatus('error');
+              setErrorMsg('Your email address has not been verified yet. Please check your inbox and click the confirmation link.');
+            }
+            return;
+          }
         }
 
         // 5. Listen for auth change (hash fragment or background token exchange)
@@ -112,7 +163,15 @@ function AuthCallbackContent() {
               router.replace('/reset-password');
               return;
             }
-            await handleSuccessfulVerification(session.user.id, session.user.email);
+            // Check if user is actually confirmed before accepting
+            const isConfirmed = Boolean(
+              session.user.email_confirmed_at &&
+              typeof session.user.email_confirmed_at === 'string' &&
+              session.user.email_confirmed_at.trim().length > 0
+            );
+            if (isConfirmed || isEmailConfirmationHash) {
+              await handleSuccessfulVerification(session.user.id, session.user.email);
+            }
           }
         });
 
@@ -120,11 +179,18 @@ function AuthCallbackContent() {
         const timer = setTimeout(async () => {
           if (!isCancelled && status === 'loading') {
             const { data: checkData } = await supabase.auth.getSession();
-            if (checkData.session) {
+            const { data: freshUser } = await supabase.auth.getUser();
+            const isConfirmed = Boolean(
+              freshUser.user?.email_confirmed_at &&
+              typeof freshUser.user.email_confirmed_at === 'string' &&
+              freshUser.user.email_confirmed_at.trim().length > 0
+            );
+
+            if (checkData.session && (isConfirmed || isEmailConfirmationHash)) {
               await handleSuccessfulVerification(checkData.session.user.id, checkData.session.user.email);
             } else {
               setStatus('error');
-              setErrorMsg('Verification session timed out. Please sign in with your verified email and password.');
+              setErrorMsg('Verification session timed out. Please check your inbox and click the confirmation link.');
             }
           }
         }, 5000);
@@ -148,6 +214,9 @@ function AuthCallbackContent() {
       if (email) setUserEmail(email);
 
       try {
+        // Atomic RPC to mark email verified in both profiles and auth.users
+        await supabase.rpc('verify_user_email', { target_user_id: userId });
+
         await supabase
           .from('profiles')
           .update({
@@ -160,34 +229,28 @@ function AuthCallbackContent() {
           localStorage.removeItem('aht_pending_verification_email');
         }
 
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', userId)
-          .single();
+        // Production redirect requirement: redirect to https://alharmaintravels.com
+        const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        const targetRedirect = isLocal
+          ? `${window.location.origin}/customer`
+          : (process.env.NEXT_PUBLIC_SITE_URL || 'https://alharmaintravels.com');
 
-        const dest =
-          prof?.role === 'admin'
-            ? '/admin'
-            : prof?.role === 'driver'
-            ? '/driver'
-            : prof?.role === 'dispatcher'
-            ? '/dispatcher'
-            : '/customer';
-
-        setDestUrl(dest);
+        setDestUrl(targetRedirect);
 
         setTimeout(() => {
           if (!isCancelled) {
-            router.replace(dest);
+            window.location.href = targetRedirect;
           }
         }, 1500);
       } catch (err) {
         console.error('Profile update error on confirmation:', err);
-        setDestUrl('/customer');
+        const fallback = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? `${window.location.origin}/customer`
+          : 'https://alharmaintravels.com';
+        setDestUrl(fallback);
         setTimeout(() => {
           if (!isCancelled) {
-            router.replace('/customer');
+            window.location.href = fallback;
           }
         }, 1500);
       }
