@@ -106,13 +106,8 @@ export default function SignUpPage() {
         return;
       }
 
-      if (res.requiresVerification) {
-        toast.success('Account created! Please verify your email to activate your account.');
-        router.push(`/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
-      } else {
-        toast.success('Account created successfully! Welcome to Al Harmain Travels.');
-        router.push('/customer');
-      }
+      toast.success('Account created successfully! Welcome to Al Harmain Travels.');
+      router.push('/customer');
     } catch {
       setErrorMsg('An unexpected network error occurred. Please try again.');
     } finally {

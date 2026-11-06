@@ -204,6 +204,16 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
   const { dir, isRTL, t } = useLanguage();
 
   const [isHovered, setIsHovered] = useState(false);
+  const navRef = React.useRef<HTMLElement>(null);
+
+  const handleSidebarWheel = (e: React.WheelEvent<HTMLElement>) => {
+    // If the wheel event is over sidebar chrome (e.g. profile header or logout footer)
+    // rather than directly over the scrollable nav list, route the scroll to the nav list
+    // so wheeling anywhere on the sidebar scrolls the navigation items.
+    if (navRef.current && !navRef.current.contains(e.target as Node)) {
+      navRef.current.scrollTop += e.deltaY;
+    }
+  };
 
   // When route changes, blur active element and reset hover state
   useEffect(() => {
@@ -323,8 +333,10 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
       ───────────────────────────────────────────────────────────── */}
       <aside
         id="admin-desktop-sidebar"
+        data-lenis-prevent
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onWheel={handleSidebarWheel}
         aria-label="Executive Admin Sidebar Navigation"
         aria-expanded={isHovered}
         className={`hidden lg:flex flex-col shrink-0 fixed top-16 sm:top-20 bottom-0 z-40 ${
@@ -383,7 +395,9 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
 
         {/* Navigation Sections */}
         <nav
-          className="p-2 space-y-1 flex-1 overflow-y-auto overflow-x-hidden scrollbar-none bg-white"
+          ref={navRef}
+          data-lenis-prevent
+          className="p-2 space-y-1 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-white"
           aria-label="Executive Admin Navigation Links"
         >
           {ADMIN_NAV_SECTIONS.map((section, sIdx) => (

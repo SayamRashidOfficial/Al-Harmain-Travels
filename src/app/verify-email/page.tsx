@@ -226,6 +226,16 @@ function VerifyEmailContent() {
             )}
           </button>
 
+          {/* Optional Skip to Dashboard */}
+          <button
+            type="button"
+            onClick={() => router.push(targetDashboard)}
+            className="w-full py-2.5 px-4 text-xs font-semibold text-secondary hover:text-primary rounded-xl border border-base/60 hover:border-base hover:bg-surface/50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>Skip for now &amp; proceed to Dashboard</span>
+            <ArrowRight className="w-3.5 h-3.5 text-muted" />
+          </button>
+
           {/* Resend Action */}
           <div className="pt-1 text-center text-xs text-muted flex flex-col items-center justify-center gap-2">
             <div className="flex items-center gap-1.5">

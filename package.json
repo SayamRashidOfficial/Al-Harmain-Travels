@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "clean": "node -e \"const fs = require('fs'); fs.rmSync('.next', { recursive: true, force: true });\"",
+    "dev": "node --max-old-space-size=4096 node_modules/next/dist/bin/next dev",
+    "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "next lint",
     "cap:sync": "cap sync",

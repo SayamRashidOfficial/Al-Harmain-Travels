@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { calculateDistanceKm, estimateDurationMinutes } from '@/lib/geo';
 import { fetchDriverDetails } from '@/lib/driver-stats';
+
+async function getAuthenticatedUser(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace(/^Bearer\s+/i, '');
+
+    if (token) {
+      const { data } = await supabaseAdmin.auth.getUser(token);
+      if (data?.user) return data.user;
+    }
+
+    const cookieHeader = req.headers.get('cookie') || '';
+    const match = cookieHeader.match(/sb-[^=]+-auth-token=([^;]+)/);
+    if (match) {
+      const cookieVal = decodeURIComponent(match[1]);
+      const parsed = JSON.parse(cookieVal);
+      const cookieToken = parsed?.access_token || (Array.isArray(parsed) ? parsed[0] : null);
+      if (cookieToken) {
+        const { data } = await supabaseAdmin.auth.getUser(cookieToken);
+        if (data?.user) return data.user;
+      }
+    }
+  } catch {}
+  return null;
+}
 
 export async function GET(
   req: NextRequest,
@@ -13,8 +38,13 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Booking ID is required.' }, { status: 400 });
     }
 
-    // Resolve booking from Supabase
-    let query = supabase.from('bookings').select(`
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Authentication required.' }, { status: 401 });
+    }
+
+    // Resolve booking from Supabase using admin client
+    let query = supabaseAdmin.from('bookings').select(`
       *,
       assigned_driver:drivers(
         id,
@@ -40,13 +70,31 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Booking not found.' }, { status: 404 });
     }
 
+    // Check user role for authorization
+    const { data: userProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    const isStaff = userProfile?.role === 'admin' || userProfile?.role === 'dispatcher';
+    const isOwner = booking.customer_id === authUser.id;
+    const isAssignedDriver = booking.assigned_driver_id === authUser.id;
+
+    if (!isStaff && !isOwner && !isAssignedDriver) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: You do not have permission to view this booking.' },
+        { status: 403 }
+      );
+    }
+
     let sanitizedDriver = null;
     let etaMinutes = null;
     let etaFormatted = null;
 
     const driverId = booking.assigned_driver_id || booking.assigned_driver?.id;
     if (driverId) {
-      const enrichedDriver = await fetchDriverDetails(supabase, driverId);
+      const enrichedDriver = await fetchDriverDetails(supabaseAdmin, driverId);
       const d = enrichedDriver || booking.assigned_driver;
 
       const driverLat = d?.location?.latitude ?? 21.4225;
@@ -122,6 +170,11 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: 'Booking ID is required.' }, { status: 400 });
     }
 
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Authentication required.' }, { status: 401 });
+    }
+
     const body = await req.json().catch(() => ({}));
     const { status, notes } = body;
 
@@ -131,7 +184,7 @@ export async function PATCH(
 
     // Resolve booking
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    let query = supabase.from('bookings').select('*, payment:payments(*)');
+    let query = supabaseAdmin.from('bookings').select('*, payment:payments(*)');
     if (isUuid) {
       query = query.eq('id', id);
     } else {
@@ -141,6 +194,23 @@ export async function PATCH(
 
     if (fetchErr || !booking) {
       return NextResponse.json({ success: false, error: 'Booking not found.' }, { status: 404 });
+    }
+
+    const { data: userProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    const isStaff = userProfile?.role === 'admin' || userProfile?.role === 'dispatcher';
+    const isOwner = booking.customer_id === authUser.id;
+    const isAssignedDriver = booking.assigned_driver_id === authUser.id;
+
+    if (!isStaff && !isOwner && !isAssignedDriver) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: You do not have permission to modify this booking.' },
+        { status: 403 }
+      );
     }
 
     // Server-side validation: if completing ride, verify cash confirmation for Cash on Pickup
@@ -182,7 +252,7 @@ export async function PATCH(
       updatePayload.notes = booking.notes ? `${booking.notes} | ${notes}` : notes;
     }
 
-    const { error: updateErr } = await supabase
+    const { error: updateErr } = await supabaseAdmin
       .from('bookings')
       .update(updatePayload)
       .eq('id', booking.id);

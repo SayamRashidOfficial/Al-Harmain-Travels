@@ -680,10 +680,17 @@ export default function DriverProfilePage() {
                       <Mail className="w-3.5 h-3.5 text-emerald-500" />
                       {isRTL ? 'البريد الإلكتروني المعتمد' : 'Official Login Email'}
                     </span>
-                    <span className="text-emerald-500 font-bold text-[10px] flex items-center gap-1">
-                      <Lock className="w-2.5 h-2.5" />
-                      {isRTL ? 'مقفول' : 'Locked'}
-                    </span>
+                    {currentUser.email_verified ? (
+                      <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold text-[10px] flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        {isRTL ? 'تم التحقق' : 'Verified'}
+                      </span>
+                    ) : (
+                      <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 font-bold text-[10px] flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 text-amber-600" />
+                        {isRTL ? 'غير مؤكد' : 'Unverified'}
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] font-mono text-primary truncate">{currentUser.email || 'Verified Account'}</p>
                 </div>

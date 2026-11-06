@@ -221,7 +221,7 @@ export default function IntroAnimation() {
         </div>
 
         {/* Brand Title: Al Harmain Travels with Kinetic Letter Stagger */}
-        <h1 className="intro-title" aria-label="Al Harmain Travels">
+        <h2 className="intro-title" aria-label="Al Harmain Travels">
           {WORDS.map((w, wIdx) => (
             <span key={wIdx} className={`intro-word ${w.isGold ? 'intro-word-gold' : ''}`}>
               {w.chars.map((char, cIdx) => {
@@ -238,7 +238,7 @@ export default function IntroAnimation() {
               })}
             </span>
           ))}
-        </h1>
+        </h2>
 
         {/* Elegant Tagline */}
         <div className="intro-tagline">

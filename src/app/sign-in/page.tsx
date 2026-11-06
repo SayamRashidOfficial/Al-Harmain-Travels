@@ -20,12 +20,10 @@ function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    setUnverifiedEmail(null);
 
     if (!email.includes('@') || !email.includes('.')) {
       setErrorMsg('Please enter a valid email address.');
@@ -74,9 +72,6 @@ function SignInForm() {
             break;
         }
       } else {
-        if (res.requiresVerification) {
-          setUnverifiedEmail(res.email || email.trim().toLowerCase());
-        }
         setErrorMsg(res.error || 'Invalid email or password. Please verify your credentials.');
       }
     } catch {
@@ -91,34 +86,7 @@ function SignInForm() {
       title="Welcome Back"
       subtitle="Sign in to your account to reserve, track, or manage executive journeys"
     >
-      {/* Verification notice for unverified accounts */}
-      {unverifiedEmail ? (
-        <div
-          role="alert"
-          className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs space-y-3 animate-fade-in shadow-sm"
-        >
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-              <AlertCircle className="w-4 h-4" />
-            </div>
-            <div className="space-y-1">
-              <span className="font-bold text-primary block text-sm">Email Verification Required</span>
-              <p className="leading-relaxed text-secondary text-xs">
-                {errorMsg || 'Your email address has not been confirmed yet. Please verify your email before signing in.'}
-              </p>
-            </div>
-          </div>
-          <div className="pt-1 flex items-center gap-2">
-            <Link
-              href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}
-              className="btn-brand text-xs !py-2 !px-4 inline-flex items-center gap-1.5 shadow-md shadow-emerald-950/20 hover:scale-[1.02] active:scale-95 transition-all"
-            >
-              <span>Resend / Verify Email</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-      ) : errorMsg ? (
+      {errorMsg ? (
         <div
           role="alert"
           className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 text-xs font-medium flex items-start gap-2.5 animate-shake shadow-sm"

@@ -125,7 +125,7 @@ export default function DispatcherNewBookingPage() {
 
   // ─── Vehicle & Passengers State ───────────────────────────────────────────
   const [selectedCategory, setSelectedCategory] = useState<VehicleCategory>('gmc');
-  const [passengerCount, setPassengerCount] = useState<number>(3);
+  const [passengerCount, setPassengerCount] = useState<number>(1);
 
   // ─── Travel Schedule State ────────────────────────────────────────────────
   const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled'>('immediate');
@@ -574,9 +574,9 @@ export default function DispatcherNewBookingPage() {
             <span className="type-eyebrow">
               {isPendingVerification ? 'Awaiting Payment Verification' : 'Booking Successfully Registered'}
             </span>
-            <h1 className="text-2xl font-black text-primary">
+            <h2 className="text-2xl font-black text-primary">
               Reference: <span className="text-emerald-500 font-mono">{submissionSuccess.reference}</span>
-            </h1>
+            </h2>
             <p className="text-xs text-secondary max-w-md mx-auto">
               {isPendingVerification ? (
                 <>

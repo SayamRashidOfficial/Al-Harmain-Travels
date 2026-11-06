@@ -179,7 +179,8 @@ function formatStatusName(status?: BookingStatus | string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-const STORAGE_KEY = 'alharmain_customer_selected_track_booking';
+const LEGACY_STORAGE_KEY = 'alharmain_customer_selected_track_booking';
+const getStorageKey = (uid?: string | null) => (uid ? `alharmain_customer_selected_track_${uid}` : null);
 
 export default function CustomerTrackPage() {
   const searchParams = useSearchParams();
@@ -362,10 +363,11 @@ export default function CustomerTrackPage() {
       if (matchUrl) return matchUrl;
     }
 
-    // 3. LocalStorage match
+    // 3. User-scoped LocalStorage match (strictly scoped to authenticated user)
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const userStorageKey = getStorageKey(authenticatedUserId);
+        const stored = userStorageKey ? localStorage.getItem(userStorageKey) : null;
         if (stored) {
           const matchStored = bookingsList.find(
             (b) =>
@@ -390,10 +392,10 @@ export default function CustomerTrackPage() {
 
     // 5. Default to first booking
     return bookingsList[0];
-  }, [urlRef]);
+  }, [urlRef, authenticatedUserId]);
 
   /**
-   * Fetch customer bookings from Supabase using authenticated customer ID or urlRef
+   * Fetch customer bookings from Supabase strictly using authenticated customer ID
    */
   const fetchCustomerBookings = useCallback(
     async (userId?: string, showRefreshFeedback = false) => {
@@ -405,7 +407,7 @@ export default function CustomerTrackPage() {
         }
         setError(null);
 
-        // 1. Determine target user ID
+        // 1. Determine target user ID strictly from verified session or authenticated state
         let targetId = userId;
         if (!targetId) {
           const { data: sessionData } = await supabase.auth.getSession();
@@ -417,35 +419,41 @@ export default function CustomerTrackPage() {
 
         if (targetId) {
           setAuthenticatedUserId(targetId);
+        } else {
+          // Unauthenticated or guest: strictly isolate data and return empty
+          setAuthenticatedUserId(null);
+          setCustomerBookings([]);
+          setSelectedBooking(null);
+          setIsLoading(false);
+          setIsRefreshing(false);
+          return;
         }
 
         let bookingsList: any[] = [];
 
-        // 2. Fetch bookings for this authenticated customer if ID is available
-        if (targetId) {
-          const { data: rawBookings, error: queryErr } = await supabase
-            .from('bookings')
-            .select(`
+        // 2. Fetch bookings for this authenticated customer ID only
+        const { data: rawBookings, error: queryErr } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            driver:drivers(
               *,
-              driver:drivers(
-                *,
-                profile:profiles(*),
-                assigned_vehicle:rate_vehicle_types(*)
-              ),
-              additional_charges(*),
-              payments(*)
-            `)
-            .eq('customer_id', targetId)
-            .order('created_at', { ascending: false });
+              profile:profiles(*),
+              assigned_vehicle:rate_vehicle_types(*)
+            ),
+            additional_charges(*),
+            payments(*)
+          `)
+          .eq('customer_id', targetId)
+          .order('created_at', { ascending: false });
 
-          if (!queryErr && rawBookings) {
-            bookingsList = rawBookings;
-          } else if (queryErr) {
-            console.warn('Supabase customer bookings query notice:', queryErr.message);
-          }
+        if (!queryErr && rawBookings) {
+          bookingsList = rawBookings;
+        } else if (queryErr) {
+          console.warn('Supabase customer bookings query notice:', queryErr.message);
         }
 
-        // 3. Priority Ref check: If urlRef is provided, ensure the booking is loaded even if it wasn't in customer_id list
+        // 3. Priority Ref check: If urlRef is provided, only allow loading if it belongs to this customer
         if (urlRef) {
           const matchExisting = bookingsList.find(
             (b) =>
@@ -467,7 +475,8 @@ export default function CustomerTrackPage() {
                 ),
                 additional_charges(*),
                 payments(*)
-              `);
+              `)
+              .eq('customer_id', targetId);
 
             query = isUuid
               ? query.or(`booking_reference.ilike.${cleanRef},id.eq.${cleanRef}`)
@@ -475,27 +484,27 @@ export default function CustomerTrackPage() {
 
             const { data: specificBooking, error: specErr } = await query.maybeSingle();
 
-            if (!specErr && specificBooking) {
+            if (!specErr && specificBooking && specificBooking.customer_id === targetId) {
               bookingsList = [specificBooking, ...bookingsList];
+            } else if (!specErr && !specificBooking) {
+              console.info(`[Live Radar] Booking ${cleanRef} not found or not owned by customer ${targetId}`);
             }
           }
         }
 
-        // 4. Context Store Fallback: In demo/mock mode or if DB returned empty
+        // 4. Fallback: Only allow records strictly matching this authenticated customer ID
         if (bookingsList.length === 0 && contextBookings && contextBookings.length > 0) {
+          const myContextBookings = contextBookings.filter((b) => b.customer_id === targetId);
           if (urlRef) {
-            const matchInContext = contextBookings.find(
+            const matchInContext = myContextBookings.find(
               (b) =>
                 b.booking_reference?.toLowerCase() === urlRef.toLowerCase() ||
                 b.id?.toLowerCase() === urlRef.toLowerCase()
             );
             if (matchInContext) bookingsList = [matchInContext];
           }
-          if (bookingsList.length === 0 && targetId) {
-            bookingsList = contextBookings.filter((b) => b.customer_id === targetId);
-          }
           if (bookingsList.length === 0) {
-            bookingsList = contextBookings;
+            bookingsList = myContextBookings;
           }
         }
 
@@ -537,7 +546,13 @@ export default function CustomerTrackPage() {
           setSelectedBooking(targetSelection);
           if (typeof window !== 'undefined') {
             try {
-              localStorage.setItem(STORAGE_KEY, targetSelection.booking_reference);
+              const userStorageKey = getStorageKey(targetId);
+              if (userStorageKey) {
+                localStorage.setItem(userStorageKey, targetSelection.booking_reference);
+              }
+              // Clean up any legacy shared storage key
+              localStorage.removeItem(LEGACY_STORAGE_KEY);
+
               // Update URL parameter without reload (only when no ref was specified in the URL)
               const currentUrlParam = new URLSearchParams(window.location.search).get('ref');
               if (!currentUrlParam && targetSelection.booking_reference) {
@@ -551,6 +566,10 @@ export default function CustomerTrackPage() {
           }
         } else {
           setSelectedBooking(null);
+          // If customer has no bookings, ensure url ref does not remain
+          if (typeof window !== 'undefined' && window.location.search.includes('ref=')) {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
         }
       } catch (err: any) {
         console.error('Unexpected error loading journey radar:', err);
@@ -576,11 +595,8 @@ export default function CustomerTrackPage() {
         fetchCustomerBookings(uid);
       } else {
         setAuthenticatedUserId(null);
-        // Don't wipe bookings if urlRef is available
-        if (!urlRef) {
-          setCustomerBookings([]);
-          setSelectedBooking(null);
-        }
+        setCustomerBookings([]);
+        setSelectedBooking(null);
         setIsLoading(false);
       }
     });
@@ -588,9 +604,9 @@ export default function CustomerTrackPage() {
     return () => {
       authSub.unsubscribe();
     };
-  }, [fetchCustomerBookings, urlRef]);
+  }, [fetchCustomerBookings]);
 
-  // Real-time Supabase postgres_changes subscription
+  // Real-time Supabase postgres_changes subscription strictly filtered by authenticated user
   useEffect(() => {
     if (!authenticatedUserId) return;
 
@@ -609,6 +625,7 @@ export default function CustomerTrackPage() {
 
           if (payload.eventType === 'UPDATE') {
             const updated = payload.new as any;
+            if (!updated || updated.customer_id !== authenticatedUserId) return;
             const isCurrentlySelected = selectedBookingRef.current?.id === updated.id;
 
             // Fetch the updated booking with driver relations, charges, and payments
@@ -625,6 +642,7 @@ export default function CustomerTrackPage() {
                 payments(*)
               `)
               .eq('id', updated.id)
+              .eq('customer_id', authenticatedUserId)
               .maybeSingle();
 
             const refreshedBooking: Booking = {
@@ -663,8 +681,9 @@ export default function CustomerTrackPage() {
               });
             }
           } else if (payload.eventType === 'INSERT') {
-            // New booking created
+            // New booking created for this customer
             const newRow = payload.new as any;
+            if (!newRow || newRow.customer_id !== authenticatedUserId) return;
             toast.success(`New Journey Registered: #${newRow.booking_reference}`);
             fetchCustomerBookings(authenticatedUserId, false);
           } else if (payload.eventType === 'DELETE') {
@@ -685,7 +704,7 @@ export default function CustomerTrackPage() {
     };
   }, [authenticatedUserId, fetchCustomerBookings]);
 
-  // Switch to a different booking
+  // Switch to a different booking owned by this customer
   const handleSelectBooking = (bookingId: string) => {
     const found = customerBookings.find((b) => b.id === bookingId || b.booking_reference === bookingId);
     if (found) {
@@ -693,7 +712,11 @@ export default function CustomerTrackPage() {
       setRatingSubmitted(false);
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem(STORAGE_KEY, found.booking_reference);
+          const userStorageKey = getStorageKey(authenticatedUserId);
+          if (userStorageKey) {
+            localStorage.setItem(userStorageKey, found.booking_reference);
+          }
+          localStorage.removeItem(LEGACY_STORAGE_KEY);
           window.history.replaceState(null, '', `?ref=${encodeURIComponent(found.booking_reference)}`);
         } catch { }
       }

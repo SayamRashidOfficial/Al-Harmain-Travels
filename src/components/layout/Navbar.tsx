@@ -35,6 +35,7 @@ import AdminMobileSidebar from '@/components/admin/AdminMobileSidebar';
 import DriverMobileSidebar from '@/components/driver/DriverMobileSidebar';
 import UserProfileDropdown from '@/components/layout/UserProfileDropdown';
 import { useLanguage } from '@/context/LanguageContext';
+import { trackBookNowClick } from '@/lib/analytics';
 
 export default function Navbar() {
   const pathname = usePathname() || '';
@@ -903,6 +904,7 @@ export default function Navbar() {
               {showBookCta && (
                 <Link
                   href="/customer"
+                  onClick={() => trackBookNowClick({ location: 'navbar_desktop', label: 'Book a Ride' })}
                   className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-slate-950 bg-gradient-to-r from-[#d4af37] via-[#f0d484] to-[#d4af37] hover:from-[#c5a030] hover:to-[#dfc15a] shadow-md shadow-amber-500/15 hover:shadow-amber-500/25 transition-all duration-300 active:scale-95 group cursor-pointer"
                 >
                   <Compass className="w-3.5 h-3.5 text-slate-950 transition-transform group-hover:rotate-45" />
@@ -1134,7 +1136,10 @@ export default function Navbar() {
                     {showBookCta && (
                       <Link
                         href="/customer"
-                        onClick={() => setIsMobileMenuOpen(false)}
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          trackBookNowClick({ location: 'navbar_mobile_menu', label: 'Book Your Journey' });
+                        }}
                         className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-xs font-bold text-slate-950 bg-gradient-to-r from-[#d4af37] via-[#f0d484] to-[#d4af37] shadow-lg shadow-amber-500/20"
                       >
                         <Compass className="w-4 h-4" />
@@ -1156,7 +1161,10 @@ export default function Navbar() {
                   <div className="space-y-2 pt-1">
                     <Link
                       href="/customer"
-                      onClick={() => setIsMobileMenuOpen(false)}
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        trackBookNowClick({ location: 'navbar_mobile_menu_guest', label: 'Book a Ride' });
+                      }}
                       className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-xs font-bold text-slate-950 bg-gradient-to-r from-[#d4af37] via-[#f0d484] to-[#d4af37] shadow-lg shadow-amber-500/20"
                     >
                       <Compass className="w-4 h-4" />
@@ -1215,6 +1223,7 @@ export default function Navbar() {
         <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
           <Link
             href="/customer"
+            onClick={() => trackBookNowClick({ location: 'navbar_mobile_sticky_bar', label: 'Book Your Journey' })}
             className="pointer-events-auto w-full flex items-center justify-center gap-2.5 py-3.5 rounded-full text-xs font-bold text-slate-950 bg-gradient-to-r from-[#d4af37] via-[#f0d484] to-[#d4af37] shadow-2xl shadow-amber-950/50 hover:scale-[1.01] active:scale-[0.98] transition-all"
           >
             <Compass className="w-4 h-4 text-slate-950" />

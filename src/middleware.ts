@@ -12,9 +12,31 @@ const ROLE_DASHBOARDS: Record<PortalRole, string> = {
 };
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
+  const host = request.headers.get('host') || '';
 
-  // 1. Staff alias redirect: /staff and /staff/* -> /dispatcher and /dispatcher/*
+  // 1. Canonical domain enforcement: redirect www to non-www and enforce HTTPS
+  if (host.startsWith('www.')) {
+    const canonicalHost = host.replace(/^www\./, '');
+    return NextResponse.redirect(`https://${canonicalHost}${pathname}${search}`, 301);
+  }
+
+  // 2. Enforce HTTPS in production when accessed over plain HTTP
+  const proto = request.headers.get('x-forwarded-proto');
+  if (proto === 'http' && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+    return NextResponse.redirect(`https://${host}${pathname}${search}`, 301);
+  }
+
+  // 3. Early return for search engine discovery assets (sitemap, robots, verification files)
+  if (
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt' ||
+    pathname === '/BingSiteAuth.xml'
+  ) {
+    return NextResponse.next();
+  }
+
+  // 4. Staff alias redirect: /staff and /staff/* -> /dispatcher and /dispatcher/*
   if (pathname === '/staff' || pathname.startsWith('/staff/')) {
     const target = pathname === '/staff' ? '/dispatcher' : pathname.replace('/staff', '/dispatcher');
     const url = request.nextUrl.clone();
@@ -37,13 +59,15 @@ export function middleware(request: NextRequest) {
     (c) => c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
   );
 
-  // 2. Handle unauthenticated access to protected portal routes
+  // 5. Handle unauthenticated access to protected portal routes
   if (isProtectedPortal) {
     if (!roleCookie && !hasSupabaseCookie) {
       const signInUrl = request.nextUrl.clone();
       signInUrl.pathname = '/sign-in';
       signInUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(signInUrl);
+      const redirectResponse = NextResponse.redirect(signInUrl);
+      redirectResponse.headers.set('X-Robots-Tag', 'noindex, nofollow');
+      return redirectResponse;
     }
 
     // If role cookie is present, enforce strict portal boundaries
@@ -59,12 +83,14 @@ export function middleware(request: NextRequest) {
         const authorizedDashboard = ROLE_DASHBOARDS[roleCookie] || '/customer';
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = authorizedDashboard;
-        return NextResponse.redirect(redirectUrl);
+        const redirectResponse = NextResponse.redirect(redirectUrl);
+        redirectResponse.headers.set('X-Robots-Tag', 'noindex, nofollow');
+        return redirectResponse;
       }
     }
   }
 
-  // 3. If authenticated user visits sign-in or sign-up, redirect to their dashboard
+  // 6. If authenticated user visits sign-in or sign-up, redirect to their dashboard
   const isAuthPage = pathname === '/sign-in' || pathname === '/sign-up';
   if (isAuthPage && roleCookie && ROLE_DASHBOARDS[roleCookie]) {
     // Check if redirect query param exists and is valid for their role
@@ -79,10 +105,17 @@ export function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = target;
     redirectUrl.searchParams.delete('redirect');
-    return NextResponse.redirect(redirectUrl);
+    const redirectResponse = NextResponse.redirect(redirectUrl);
+    redirectResponse.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return redirectResponse;
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  // Ensure private portal routes always carry X-Robots-Tag
+  if (isProtectedPortal || isAuthPage) {
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  }
+  return response;
 }
 
 export const config = {

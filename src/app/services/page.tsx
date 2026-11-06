@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import CinematicTexture from '@/components/cinematic/CinematicTexture';
 import VehicleClassesSection from '@/components/services/VehicleClassesSection';
+import { trackBookNowClick } from '@/lib/analytics';
 
 export default function ServicesPage() {
   const { services, settings } = useApp();
@@ -75,9 +76,9 @@ export default function ServicesPage() {
                 {/* Content */}
                 <div className="p-6 flex-1 flex flex-col justify-between space-y-5">
                   <div>
-                    <h3 className="text-xl font-bold text-primary group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">
+                    <h2 className="text-xl font-bold text-primary group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">
                       {service.title}
-                    </h3>
+                    </h2>
                     <p className="text-muted text-xs sm:text-sm mt-2 leading-relaxed">
                       {service.description}
                     </p>
@@ -100,6 +101,7 @@ export default function ServicesPage() {
                   <div className="pt-2">
                     <Link
                       href="/customer"
+                      onClick={() => trackBookNowClick({ location: 'services_page_card', label: `Book Service: ${service.title}` })}
                       className="w-full bg-gradient-to-r from-[#d4af37] via-[#e5c567] to-[#d4af37] hover:from-[#c5a030] hover:to-[#dfc15a] text-[#06101e] py-3.5 px-5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-300 shadow-xl hover:shadow-[#d4af37]/20 inline-flex items-center justify-center gap-2.5 cursor-pointer group active:scale-95"
                     >
                       <Compass className="w-4 h-4 text-[#06101e]" />
