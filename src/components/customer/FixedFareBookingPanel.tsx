@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import Link from 'next/link';
+import { SITE_CONFIG } from '@/config/siteConfig';
 import {
   ServiceType,
   TerminalCode,
@@ -602,7 +603,7 @@ export default function FixedFareBookingPanel({
 
           <div className="p-2.5 rounded-xl bg-surface border border-base/80 flex items-center gap-2 text-[11px] text-slate-700 font-medium">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>All fixed-fare rates are licensed by KSA Transport General Authority.</span>
+            <span>All fixed-fare rates are licensed by {SITE_CONFIG.regulatory.authorityFull} ({SITE_CONFIG.regulatory.authorityShort}).</span>
           </div>
         </div>
       )}

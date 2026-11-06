@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Compass } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   SINGLE EDITABLE DESTINATIONS ARRAY (EDITABLE FROM HERE)
+   SINGLE EDITABLE DESTINATIONS ARRAY
    Format: { id, title, country, subtitle, image, link, pickup, destination }
 ───────────────────────────────────────────────────────────────────────────── */
 export interface DestinationPanel {
@@ -26,7 +27,7 @@ export const DESTINATIONS_DATA: DestinationPanel[] = [
     id: 'makkah',
     title: 'MAKKAH',
     country: 'SAUDI ARABIA • THE SACRED SANCTUARY',
-    subtitle: 'Direct transfers from Jeddah Airport to your hotel suite with authorized Haram Gate permits.',
+    subtitle: `${SITE_CONFIG.operational.haramDropoffShort}. Drop-offs adjust around Salah traffic checkpoints.`,
     image: '/images/dest_makkah.jpg',
     link: '/services',
     pickup: 'King Abdulaziz Airport (JED)',
@@ -36,11 +37,11 @@ export const DESTINATIONS_DATA: DestinationPanel[] = [
     id: 'madinah',
     title: 'MADINAH',
     country: "SAUDI ARABIA • THE PROPHET'S CITY",
-    subtitle: 'Peaceful, air-conditioned intercity journeys to the marble courtyards of the Prophet’s Mosque.',
+    subtitle: '',
     image: '/images/dest_madinah.jpg',
     link: '/services',
-    pickup: 'Makkah Clock Royal Tower',
-    destination: "Madinah Prophet's Mosque Gate 1",
+    pickup: ' ',
+    destination: " ",
   },
   {
     id: 'jeddah',
@@ -173,32 +174,66 @@ export default function CinematicDestinations({
   const [selectedSacredIdx, setSelectedSacredIdx] = useState(0);
   const lastInteractionTimeRef = useRef<number>(0);
 
-  const totalPanels = DESTINATIONS_DATA.length; // 3 panels + 1 outro
+  const totalPanels = DESTINATIONS_DATA.length; // 3 panels: Makkah, Madinah, Jeddah
+
+  // Direct smooth jump to specific destination milestone
+  const scrollToDestination = (targetIdx: number) => {
+    if (typeof window === 'undefined') return;
+
+    if (targetIdx >= 4) {
+      const fleetEl = document.getElementById('the-fleet');
+      if (fleetEl) {
+        fleetEl.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+
+    // Milestones corresponding to dwell centers:
+    // 0: Makkah (p ~ 0.09)
+    // 1: Madinah (p ~ 0.41)
+    // 2: Jeddah (p ~ 0.73)
+    // 3: Outro (p ~ 0.96)
+    const targets = [0.092, 0.408, 0.725, 0.958];
+    const targetProgress = targets[targetIdx] ?? 0;
+
+    const st = ScrollTrigger.getById('cinematic-destinations');
+    if (st) {
+      const targetY = st.start + targetProgress * (st.end - st.start);
+      window.scrollTo({
+        top: targetY,
+        behavior: 'smooth',
+      });
+    } else if (containerRef.current) {
+      const containerTop = containerRef.current.getBoundingClientRect().top + window.scrollY;
+      const scrollDistance = containerRef.current.offsetHeight - window.innerHeight;
+      window.scrollTo({
+        top: containerTop + targetProgress * scrollDistance,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // Native scrolling enabled: GSAP ScrollTrigger tracks natural browser scroll
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // 2. Setup GSAP ScrollTrigger Pinned Wipe Animation
+    // Setup GSAP ScrollTrigger Pinned Wipe Animation with generous dwell & slow velocity
     const ctx = gsap.context(() => {
       if (!containerRef.current || !stageRef.current) return;
 
       if (prefersReducedMotion) {
-        // Fallback: simple stack without pin
         return;
       }
 
-      // Panels: Panel 0 (Makkah), Panel 1 (Madinah), Panel 2 (Jeddah), Panel 3 (Outro Compass)
       const panels = gsap.utils.toArray<HTMLElement>('.cinematic-panel');
       const images = gsap.utils.toArray<HTMLElement>('.cinematic-panel-img');
       const titles = gsap.utils.toArray<HTMLElement>('.cinematic-title-block');
       const outroPanel = document.querySelector<HTMLElement>('.cinematic-outro-panel');
 
-      // Initial Setup:
+      // Initial Panel Stacking:
       // Panel 0 is visible base. Subsequent panels start clipped at inset(100% 0 0 0)
       panels.forEach((panel, i) => {
         if (i === 0) {
@@ -212,134 +247,133 @@ export default function CinematicDestinations({
         gsap.set(outroPanel, { clipPath: 'inset(100% 0% 0% 0%)', zIndex: 50 });
       }
 
-      // Set initial scale and opacity on images
+      // Initial scale and translation on image inner wrappers
       images.forEach((img, i) => {
         if (i === 0) {
           gsap.set(img, { scale: 1.0, yPercent: 0 });
         } else {
-          gsap.set(img, { scale: 1.15, yPercent: 0 });
+          gsap.set(img, { scale: 1.12, yPercent: 0 });
         }
       });
 
-      // Set initial titles
+      // Initial titles
       titles.forEach((t, i) => {
         if (i === 0) {
           gsap.set(t, { yPercent: 0, opacity: 1 });
         } else {
-          gsap.set(t, { yPercent: 60, opacity: 0 });
+          gsap.set(t, { yPercent: 40, opacity: 0 });
         }
       });
 
-      // Create Scrubbed Timeline:
-      // Total scroll distance = 100vh per transition + outro
+      // Scrubbed Timeline with 1.6s inertial damping:
+      // Total duration = 12 virtual units. Generous dwell times ensure slow, user-friendly reading.
       const tl = gsap.timeline({
         scrollTrigger: {
+          id: 'cinematic-destinations',
           trigger: containerRef.current,
           start: 'top top',
           end: 'bottom bottom',
           pin: stageRef.current,
-          scrub: 1.0, // Smooth lag
+          scrub: 1.6, // Luxurious lag & inertial smoothing
           anticipatePin: 1,
           onUpdate: (self) => {
             const p = self.progress;
             setScrollProgress(p);
-            if (p > 0.02) setHasScrolled(true);
+            if (p > 0.01) setHasScrolled(true);
 
-            // Determine active panel index (0, 1, 2, or 3 for outro)
-            const panelStep = 1 / (totalPanels + 0.5);
-            const activeIdx = Math.min(Math.floor(p / panelStep), totalPanels - 1);
+            // Synchronize active destination index with dwell & transition states:
+            // 0: Makkah (p: 0 - 0.25)
+            // 1: Madinah (p: 0.25 - 0.58)
+            // 2: Jeddah (p: 0.58 - 0.88)
+            // 3: Outro / Concierge (p: 0.88 - 1.0)
+            let activeIdx = 0;
+            if (p >= 0.88) {
+              activeIdx = 3;
+            } else if (p >= 0.58) {
+              activeIdx = 2;
+            } else if (p >= 0.25) {
+              activeIdx = 1;
+            } else {
+              activeIdx = 0;
+            }
             setActivePanelIndex(activeIdx);
           },
         },
       });
 
-      // Easing: cubic-bezier(0.76, 0, 0.24, 1) or power2.inOut
       const easeCurve = 'power2.inOut';
 
-      // ── WIPE 1: Makkah -> Madinah ──
-      tl.to(
-        titles[0],
-        { yPercent: -40, opacity: 0, duration: 0.5, ease: 'power2.in' },
-        0.15
-      );
-      tl.to(
-        images[0],
-        { yPercent: -12, scale: 1.08, duration: 1.0, ease: easeCurve },
-        0.2
-      );
-      tl.to(
-        panels[1],
-        { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.0, ease: easeCurve },
-        0.2
-      );
-      tl.to(
-        images[1],
-        { scale: 1.0, duration: 1.0, ease: easeCurve },
-        0.2
-      );
-      tl.to(
-        titles[1],
-        { yPercent: 0, opacity: 1, duration: 0.6, ease: 'power2.out' },
-        0.45
-      );
+      // ── STAGE 0: MAKKAH DWELL & SLOW KEN BURNS (0.0 -> 2.2) ──
+      tl.to(images[0], { scale: 1.05, duration: 2.2, ease: 'sine.inOut' }, 0);
 
-      // ── WIPE 2: Madinah -> Jeddah ──
-      tl.to(
-        titles[1],
-        { yPercent: -40, opacity: 0, duration: 0.5, ease: 'power2.in' },
-        1.15
-      );
-      tl.to(
-        images[1],
-        { yPercent: -12, scale: 1.08, duration: 1.0, ease: easeCurve },
-        1.2
-      );
-      tl.to(
-        panels[2],
-        { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.0, ease: easeCurve },
-        1.2
-      );
-      tl.to(
-        images[2],
-        { scale: 1.0, duration: 1.0, ease: easeCurve },
-        1.2
-      );
-      tl.to(
-        titles[2],
-        { yPercent: 0, opacity: 1, duration: 0.6, ease: 'power2.out' },
-        1.45
-      );
+      // ── TRANSITION 1: Makkah -> Madinah (2.2 -> 3.8) ──
+      tl.to(titles[0], { yPercent: -35, opacity: 0, duration: 0.8, ease: 'power2.in' }, 2.2);
+      tl.to(images[0], { yPercent: -8, scale: 1.08, duration: 1.6, ease: easeCurve }, 2.2);
+      tl.to(panels[1], { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.6, ease: easeCurve }, 2.2);
+      tl.to(images[1], { scale: 1.0, duration: 1.6, ease: easeCurve }, 2.2);
+      tl.to(titles[1], { yPercent: 0, opacity: 1, duration: 0.9, ease: 'power2.out' }, 2.7);
 
-      // ── OUTRO WIPE: Jeddah -> Dark Navy Compass Screen ──
+      // ── STAGE 1: MADINAH DWELL & SLOW KEN BURNS (3.8 -> 6.0) ──
+      tl.to(images[1], { scale: 1.05, duration: 2.2, ease: 'sine.inOut' }, 3.8);
+
+      // ── TRANSITION 2: Madinah -> Jeddah (6.0 -> 7.6) ──
+      tl.to(titles[1], { yPercent: -35, opacity: 0, duration: 0.8, ease: 'power2.in' }, 6.0);
+      tl.to(images[1], { yPercent: -8, scale: 1.08, duration: 1.6, ease: easeCurve }, 6.0);
+      tl.to(panels[2], { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.6, ease: easeCurve }, 6.0);
+      tl.to(images[2], { scale: 1.0, duration: 1.6, ease: easeCurve }, 6.0);
+      tl.to(titles[2], { yPercent: 0, opacity: 1, duration: 0.9, ease: 'power2.out' }, 6.5);
+
+      // ── STAGE 2: JEDDAH DWELL & SLOW KEN BURNS (7.6 -> 9.8) ──
+      tl.to(images[2], { scale: 1.05, duration: 2.2, ease: 'sine.inOut' }, 7.6);
+
+      // ── TRANSITION 3: Jeddah -> Outro Compass Screen (9.8 -> 11.0) ──
       if (outroPanel) {
-        tl.to(
-          titles[2],
-          { yPercent: -40, opacity: 0, duration: 0.5, ease: 'power2.in' },
-          2.15
-        );
-        tl.to(
-          images[2],
-          { yPercent: -12, scale: 1.08, duration: 1.0, ease: easeCurve },
-          2.2
-        );
-        tl.to(
-          outroPanel,
-          { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.0, ease: easeCurve },
-          2.2
-        );
+        tl.to(titles[2], { yPercent: -35, opacity: 0, duration: 0.6, ease: 'power2.in' }, 9.8);
+        tl.to(images[2], { yPercent: -8, scale: 1.08, duration: 1.2, ease: easeCurve }, 9.8);
+        tl.to(outroPanel, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.2, ease: easeCurve }, 9.8);
         tl.fromTo(
           '.outro-content',
-          { y: 30, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.7, ease: 'power2.out' },
-          2.5
+          { y: 35, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.8, ease: 'power2.out' },
+          10.3
         );
       }
+
+      // ── STAGE 3: OUTRO DWELL (11.0 -> 12.0) ──
+      // Ample time for user to interact with compass, read bearings, and click CTA
     }, containerRef);
 
     return () => {
       ctx.revert();
     };
-  }, [totalPanels]);
+  }, []);
+
+  // Keyboard navigation support: Arrow keys step smoothly through destinations
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (scrollProgress <= 0.01 || scrollProgress >= 0.99) return;
+
+      const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (targetTag === 'input' || targetTag === 'textarea' || targetTag === 'select') return;
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        if (activePanelIndex < 3) {
+          e.preventDefault();
+          scrollToDestination(activePanelIndex + 1);
+        }
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        if (activePanelIndex > 0) {
+          e.preventDefault();
+          scrollToDestination(activePanelIndex - 1);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [scrollProgress, activePanelIndex]);
 
   // Gyroscope, Device Orientation & Continuous Magnetic Needle Drift
   useEffect(() => {
@@ -372,9 +406,11 @@ export default function CinematicDestinations({
 
     // Subtle magnetic needle breathing loop when idle
     const loop = (time: number) => {
-      // If no recent direct interaction within 1.4 seconds, smoothly oscillate towards current destination bearing
       if (Date.now() - lastInteractionTimeRef.current > 1400) {
-        const baseBearing = SACRED_DESTINATIONS[activePanelIndex]?.bearing ?? 214;
+        const baseBearing =
+          (activePanelIndex < 3
+            ? SACRED_DESTINATIONS[activePanelIndex]?.bearing
+            : SACRED_DESTINATIONS[selectedSacredIdx]?.bearing) ?? 214;
         const drift = Math.sin(time * 0.0022) * 3.5;
         setNeedleAngle((prev) => {
           const target = baseBearing + drift;
@@ -391,9 +427,9 @@ export default function CinematicDestinations({
       window.removeEventListener('deviceorientation', handleOrientation);
       cancelAnimationFrame(rafId);
     };
-  }, [activePanelIndex]);
+  }, [activePanelIndex, selectedSacredIdx]);
 
-  // Unified coordinate tracking for mouse and mobile touch
+  // Mouse & Touch coordinates for parallax and compass guidance
   const updateAngleFromCoords = (clientX: number, clientY: number) => {
     if (typeof window === 'undefined') return;
     lastInteractionTimeRef.current = Date.now();
@@ -401,12 +437,10 @@ export default function CinematicDestinations({
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
 
-    // Fluid parallax translation for backdrops (both mobile and desktop)
     const normX = (clientX - centerX) / (centerX || 1);
     const normY = (clientY - centerY) / (centerY || 1);
     setMouseParallax({ x: normX * -14, y: normY * -10 });
 
-    // Compass needle angle calculation (points subtly towards touch/cursor)
     if (compassContainerRef.current) {
       const rect = compassContainerRef.current.getBoundingClientRect();
       const compassX = rect.left + rect.width / 2;
@@ -415,7 +449,6 @@ export default function CinematicDestinations({
       const deg = (rad * 180) / Math.PI + 90;
       setNeedleAngle(deg);
     } else {
-      // Relative to screen center (where mini explore compass sits)
       const rad = Math.atan2(clientY - centerY, clientX - centerX);
       const deg = (rad * 180) / Math.PI + 90;
       setNeedleAngle(deg);
@@ -433,7 +466,6 @@ export default function CinematicDestinations({
   };
 
   const handleCompassTap = () => {
-    // Tap to cycle sacred bearings or calibrate
     setTouchPulse(true);
     setTimeout(() => setTouchPulse(false), 500);
 
@@ -451,7 +483,8 @@ export default function CinematicDestinations({
     });
   };
 
-  const currentDestination = DESTINATIONS_DATA[activePanelIndex] || DESTINATIONS_DATA[0];
+  const currentDestination =
+    DESTINATIONS_DATA[Math.min(activePanelIndex, DESTINATIONS_DATA.length - 1)] || DESTINATIONS_DATA[0];
 
   const handleExploreClick = () => {
     if (onSelectDestination && currentDestination.pickup && currentDestination.destination) {
@@ -471,46 +504,48 @@ export default function CinematicDestinations({
       onTouchMove={handleTouchMove}
       className="relative bg-[#06101e] text-white selection:bg-[#d4af37] selection:text-[#06101e] w-full touch-pan-y"
       style={{
-        // Total height provides enough scrub distance for smooth yacht-brand wiped transitions
-        minHeight: `${(totalPanels + 1) * 100}vh`,
+        // Generous 800vh runway allows unhurried, slow scrolling with peaceful resting dwell times
+        minHeight: '800vh',
       }}
     >
       {/* ─────────────────────────────────────────────────────────────
-          STICKY / PINNED VIEWPORT STAGE (100VH)
+          STICKY / PINNED VIEWPORT STAGE (100VH / 100DVH)
       ───────────────────────────────────────────────────────────── */}
       <div
         ref={stageRef}
-        className="sticky top-0 left-0 w-full h-screen overflow-hidden flex flex-col justify-between"
+        className="sticky top-0 left-0 w-full h-screen h-[100dvh] overflow-hidden flex flex-col justify-between"
       >
         {/* ── PANELS STACK ── */}
         <div className="absolute inset-0 w-full h-full overflow-hidden">
           {DESTINATIONS_DATA.map((panel, idx) => (
             <div
               key={panel.id}
-              className={`cinematic-panel absolute inset-0 w-full h-full will-change-[clip-path]`}
+              className="cinematic-panel absolute inset-0 w-full h-full will-change-[clip-path]"
               style={{
                 zIndex: 10 + idx * 10,
               }}
             >
-              {/* Full-bleed background image with scale & parallax */}
+              {/* Parallax layer separated from GSAP scale layer to prevent CSS transition fighting */}
               <div
-                className="cinematic-panel-img absolute inset-0 w-full h-full will-change-transform"
+                className="absolute inset-[-24px] pointer-events-none will-change-transform"
                 style={{
                   transform: `translate3d(${mouseParallax.x}px, ${mouseParallax.y}px, 0)`,
                   transition: 'transform 0.4s ease-out',
                 }}
               >
-                <img
-                  src={panel.image}
-                  alt={panel.title}
-                  loading={idx < 2 ? 'eager' : 'lazy'}
-                  className="w-full h-full object-cover object-center"
-                />
+                <div className="cinematic-panel-img absolute inset-0 w-full h-full will-change-transform">
+                  <img
+                    src={panel.image}
+                    alt={panel.title}
+                    loading={idx < 2 ? 'eager' : 'lazy'}
+                    className="w-full h-full object-cover object-center select-none"
+                  />
+                </div>
               </div>
 
-              {/* Editorial Gradient Scrims: Dark gradient overlay at bottom so text stays readable */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#06101e]/90 via-[#06101e]/40 to-black/25 pointer-events-none" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#06101e]/80 via-transparent to-transparent pointer-events-none" />
+              {/* Editorial Gradient Scrims: Ensures high text legibility on all displays */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#06101e]/95 via-[#06101e]/45 to-black/30 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#06101e]/85 via-[#06101e]/30 to-transparent pointer-events-none" />
             </div>
           ))}
 
@@ -519,16 +554,18 @@ export default function CinematicDestinations({
             className="cinematic-outro-panel absolute inset-0 w-full h-full bg-[#06101e] flex flex-col items-center justify-center p-6 text-center will-change-[clip-path]"
             style={{ zIndex: 50 }}
           >
-            {/* Subtle atmospheric glow behind compass */}
+            {/* Atmospheric glow behind compass */}
             <div className="absolute w-[450px] h-[450px] rounded-full bg-gradient-to-tr from-[#0b4736]/30 via-[#b8922a]/15 to-transparent blur-3xl pointer-events-none" />
 
             <div className="outro-content relative z-10 flex flex-col items-center max-w-lg space-y-4 sm:space-y-5">
-              {/* Procedural SVG Compass: Rotates and reacts to touch/mouse/sensor */}
+              {/* Procedural SVG Compass */}
               <div
                 ref={compassContainerRef}
                 onClick={handleCompassTap}
                 onTouchStart={handleCompassTap}
-                className={`relative p-6 sm:p-7 rounded-full bg-white/5 border border-white/15 backdrop-blur-md shadow-2xl cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 ${touchPulse ? 'ring-4 ring-[#d4af37]/60 shadow-[0_0_40px_rgba(212,175,55,0.4)]' : ''
+                className={`relative p-6 sm:p-7 rounded-full bg-white/5 border border-white/15 backdrop-blur-md shadow-2xl cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 ${touchPulse
+                  ? 'ring-4 ring-[#d4af37]/60 shadow-[0_0_40px_rgba(212,175,55,0.4)]'
+                  : ''
                   }`}
                 title="Tap to align compass"
               >
@@ -540,11 +577,12 @@ export default function CinematicDestinations({
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-[#d4af37]/40 text-[10px] sm:text-xs font-mono tracking-widest text-[#d4af37] backdrop-blur-md shadow-lg">
                   <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse" />
                   <span>
-                    {Math.round(((needleAngle % 360) + 360) % 360)}° {getCardinalDirection(needleAngle)} &bull; {SACRED_DESTINATIONS[selectedSacredIdx].name.toUpperCase()}
+                    {Math.round(((needleAngle % 360) + 360) % 360)}° {getCardinalDirection(needleAngle)} &bull;{' '}
+                    {SACRED_DESTINATIONS[selectedSacredIdx].name.toUpperCase()}
                   </span>
                 </div>
                 <span className="text-[10px] text-white/60 font-mono tracking-wider">
-                  {sensorHeading !== null ? '🧭 GYRO COMPASS LIVE &bull; ROTATE DEVICE' : 'TAP TO ALIGN &bull; DRAG TO STEER'}
+                  {sensorHeading !== null ? '' : 'TAP TO ALIGN &bull; DRAG TO STEER'}
                 </span>
               </div>
 
@@ -556,7 +594,6 @@ export default function CinematicDestinations({
                 <h3 className="font-serif text-3xl sm:text-5xl text-white font-normal tracking-tight">
                   Where to next?
                 </h3>
-
               </div>
 
               {/* Action Button */}
@@ -577,9 +614,9 @@ export default function CinematicDestinations({
           </div>
         </div>
 
-        {/* ── TOP SECTION HEADER (MINIMAL & LUXURIOUS) ── */}
-        <div className="relative z-40 w-full px-5 sm:px-10 lg:px-14 pt-6 sm:pt-8 flex items-center justify-between pointer-events-none">
-          <div className="flex items-center gap-3">
+        {/* ── TOP SECTION HEADER + USER-FRIENDLY DESTINATION TABS ── */}
+        <div className="relative z-40 w-full px-5 sm:px-10 lg:px-14 pt-6 sm:pt-8 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+          <div className="flex items-center gap-3 pointer-events-auto">
             <span className="text-[10px] sm:text-xs font-mono font-bold tracking-[0.25em] uppercase text-[#d4af37]">
               AL HARMAIN
             </span>
@@ -587,6 +624,41 @@ export default function CinematicDestinations({
             <span className="text-[10px] sm:text-xs font-sans tracking-[0.2em] uppercase text-white/70">
               SACRED DESTINATIONS
             </span>
+          </div>
+
+          {/* Interactive Quick-Jump Navigation Tabs (User Friendly) */}
+          <div className="pointer-events-auto hidden md:flex items-center gap-1.5 bg-black/55 backdrop-blur-md px-2.5 py-1.5 rounded-full border border-white/20 shadow-xl">
+            {DESTINATIONS_DATA.map((dest, idx) => {
+              const isCurrent = activePanelIndex === idx && scrollProgress < 0.88;
+              return (
+                <button
+                  key={dest.id}
+                  type="button"
+                  onClick={() => scrollToDestination(idx)}
+                  className={`px-3 py-1 rounded-full text-[10px] font-mono tracking-wider uppercase transition-all duration-300 flex items-center gap-1.5 cursor-pointer ${isCurrent
+                    ? 'bg-[#d4af37] text-[#06101e] font-bold shadow-md shadow-[#d4af37]/30 scale-105'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                    }`}
+                  aria-label={`Jump to ${dest.title}`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+                  <span>0{idx + 1} {dest.title}</span>
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={() => scrollToDestination(3)}
+              className={`px-3 py-1 rounded-full text-[10px] font-mono tracking-wider uppercase transition-all duration-300 flex items-center gap-1.5 cursor-pointer ${activePanelIndex >= 3 || scrollProgress >= 0.88
+                ? 'bg-[#d4af37] text-[#06101e] font-bold shadow-md shadow-[#d4af37]/30 scale-105'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
+              aria-label="Jump to Expedition Concierge"
+            >
+              <span className="" />
+
+            </button>
           </div>
 
           <Link
@@ -598,8 +670,8 @@ export default function CinematicDestinations({
           </Link>
         </div>
 
-        {/* ── CENTER EXPLORE CIRCULAR BUTTON (64PX GLASS BLUR WITH MINI COMPASS) ── */}
-        {scrollProgress < 0.78 && (
+        {/* ── CENTER EXPLORE CIRCULAR BUTTON ── */}
+        {scrollProgress < 0.86 && (
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-40 pointer-events-auto transition-opacity duration-300">
             <button
               type="button"
@@ -607,7 +679,6 @@ export default function CinematicDestinations({
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-white/40 bg-white/10 hover:bg-white/20 active:scale-95 backdrop-blur-md flex flex-col items-center justify-center text-white transition-all duration-300 hover:scale-110 hover:border-white shadow-2xl cursor-pointer group focus:outline-none"
               aria-label={`Explore ${currentDestination.title}`}
             >
-              {/* Mini Procedural Compass */}
               <CompassSVG
                 size={24}
                 needleRotation={needleAngle}
@@ -621,17 +692,19 @@ export default function CinematicDestinations({
           </div>
         )}
 
-        {/* ── BOTTOM ROW: LARGE EDITORIAL TITLE + COUNTER + SCROLL HINT ── */}
+        {/* ── BOTTOM ROW: EDITORIAL TITLE + USER-FRIENDLY STEP CONTROLS + SCROLL HINT ── */}
         <div className="relative z-40 w-full px-5 sm:px-10 lg:px-14 pb-8 sm:pb-12 flex flex-col sm:flex-row sm:items-end justify-between gap-6 pointer-events-none">
-          {/* Bottom-Left: Large Destination Title (clamp(3rem, 9vw, 9rem)) with Line-Mask Reveal */}
-          <div className="max-w-2xl overflow-hidden pointer-events-auto">
+          {/* Bottom-Left: Large Destination Title (Stacked with CSS Grid for smooth cross-fading) */}
+          <div className="relative w-full max-w-2xl min-h-[170px] sm:min-h-[230px] pointer-events-auto">
             {DESTINATIONS_DATA.map((dest, idx) => {
-              const isActive = activePanelIndex === idx && scrollProgress < 0.8;
+              const isActive = activePanelIndex === idx && scrollProgress < 0.88;
               return (
                 <div
                   key={`title-${dest.id}`}
-                  className={`cinematic-title-block will-change-transform ${isActive ? 'block' : 'hidden'
-                    }`}
+                  className="cinematic-title-block absolute inset-0 will-change-transform flex flex-col justify-end"
+                  style={{
+                    pointerEvents: isActive ? 'auto' : 'none',
+                  }}
                 >
                   {/* Small Subtitle (Country / Tagline) */}
                   <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
@@ -651,40 +724,85 @@ export default function CinematicDestinations({
                     {dest.title}
                   </h2>
 
-                  {/* Subtitle / Caption */}
+                  {/* Subtitle / Description */}
                   <p className="text-xs sm:text-sm text-white/80 font-normal leading-relaxed mt-2 sm:mt-3 max-w-md">
                     {dest.subtitle}
                   </p>
+
+                  {/* Quick Route Info & Booking Link */}
+                  <div className="mt-3 flex flex-wrap items-center gap-2.5 text-[10px] sm:text-xs font-mono">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-white/90 backdrop-blur-sm">
+                      <span className="text-[#d4af37] font-semibold">{dest.pickup}</span>
+                      <ArrowRight className="w-3 h-3 text-[#d4af37]" />
+                      <span className="text-white">{dest.destination}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleExploreClick}
+                      className="px-3 py-1 rounded-full bg-[#d4af37]/20 hover:bg-[#d4af37] text-[#d4af37] hover:text-[#06101e] border border-[#d4af37]/40 font-bold transition-all duration-200 cursor-pointer active:scale-95 inline-flex items-center gap-1"
+                    >
+                      <span>Book Route</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Bottom-Center: Tiny "Scroll" Hint (Fades out after initial scroll, visible on mobile) */}
+          {/* Bottom-Center: Slow Scroll Guidance Hint */}
           <div
             className={`flex flex-col items-center gap-1.5 text-white/70 transition-opacity duration-500 absolute left-1/2 -translate-x-1/2 bottom-5 sm:bottom-8 ${hasScrolled ? 'opacity-0 pointer-events-none' : 'opacity-100'
               }`}
           >
-            <span className="text-[9px] sm:text-[10px] font-mono tracking-[0.25em] uppercase">
-              SWIPE / SCROLL
+            <span className="text-[9px] sm:text-[10px] font-mono tracking-[0.25em] uppercase text-white/60">
+              SLOW SCROLL &bull; OR USE CONTROLS
             </span>
             <div className="w-[1px] h-5 sm:h-6 bg-gradient-to-b from-[#d4af37] via-white to-transparent animate-pulse" />
           </div>
 
-          {/* Bottom-Right: Panel Counter ("01 / 03") */}
-          <div className="pointer-events-auto flex items-center gap-3 bg-black/40 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 self-start sm:self-auto">
-            <span className="font-mono text-xs sm:text-sm font-bold text-white tracking-widest">
-              0{activePanelIndex + 1}
-            </span>
-            <span className="text-white/30 text-xs">/</span>
-            <span className="font-mono text-xs text-[#d4af37] font-semibold">
-              0{totalPanels}
-            </span>
+          {/* Bottom-Right: Step Arrows + Counter Navigation Controls */}
+          <div className="pointer-events-auto flex items-center gap-3 self-start sm:self-auto">
+            {/* Step Arrows */}
+            <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-full border border-white/20 shadow-xl">
+              <button
+                type="button"
+                onClick={() => scrollToDestination(Math.max(0, activePanelIndex - 1))}
+                disabled={activePanelIndex === 0}
+                className="w-8 h-8 rounded-full border border-white/15 bg-white/5 hover:bg-white/20 disabled:opacity-25 disabled:cursor-not-allowed flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer"
+                aria-label="Previous destination"
+                title="Previous destination (or Up/Left arrow)"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToDestination(Math.min(4, activePanelIndex + 1))}
+                disabled={activePanelIndex >= 3}
+                className="w-8 h-8 rounded-full border border-white/15 bg-white/5 hover:bg-white/20 disabled:opacity-25 disabled:cursor-not-allowed flex items-center justify-center text-white transition-all active:scale-95 cursor-pointer"
+                aria-label="Next destination"
+                title="Next destination (or Down/Right arrow)"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Panel Counter ("01 / 03") */}
+            <div className="flex items-center gap-2.5 bg-black/60 backdrop-blur-md px-3.5 py-2 rounded-full border border-white/20 shadow-xl">
+              <span className="font-mono text-xs sm:text-sm font-bold text-white tracking-widest">
+                0{Math.min(activePanelIndex + 1, totalPanels)}
+              </span>
+              <span className="text-white/30 text-xs">/</span>
+              <span className="font-mono text-xs text-[#d4af37] font-semibold">
+                0{totalPanels}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* ── THIN PROGRESS LINE AT THE BOTTOM EDGE ── */}
-        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/15 overflow-hidden z-50">
+        <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white/15 overflow-hidden z-50">
           <div
             style={{
               width: `${Math.min(Math.round(scrollProgress * 100), 100)}%`,

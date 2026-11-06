@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ShieldCheck, Lock, Award, Headphones } from 'lucide-react';
 import BrandLogo from '@/components/ui/BrandLogo';
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 interface AuthShellProps {
   badge?: string;
@@ -114,7 +115,7 @@ export default function AuthShell({
             </div>
             <div className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-surface/50 border border-base/60 text-center">
               <Award className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span className="font-medium truncate">GTA Licensed</span>
+              <span className="font-medium truncate">{SITE_CONFIG.regulatory.badge}</span>
             </div>
             <div className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-surface/50 border border-base/60 text-center">
               <Headphones className="w-3.5 h-3.5 text-emerald-500 shrink-0" />

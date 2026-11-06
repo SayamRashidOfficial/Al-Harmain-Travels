@@ -3,13 +3,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { MapPin } from 'lucide-react';
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 const HERITAGE_SLIDES = [
   {
     src: '/images/dest_madinah.jpg',
     alt: "Prophet's Mosque Al-Masjid An-Nabawi in Madinah",
     title: 'Madinah Al-Munawwarah',
-    subtitle: 'Direct Northern Courtyard Clearance',
+    subtitle: 'Central Area (Markaziyah) & Haram Tunnel Clearance',
   },
   {
     src: '/images/dest_makkah.jpg',
@@ -128,7 +129,7 @@ export default function HeritageSection() {
                 Founded with a sacred commitment to serve Dhuyuf Al-Rahman (Guests of The Most Merciful), Al-Haramain Travels provides calm, dependable chauffeured journeys between the holy sanctuaries and airport terminals.
               </p>
               <p>
-                Every transfer is conducted by courteous, licensed chauffeurs with authorized Haram courtyard access, ensuring you arrive on schedule and in complete comfort for your worship.
+                Every transfer is conducted by courteous, licensed chauffeurs with authorized Central Area (Markaziyah) Hotel & Haram Tunnel Drop-Offs (Ajyad, Jabal Omar & Clock Tower Basements, with drop-offs adjusting around Salah traffic checkpoints), ensuring you arrive on schedule and in complete comfort for your worship.
               </p>
             </div>
           </div>

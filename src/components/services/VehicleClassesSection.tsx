@@ -12,6 +12,7 @@ import {
   Check,
   Crown,
 } from 'lucide-react';
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 interface VehicleClass {
   id: string;
@@ -38,7 +39,7 @@ const VEHICLE_CLASSES: VehicleClass[] = [
     suitability: 'Ideal for solo or couple pilgrims',
     image: '/images/fleet_sedan.jpg',
     badge: 'Popular Choice',
-    amenities: ['Direct Northern Courtyard Clearance', 'Chilled Mineral Water', 'Live Flight Tracking'],
+    amenities: ['Central Area & Tunnel Drop-Off Clearance', 'Chilled Mineral Water', 'Live Flight Tracking'],
   },
   {
     id: 'premium_van',
@@ -312,7 +313,7 @@ export default function VehicleClassesSection() {
               className="text-sm sm:text-base text-black !text-black font-medium leading-relaxed max-w-[65ch]"
               style={{ color: '#000000' }}
             >
-              Each category is meticulously prepared with climate-adjusted cabin comfort, licensed English &amp; Arabic speaking chauffeurs, and authorized Haram courtyard clearances.
+              Each category is meticulously prepared with climate-adjusted cabin comfort, licensed English &amp; Arabic speaking chauffeurs, and authorized Central Area (Markaziyah) Hotel &amp; Haram Tunnel Drop-Offs (Ajyad, Jabal Omar &amp; Clock Tower Basements, with drop-offs adjusting around Salah traffic checkpoints).
             </p>
           </div>
         </div>

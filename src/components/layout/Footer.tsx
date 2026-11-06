@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import CinematicTexture from '@/components/cinematic/CinematicTexture';
 import BrandLogo from '@/components/ui/BrandLogo';
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 export default function Footer() {
   const pathname = usePathname() || '';
@@ -109,7 +110,7 @@ export default function Footer() {
       observer.disconnect();
       clearTimeout(fallbackTimer);
     };
-  }, [pathname]);
+  }, [pathname, shouldHideFooter]);
 
   // Helper for smooth downward-to-upward staggered reveal
   const getRevealStyle = (delayMs: number) => {
@@ -164,7 +165,7 @@ export default function Footer() {
             </Link>
 
             <a
-              href="https://wa.me/966548881234"
+              href={SITE_CONFIG.contact.whatsAppLink}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-xs sm:text-sm font-bold tracking-wider uppercase text-white/90 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/50 hover:border-[#d4af37]/60 transition-all duration-300 cursor-pointer active:scale-95 shadow-md"
@@ -180,14 +181,125 @@ export default function Footer() {
         ───────────────────────────────────────────────────────────── */}
         <div className="py-12 sm:py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
 
-          {/* ── COL 1: BRAND & MOT LICENSE (4 COLS) ── */}
+          {/* ── COL 1: BRAND, TGA LICENSE & MONOCHROME SOCIAL ICONS (4 COLS) ── */}
           <div className="sm:col-span-2 lg:col-span-4 space-y-4" style={getRevealStyle(180)}>
             <BrandLogo size="md" href="/" subtitle="VIP Chauffeur · Makkah · Madinah" variant="dark" />
 
-            {/* Clean Formal MOT License Info */}
+            {/* Clean Formal TGA License Info */}
             <div className="flex items-center gap-2 text-xs text-emerald-200/80 pt-1">
               <ShieldCheck className="w-4 h-4 text-[#d4af37] shrink-0" />
-              <span>KSA Ministry of Transport Licensed Operator #4029</span>
+              <span>{SITE_CONFIG.regulatory.licenseLabel}</span>
+            </div>
+
+            {/* Minimalist Social Media Icons (White by default, brand color & animated on hover) */}
+            <div className="flex items-center gap-5 mt-6">
+              {/* Facebook */}
+              <a
+                href="https://www.facebook.com/alharmaintravels"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="text-white hover:text-[#1877F2] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-110 active:scale-95 hover:drop-shadow-[0_2px_10px_rgba(24,119,242,0.6)] inline-flex items-center justify-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  className="w-5 h-5 fill-current"
+                  aria-hidden="true"
+                >
+                  <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" />
+                </svg>
+              </a>
+
+              {/* Twitter / X */}
+              <a
+                href="https://x.com/alharmaintravels"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="X (Twitter)"
+                className="text-white hover:text-[#1DA1F2] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-110 active:scale-95 hover:drop-shadow-[0_2px_10px_rgba(29,161,242,0.6)] inline-flex items-center justify-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  className="w-5 h-5 fill-current"
+                  aria-hidden="true"
+                >
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </a>
+
+              {/* Instagram */}
+              <a
+                href="https://www.instagram.com/alharmaintravels"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="text-white hover:text-[#E4405F] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-110 active:scale-95 hover:drop-shadow-[0_2px_10px_rgba(228,64,95,0.6)] inline-flex items-center justify-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  className="w-5 h-5 fill-current"
+                  aria-hidden="true"
+                >
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                </svg>
+              </a>
+
+              {/* TikTok */}
+              <a
+                href="https://www.tiktok.com/@alharmaintravels"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="TikTok"
+                className="text-white hover:text-[#FF0050] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-110 active:scale-95 hover:drop-shadow-[0_2px_10px_rgba(255,0,80,0.6)] inline-flex items-center justify-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  className="w-5 h-5 fill-current"
+                  aria-hidden="true"
+                >
+                  <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
+                </svg>
+              </a>
+
+              {/* LinkedIn */}
+              <a
+                href="https://www.linkedin.com/company/alharmaintravels"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="LinkedIn"
+                className="text-white hover:text-[#0A66C2] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-110 active:scale-95 hover:drop-shadow-[0_2px_10px_rgba(10,102,194,0.6)] inline-flex items-center justify-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  className="w-5 h-5 fill-current"
+                  aria-hidden="true"
+                >
+                  <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.54a1.6 1.6 0 0 0-1.6 1.6 1.6 1.6 0 0 0 1.6 1.6 1.6 1.6 0 0 0 1.6-1.6 1.6 1.6 0 0 0-1.6-1.6z" />
+                </svg>
+              </a>
+
+              {/* WhatsApp */}
+              <a
+                href={SITE_CONFIG.contact.whatsAppLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="WhatsApp"
+                className="text-white hover:text-[#25D366] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-110 active:scale-95 hover:drop-shadow-[0_2px_10px_rgba(37,211,102,0.6)] inline-flex items-center justify-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  className="w-5 h-5 fill-current"
+                  aria-hidden="true"
+                >
+                  <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm.01 1.67c2.2 0 4.26.86 5.82 2.41a8.175 8.175 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24zm4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.03-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.12-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.47c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.44.53.6.19 1.15.16 1.59.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.22-.17-.47-.3z" />
+                </svg>
+              </a>
             </div>
           </div>
 
@@ -225,7 +337,7 @@ export default function Footer() {
               {[
                 { title: 'Jeddah Airport ⇄ Makkah', desc: '55m &bull; VIP Terminal Meet' },
                 { title: 'Makkah ⇄ Madinah', desc: 'Intercity Highway Express' },
-                { title: 'Madinah Airport ⇄ Hotels', desc: '25m &bull; Direct Haram Gates' },
+                { title: 'Madinah Airport ⇄ Hotels', desc: '25m &bull; Central Markaziyah & Hotel Drop-Offs' },
                 { title: 'Ziyarat Holy Sites Tours', desc: 'Ghar Hira, Quba & Uhud' },
               ].map((r) => (
                 <li key={r.title}>
@@ -261,16 +373,16 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li>
                 <a
-                  href="tel:+966548881234"
+                  href={SITE_CONFIG.contact.phoneTel}
                   className="flex items-center gap-2.5 text-emerald-100/80 hover:text-white transition-colors group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
                 >
                   <Phone className="w-4 h-4 text-[#d4af37] shrink-0" />
-                  <span>+966 54 888 1234</span>
+                  <span>{SITE_CONFIG.contact.phoneDisplay}</span>
                 </a>
               </li>
               <li>
                 <a
-                  href="https://wa.me/966548881234"
+                  href={SITE_CONFIG.contact.whatsAppLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2.5 text-emerald-100/80 hover:text-emerald-300 transition-colors group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
@@ -281,16 +393,16 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:bookings@alharmaintravels.com"
+                  href={`mailto:${SITE_CONFIG.contact.email}`}
                   className="flex items-center gap-2.5 text-emerald-100/80 hover:text-white transition-colors group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
                 >
                   <Mail className="w-4 h-4 text-[#d4af37] shrink-0" />
-                  <span className="truncate">bookings@alharmaintravels.com</span>
+                  <span className="truncate">{SITE_CONFIG.contact.email}</span>
                 </a>
               </li>
               <li className="flex items-start gap-2.5 text-emerald-100/80">
                 <MapPin className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
-                <span>Ibrahim Al Khalil St, Makkah</span>
+                <span>{SITE_CONFIG.contact.address}</span>
               </li>
             </ul>
           </div>
@@ -300,95 +412,63 @@ export default function Footer() {
             3. BOTTOM BAR (CLEAN, FORMAL DIVIDER & COPYRIGHT)
         ───────────────────────────────────────────────────────────── */}
         <div
-          className="py-6 border-t border-emerald-800/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-emerald-200/60 font-sans"
+          className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8 mt-8 border-t border-slate-800/80 text-xs text-slate-400 font-sans"
           style={getRevealStyle(500)}
         >
-          <p className="text-center sm:text-left">
-            &copy; {new Date().getFullYear()} Al Harmain Travels. All rights reserved.
+          <p className="text-center md:text-left">
+            &copy; {new Date().getFullYear()} {SITE_CONFIG.brandName}. All rights reserved.
           </p>
 
-          <div className="flex items-center gap-6">
-            <Link
-              href="/sign-in"
-              className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
-            >
-              Staff sign in
-            </Link>
-            <Link
-              href="/contact"
-              className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
-            >
-              Support
-            </Link>
-            {/* Social Media Icons */}
-            <div className="flex items-center gap-4">
-              <a
-                href="https://www.linkedin.com/company/alharmaintravels"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="LinkedIn"
-                className="transform transition-transform hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(0,119,181,0.8)]"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 fill-[#0A66C2]"
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+              <li>
+                <Link
+                  href="/terms-and-conditions"
+                  className="hover:text-amber-400 transition-colors duration-200 underline-offset-4 hover:underline"
                 >
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.024-3.039-1.852-3.039-1.853 0-2.136 1.445-2.136 2.939v5.669h-3.554V9h3.413v1.561h.047c.476-.9 1.637-1.852 3.371-1.852 3.603 0 4.267 2.37 4.267 5.452v6.291zM5.337 7.433c-1.144 0-2.069-.926-2.069-2.069 0-1.144.925-2.069 2.069-2.069 1.144 0 2.069.925 2.069 2.069 0 1.143-.925 2.069-2.069 2.069zm1.777 13.019H3.56V9h3.554v11.452zM22.225 0H1.771C.792 0 0 .771 0 1.723v20.554C0 23.229.792 24 1.771 24h20.451C23.208 24 24 23.229 24 22.277V1.723C24 .771 23.208 0 22.225 0z" />
-                </svg>
-              </a>
-              <a
-                href="https://www.tiktok.com/@alharmaintravels"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="TikTok"
-                className="transform transition-transform hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(255,0,0,0.8)]"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 fill-[#FF0050]"
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+              <li aria-hidden="true" className="text-slate-700 select-none">
+                •
+              </li>
+              <li>
+                <Link
+                  href="/privacy-policy"
+                  className="hover:text-amber-400 transition-colors duration-200 underline-offset-4 hover:underline"
                 >
-                  <path d="M9.5 3c0 2.97-.22 5.83-.74 8.55-1.06-.5-2.27-.8-3.66-.8C2.47 10.75 0 13.22 0 16.25s2.47 5.5 5.5 5.5 5.5-2.47 5.5-5.5c0-.94-.23-1.83-.63-2.6 2.02.39 4.28.61 6.63.61v-3c-3.14 0-5.83-1.68-7.1-4.16C12.07 10.86 12 9.93 12 9c0-3.31 2.69-6 6-6V0c-4.97 0-9 4.03-9 9z" />
-                </svg>
-              </a>
-              <a
-                href="https://www.facebook.com/alharmaintravels"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook"
-                className="transform transition-transform hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(59,89,152,0.8)]"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 fill-[#3B5998]"
+                  Privacy Policy
+                </Link>
+              </li>
+              <li aria-hidden="true" className="text-slate-700 select-none">
+                •
+              </li>
+              <li>
+                <Link
+                  href="/cancellation-policy"
+                  className="hover:text-amber-400 transition-colors duration-200 underline-offset-4 hover:underline"
                 >
-                  <path d="M22.676 0H1.324C.593 0 0 .593 0 1.324v21.352C0 23.407.593 24 1.324 24h11.495v-9.294H9.69V11.01h3.129V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.464.099 2.796.144v3.24l-1.918.001c-1.504 0-1.795.716-1.795 1.765v2.313h3.587l-.467 3.696h-3.12V24h6.116C23.407 24 24 23.407 24 22.676V1.324C24 .593 23.407 0 22.676 0z" />
-                </svg>
-              </a>
-              <a
-                href="https://x.com/alharmaintravels"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="X (Twitter)"
-                className="transform transition-transform hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 fill-[#000000]"
+                  Cancellation Policy
+                </Link>
+              </li>
+              <li aria-hidden="true" className="text-slate-700 select-none">
+                •
+              </li>
+              <li>
+                <Link
+                  href="/contact"
+                  className="hover:text-amber-400 transition-colors duration-200 underline-offset-4 hover:underline"
                 >
-                  <path d="M23.954 4.569c-.885.389-1.83.654-2.825.775 1.014-.607 1.794-1.566 2.163-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-2.722 0-4.928 2.206-4.928 4.928 0 .386.043.762.127 1.124-4.094-.205-7.725-2.168-10.152-5.152-.424.727-.666 1.571-.666 2.475 0 1.708.87 3.216 2.188 4.099-.807-.026-1.566-.247-2.228-.616v.062c0 2.385 1.697 4.374 3.946 4.824-.413.112-.849.171-1.296.171-.317 0-.626-.031-.928-.088.626 1.956 2.444 3.379 4.6 3.418-1.68 1.317-3.808 2.103-6.115 2.103-.398 0-.79-.023-1.176-.069 2.179 1.397 4.768 2.212 7.557 2.212 9.054 0 14.003-7.496 14.003-13.986 0-.21-.005-.423-.014-.634.962-.694 1.8-1.562 2.46-2.549z" />
-                </svg>
-              </a>
-            </div>
+                  Support
+                </Link>
+              </li>
+            </ul>
 
             {/* Clean, Simple Back to Top Button */}
             <button
               type="button"
               onClick={scrollToTop}
-              className="inline-flex items-center gap-1.5 text-emerald-200/70 hover:text-[#d4af37] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
+              className="inline-flex items-center gap-1.5 text-slate-400 hover:text-amber-400 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d4af37]"
               aria-label="Back to top"
             >
               <span>Back to top</span>

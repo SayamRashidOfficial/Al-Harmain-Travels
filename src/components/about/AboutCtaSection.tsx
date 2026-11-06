@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, MessageCircle } from 'lucide-react';
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 export default function AboutCtaSection() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -85,11 +86,11 @@ export default function AboutCtaSection() {
               </Link>
 
               <a
-                href="https://wa.me/966548881234"
+                href={SITE_CONFIG.contact.whatsAppLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2.5 px-7 py-3.5 sm:px-8 sm:py-4 rounded-full text-xs sm:text-sm font-bold tracking-wider uppercase text-white/90 bg-white/10 hover:bg-white/20 hover:text-white border border-white/20 backdrop-blur-md transition-all duration-300 shadow-lg cursor-pointer group active:scale-95"
-                aria-label="Contact Al-Haramain Travels via WhatsApp"
+                aria-label={`Contact ${SITE_CONFIG.brandName} via WhatsApp`}
               >
                 <MessageCircle className="w-4 h-4 text-[#d4af37] transition-transform group-hover:scale-110" />
                 <span>WhatsApp 24/7</span>

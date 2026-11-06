@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 export default function StatsSection() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -88,14 +89,14 @@ export default function StatsSection() {
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-[#d4af37] shrink-0 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]" />
               <span className="font-display text-2xl sm:text-3xl lg:text-[2.35rem] font-normal text-[#f0d484] tracking-tight leading-none">
-                MOT Certified
+                {SITE_CONFIG.regulatory.badge}
               </span>
             </div>
             <p className="text-sm sm:text-base text-[#d1e0d7] font-medium tracking-wide">
               Officially Licensed &amp; Insured
             </p>
             <p className="text-xs text-[#9cb4a8] font-mono tracking-wider max-w-[28ch]">
-              License #KSA-MOT-99201
+              {SITE_CONFIG.regulatory.licenseNumber}
             </p>
           </div>
 

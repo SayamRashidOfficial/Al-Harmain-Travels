@@ -367,6 +367,20 @@ export default function Navbar() {
         .customer-portal, .dispatcher-portal, .driver-portal, .admin-portal {
           min-height: calc(100vh - 4rem) !important;
         }
+        @keyframes bellRing {
+          0% { transform: rotate(0deg); }
+          15% { transform: rotate(14deg); }
+          30% { transform: rotate(-12deg); }
+          45% { transform: rotate(10deg); }
+          60% { transform: rotate(-8deg); }
+          75% { transform: rotate(4deg); }
+          85% { transform: rotate(-2deg); }
+          100% { transform: rotate(0deg); }
+        }
+        .bell-btn:hover .bell-icon {
+          animation: bellRing 0.8s ease-in-out both;
+          transform-origin: top center;
+        }
         html.navbar-hidden .customer-portal, html.navbar-hidden .dispatcher-portal, html.navbar-hidden .driver-portal, html.navbar-hidden .admin-portal {
           min-height: 100vh !important;
         }
@@ -425,11 +439,11 @@ export default function Navbar() {
                       setIsNotifOpen((prev) => !prev);
                       if (isCustomerSidebarOpen) setIsCustomerSidebarOpen(false);
                     }}
-                    className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
+                    className="bell-btn group p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
                     aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
                     aria-expanded={isNotifOpen}
                   >
-                    <Bell className="w-4 h-4 text-slate-600" />
+                    <Bell className="bell-icon w-4 h-4 text-slate-600 origin-top transition-transform" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold flex items-center justify-center shadow-xs">
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -496,11 +510,11 @@ export default function Navbar() {
                       setIsNotifOpen((prev) => !prev);
                       if (isDispatcherSidebarOpen) setIsDispatcherSidebarOpen(false);
                     }}
-                    className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
+                    className="bell-btn group p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
                     aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
                     aria-expanded={isNotifOpen}
                   >
-                    <Bell className="w-4 h-4 text-slate-600" />
+                    <Bell className="bell-icon w-4 h-4 text-slate-600 origin-top transition-transform" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold flex items-center justify-center shadow-xs">
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -567,11 +581,11 @@ export default function Navbar() {
                       setIsNotifOpen((prev) => !prev);
                       if (isAdminSidebarOpen) setIsAdminSidebarOpen(false);
                     }}
-                    className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
+                    className="bell-btn group p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
                     aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
                     aria-expanded={isNotifOpen}
                   >
-                    <Bell className="w-4 h-4 text-slate-600" />
+                    <Bell className="bell-icon w-4 h-4 text-slate-600 origin-top transition-transform" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold flex items-center justify-center shadow-xs">
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -638,11 +652,11 @@ export default function Navbar() {
                       setIsNotifOpen((prev) => !prev);
                       if (isDriverSidebarOpen) setIsDriverSidebarOpen(false);
                     }}
-                    className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
+                    className="bell-btn group p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all flex items-center justify-center w-10 h-10 shadow-xs cursor-pointer active:scale-95"
                     aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
                     aria-expanded={isNotifOpen}
                   >
-                    <Bell className="w-4 h-4 text-slate-600" />
+                    <Bell className="bell-icon w-4 h-4 text-slate-600 origin-top transition-transform" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold flex items-center justify-center shadow-xs">
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -787,12 +801,21 @@ export default function Navbar() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`text-sm font-body flex items-center gap-1 py-2 sm:py-2.5 transition-colors duration-200 hover:text-roseGold font-semibold ${isActive
-                          ? 'text-roseGold border-b-2 border-roseGold -mb-[2px]'
-                          : 'text-charcoal'
-                        }`}
+                      className={`group relative text-sm font-body flex items-center gap-1 py-2 sm:py-2.5 font-semibold transition-colors duration-200 ${
+                        isActive
+                          ? 'text-[#b45309]'
+                          : 'text-charcoal hover:text-[#b45309]'
+                      }`}
                     >
                       <span>{item.label}</span>
+                      {/* Animated Gold Underline on Hover & Active */}
+                      <span
+                        className={`absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-[#d4af37] via-amber-400 to-[#d4af37] rounded-full transition-all duration-300 ease-out origin-center ${
+                          isActive
+                            ? 'opacity-100 scale-x-100'
+                            : 'opacity-0 scale-x-0 group-hover:opacity-100 group-hover:scale-x-100'
+                        }`}
+                      />
                     </Link>
                   );
                 })}
@@ -840,11 +863,11 @@ export default function Navbar() {
               <div className="relative" ref={notifRef}>
                 <button
                   onClick={() => setIsNotifOpen(!isNotifOpen)}
-                  className="p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all cursor-pointer active:scale-95 shadow-xs"
+                  className="bell-btn group p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative transition-all cursor-pointer active:scale-95 shadow-xs"
                   aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
                   aria-expanded={isNotifOpen}
                 >
-                  <Bell className="w-4 h-4" />
+                  <Bell className="bell-icon w-4 h-4 origin-top transition-transform" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold flex items-center justify-center shadow-xs">
                       {unreadCount > 9 ? '9+' : unreadCount}
@@ -864,9 +887,6 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-
-              {/* User Profile Dropdown */}
-              <UserProfileDropdown forceLight />
 
               {/* Guest Sign In Quick Access */}
               {!isAuthenticated && !isAuthLoading && (

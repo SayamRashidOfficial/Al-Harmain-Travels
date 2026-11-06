@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Award, Plane, ShieldCheck, Headphones } from 'lucide-react';
 import CinematicTexture from '@/components/cinematic/CinematicTexture';
 import { BrandEmblem } from '@/components/ui/BrandLogo';
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 interface FeatureCardProps {
   icon: React.ElementType;
@@ -211,9 +212,9 @@ export default function AlHarmainStandard() {
     },
     {
       icon: ShieldCheck,
-      title: 'Haram Gate Permits',
+      title: 'Haram Tunnel & Hotel Permits',
       description:
-        'Authorized access permits for hotel drop-offs and luggage drop directly at the Haram perimeter.',
+        SITE_CONFIG.operational.haramDropoffFull,
     },
     {
       icon: Headphones,
