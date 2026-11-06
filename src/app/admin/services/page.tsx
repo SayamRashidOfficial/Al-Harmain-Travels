@@ -42,7 +42,7 @@ export default function AdminServicesPage() {
   const [imageUrl, setImageUrl] = useState('');
   const [basePrice, setBasePrice] = useState<number>(300);
   const [vehicleType, setVehicleType] = useState<VehicleType>('vip_gmc');
-  const [features, setFeatures] = useState<string>('Direct Haram Access\nComplimentary Zamzam\nMultilingual Captain');
+  const [features, setFeatures] = useState<string>('Central Markaziyah & Haram Tunnel Access\nComplimentary Zamzam\nMultilingual Captain');
 
   // Metrics
   const metrics = useMemo(() => {
@@ -60,7 +60,7 @@ export default function AdminServicesPage() {
     setImageUrl('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80');
     setBasePrice(350);
     setVehicleType('vip_gmc');
-    setFeatures('Direct Haram Access\nComplimentary Zamzam\nMultilingual Captain');
+    setFeatures('Central Markaziyah & Haram Tunnel Access\nComplimentary Zamzam\nMultilingual Captain');
     setModalOpen(true);
   };
 

@@ -2,6 +2,7 @@
  * Client-side pure PDF generator for Al Harmain Travels invoices.
  * Generates valid PDF-1.4 documents without any external heavy libraries.
  */
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 export interface InvoicePdfData {
   companyName: string;
@@ -155,7 +156,7 @@ export function generateInvoicePdfBytes(data: InvoicePdfData): Uint8Array {
   streamCommands.push('0.85 0.85 0.85 RG 0.5 w 40 85 m 555 85 l S');
   streamCommands.push('0.4 0.4 0.4 rg');
   streamCommands.push('BT /F2 8.5 Tf 40 70 Td (' + escapePdfText(data.companyName || 'Al Harmain Travels') + ' - Executive VIP Chauffeur Fleet) Tj ET');
-  streamCommands.push('BT /F1 8 Tf 40 57 Td (Kingdom of Saudi Arabia | Support: +966 54 888 1234 | bookings@alharmaintravels.com) Tj ET');
+  streamCommands.push(`BT /F1 8 Tf 40 57 Td (Kingdom of Saudi Arabia | ${SITE_CONFIG.regulatory.licenseNumber} | Support: ${SITE_CONFIG.contact.phoneDisplay} | ${SITE_CONFIG.contact.email}) Tj ET`);
   streamCommands.push('BT /F1 8 Tf 450 70 Td (Official Digital PDF Invoice) Tj ET');
 
   const contentStream = streamCommands.join('\n');

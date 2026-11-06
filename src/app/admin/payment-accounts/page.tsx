@@ -474,10 +474,10 @@ export default function AdminPaymentAccountsPage() {
                   paymentAccounts.length === 0
                     ? handleOpenAdd
                     : () => {
-                        setSearchQuery('');
-                        setMethodFilter('all');
-                        setStatusFilter('all');
-                      }
+                      setSearchQuery('');
+                      setMethodFilter('all');
+                      setStatusFilter('all');
+                    }
                 }
               />
             </div>
@@ -500,9 +500,8 @@ export default function AdminPaymentAccountsPage() {
                   return (
                     <tr
                       key={account.id}
-                      className={`hover:bg-slate-50/60 transition-colors ${
-                        !account.is_active ? 'opacity-65 bg-slate-50/30' : ''
-                      }`}
+                      className={`hover:bg-slate-50/60 transition-colors ${!account.is_active ? 'opacity-65 bg-slate-50/30' : ''
+                        }`}
                     >
                       {/* Provider & Method */}
                       <td className="py-3.5 px-4">
@@ -608,11 +607,10 @@ export default function AdminPaymentAccountsPage() {
                         <button
                           type="button"
                           onClick={() => togglePaymentAccountActive(account.id, !account.is_active)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors cursor-pointer ${
-                            account.is_active
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
-                          }`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors cursor-pointer ${account.is_active
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                            : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                            }`}
                           title={account.is_active ? 'Click to deactivate' : 'Click to activate'}
                         >
                           <Power className="w-3 h-3" />
@@ -626,11 +624,10 @@ export default function AdminPaymentAccountsPage() {
                           type="button"
                           onClick={() => setDefaultPaymentAccount(account.id)}
                           disabled={isCurrentDefault}
-                          className={`p-1.5 rounded-xl transition-all ${
-                            isCurrentDefault
-                              ? 'text-amber-500 bg-amber-50 cursor-default ring-1 ring-amber-300'
-                              : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100 cursor-pointer'
-                          }`}
+                          className={`p-1.5 rounded-xl transition-all ${isCurrentDefault
+                            ? 'text-amber-500 bg-amber-50 cursor-default ring-1 ring-amber-300'
+                            : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100 cursor-pointer'
+                            }`}
                           title={isCurrentDefault ? 'Current Preferred Default Account' : 'Click to make preferred default'}
                         >
                           <Star className={`w-4 h-4 ${isCurrentDefault ? 'fill-amber-500' : ''}`} />
@@ -720,17 +717,16 @@ export default function AdminPaymentAccountsPage() {
                               newType === 'stc_pay'
                                 ? 'STC Pay'
                                 : newType === 'urpay'
-                                ? 'Urpay'
-                                : prev.provider_name === 'STC Pay' || prev.provider_name === 'Urpay'
-                                ? ''
-                                : prev.provider_name,
+                                  ? 'Urpay'
+                                  : prev.provider_name === 'STC Pay' || prev.provider_name === 'Urpay'
+                                    ? ''
+                                    : prev.provider_name,
                           }));
                         }}
-                        className={`p-2.5 rounded-xl border text-left flex flex-col items-center gap-1.5 transition-all text-xs font-bold ${
-                          isSelected
-                            ? 'bg-amber-50/80 border-amber-400 text-amber-950 shadow-2xs'
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
+                        className={`p-2.5 rounded-xl border text-left flex flex-col items-center gap-1.5 transition-all text-xs font-bold ${isSelected
+                          ? 'bg-amber-50/80 border-amber-400 text-amber-950 shadow-2xs'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
                       >
                         <Icon className={`w-4 h-4 ${isSelected ? 'text-amber-700' : 'text-slate-400'}`} />
                         <span>{m.label}</span>
@@ -755,9 +751,8 @@ export default function AdminPaymentAccountsPage() {
                   value={formData.provider_name}
                   onChange={(e) => setFormData({ ...formData, provider_name: e.target.value })}
                   placeholder="e.g. Al Rajhi Bank, SNB, STC Pay..."
-                  className={`w-full px-3 py-2 text-xs rounded-xl border bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900 ${
-                    formErrors.provider_name ? 'border-rose-300' : 'border-slate-200'
-                  }`}
+                  className={`w-full px-3 py-2 text-xs rounded-xl border bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900 ${formErrors.provider_name ? 'border-rose-300' : 'border-slate-200'
+                    }`}
                 />
                 {/* Preset Chips */}
                 {PROVIDER_PRESETS[formData.payment_method_type]?.length > 0 && (
@@ -789,9 +784,8 @@ export default function AdminPaymentAccountsPage() {
                   value={formData.account_holder_name}
                   onChange={(e) => setFormData({ ...formData, account_holder_name: e.target.value })}
                   placeholder="e.g. Al Harmain VIP Transport Co."
-                  className={`w-full px-3 py-2 text-xs rounded-xl border bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900 ${
-                    formErrors.account_holder_name ? 'border-rose-300' : 'border-slate-200'
-                  }`}
+                  className={`w-full px-3 py-2 text-xs rounded-xl border bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900 ${formErrors.account_holder_name ? 'border-rose-300' : 'border-slate-200'
+                    }`}
                 />
                 {formErrors.account_holder_name && (
                   <p className="text-[11px] text-rose-600 font-medium">{formErrors.account_holder_name}</p>
@@ -826,9 +820,8 @@ export default function AdminPaymentAccountsPage() {
                       value={formData.iban}
                       onChange={(e) => setFormData({ ...formData, iban: e.target.value.toUpperCase() })}
                       placeholder="e.g. SA44 8000 0000 0000 0000 0000"
-                      className={`w-full px-3 py-2 text-xs font-mono rounded-xl border bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900 ${
-                        formErrors.iban ? 'border-rose-300' : 'border-slate-200'
-                      }`}
+                      className={`w-full px-3 py-2 text-xs font-mono rounded-xl border bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900 ${formErrors.iban ? 'border-rose-300' : 'border-slate-200'
+                        }`}
                     />
                     {formErrors.iban && (
                       <p className="text-[11px] text-rose-600 font-medium">{formErrors.iban}</p>
@@ -841,25 +834,24 @@ export default function AdminPaymentAccountsPage() {
               {(formData.payment_method_type === 'stc_pay' ||
                 formData.payment_method_type === 'urpay' ||
                 formData.payment_method_type === 'other') && (
-                <div className="space-y-1 pt-1">
-                  <label className="text-xs font-bold text-slate-800">
-                    Mobile Wallet Phone Number{' '}
-                    {formData.payment_method_type !== 'other' && <span className="text-rose-500">*</span>}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.wallet_number}
-                    onChange={(e) => setFormData({ ...formData, wallet_number: e.target.value })}
-                    placeholder="e.g. +966 54 888 1234 or 0548881234"
-                    className={`w-full px-3 py-2 text-xs font-mono rounded-xl border bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900 ${
-                      formErrors.wallet_number ? 'border-rose-300' : 'border-slate-200'
-                    }`}
-                  />
-                  {formErrors.wallet_number && (
-                    <p className="text-[11px] text-rose-600 font-medium">{formErrors.wallet_number}</p>
-                  )}
-                </div>
-              )}
+                  <div className="space-y-1 pt-1">
+                    <label className="text-xs font-bold text-slate-800">
+                      Mobile Wallet Phone Number{' '}
+                      {formData.payment_method_type !== 'other' && <span className="text-rose-500">*</span>}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.wallet_number}
+                      onChange={(e) => setFormData({ ...formData, wallet_number: e.target.value })}
+                      placeholder="e.g. +966 53 190 7430 or 966531907430"
+                      className={`w-full px-3 py-2 text-xs font-mono rounded-xl border bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900 ${formErrors.wallet_number ? 'border-rose-300' : 'border-slate-200'
+                        }`}
+                    />
+                    {formErrors.wallet_number && (
+                      <p className="text-[11px] text-rose-600 font-medium">{formErrors.wallet_number}</p>
+                    )}
+                  </div>
+                )}
 
               {/* Payment Instructions / Remark */}
               <div className="space-y-1">
