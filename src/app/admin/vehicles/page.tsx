@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function AdminVehiclesRedirectPage() {
-  redirect('/admin/fleet');
+  redirect('/admin/users');
 }

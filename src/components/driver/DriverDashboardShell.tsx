@@ -121,7 +121,7 @@ export default function DriverDashboardShell({ children }: DriverDashboardShellP
   return (
     <div
       dir={dir}
-      className="driver-portal customer-portal relative min-h-[calc(100vh-5rem)] w-full bg-page text-primary antialiased overflow-x-hidden"
+      className="driver-portal customer-portal relative min-h-[calc(100vh-4rem)] w-full bg-page text-primary antialiased overflow-x-hidden"
     >
       {/* ─────────────────────────────────────────────────────────────
           1. DESKTOP SIDEBAR (lg+ screen size)
@@ -133,7 +133,7 @@ export default function DriverDashboardShell({ children }: DriverDashboardShellP
         onMouseLeave={() => setIsHovered(false)}
         aria-label="Driver Sidebar Navigation"
         aria-expanded={isHovered}
-        className={`hidden lg:flex flex-col shrink-0 fixed top-16 sm:top-20 bottom-0 z-40 ${
+        className={`hidden lg:flex flex-col shrink-0 fixed top-16 bottom-0 z-40 ${
           isRTL ? 'right-0 border-l' : 'left-0 border-r'
         } border-base bg-white dark:bg-card transition-all duration-300 ease-in-out select-none overflow-hidden group/sidebar ${
           isHovered

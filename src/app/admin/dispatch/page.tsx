@@ -20,9 +20,12 @@ import {
   MapPin,
   Inbox,
   Calendar,
+  CalendarClock,
+  Edit3,
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import EditScheduleModal from '@/components/shared/EditScheduleModal';
 import {
   AdminPageHeader,
   AdminStatCard,
@@ -52,6 +55,7 @@ export default function AdminDispatchPage() {
   } = useApp();
 
   const [manualAssignModalBooking, setManualAssignModalBooking] = useState<Booking | null>(null);
+  const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(null);
   const [isReassignMode, setIsReassignMode] = useState<boolean>(false);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [radarSelectedDriverId, setRadarSelectedDriverId] = useState<string | null>(null);
@@ -259,6 +263,15 @@ export default function AdminDispatchPage() {
                             <Calendar className="w-3.5 h-3.5 text-emerald-600" /> {booking.scheduled_at ? formatDateTime(booking.scheduled_at) : '—'}
                           </span>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setRescheduleBooking(booking)}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded transition-all cursor-pointer shadow-2xs ml-1"
+                          title="Edit / Reschedule Date & Time"
+                        >
+                          <Edit3 className="w-2.5 h-2.5 text-emerald-600" />
+                          <span>Edit</span>
+                        </button>
                       </div>
                       <div className="text-slate-400 text-[11px] mt-0.5">
                         Vehicle: {booking.vehicle_type || 'Standard'} &bull; Requested: {formatDateTime(booking.created_at)}
@@ -460,6 +473,13 @@ export default function AdminDispatchPage() {
           </div>
         </div>
       )}
+
+      {/* Edit / Reschedule Modal */}
+      <EditScheduleModal
+        isOpen={!!rescheduleBooking}
+        onClose={() => setRescheduleBooking(null)}
+        booking={rescheduleBooking}
+      />
     </div>
   );
 }

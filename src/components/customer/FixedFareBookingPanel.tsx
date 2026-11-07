@@ -414,18 +414,20 @@ export default function FixedFareBookingPanel({
   const customPlaces = useMemo(() => savedPlaces.filter((p) => p.type === 'custom'), [savedPlaces]);
 
 
-  // Dynamic available vehicle categories list
+  // Dynamic available vehicle categories list (from Rate Master configured by Admin)
   const displayVehicles = useMemo(() => {
-    const list: string[] = [];
     if (rateVehicles && rateVehicles.length > 0) {
-      rateVehicles.filter(v => v.is_active).forEach(v => {
-        if (!list.includes(v.category)) list.push(v.category);
-      });
+      const list: string[] = [];
+      rateVehicles
+        .filter((v) => v.is_active !== false)
+        .sort((a, b) => (a.display_order ?? 99) - (b.display_order ?? 99))
+        .forEach((v) => {
+          const cat = v.category || v.id;
+          if (cat && !list.includes(cat)) list.push(cat);
+        });
+      if (list.length > 0) return list;
     }
-    VEHICLE_CATEGORIES.forEach(c => {
-      if (!list.includes(c)) list.push(c);
-    });
-    return list;
+    return VEHICLE_CATEGORIES;
   }, [rateVehicles]);
 
   return (

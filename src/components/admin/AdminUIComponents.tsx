@@ -38,6 +38,8 @@ export function getActivityTone(status?: string | null): ActivityTone {
       'active',
       'verified',
       'confirmed',
+      'paid',
+      'payment_verified',
       'completed',
       'ride_completed',
       'trip_completed',
@@ -61,6 +63,7 @@ export function getActivityTone(status?: string | null): ActivityTone {
       'deleted',
       'failed',
       'rejected',
+      'payment_rejected',
       'cancelled',
       'canceled',
       'inactive',
@@ -228,24 +231,24 @@ export function AdminActionButton({
   ...props
 }: AdminActionButtonProps) {
   const variantStyles: Record<ActionButtonVariant, string> = {
-    view: 'text-sky-700 bg-sky-50 hover:bg-sky-100 border-sky-200 hover:border-sky-300 focus-visible:ring-sky-500',
-    edit: 'text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-200 hover:border-amber-300 focus-visible:ring-amber-500',
+    view: 'text-sky-600 bg-sky-50/90 hover:bg-sky-600 hover:text-white border-sky-200/90 hover:border-sky-600 shadow-2xs hover:shadow-md hover:shadow-sky-500/20 focus-visible:ring-sky-500',
+    edit: 'text-amber-700 bg-amber-50/90 hover:bg-amber-600 hover:text-white border-amber-200/90 hover:border-amber-600 shadow-2xs hover:shadow-md hover:shadow-amber-500/20 focus-visible:ring-amber-500',
     delete:
-      'text-rose-700 bg-rose-50 hover:bg-rose-100 border-rose-200 hover:border-rose-300 focus-visible:ring-rose-500',
-    more: 'text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-200 hover:border-purple-300 focus-visible:ring-purple-500',
+      'text-rose-600 bg-rose-50/90 hover:bg-rose-600 hover:text-white border-rose-200/90 hover:border-rose-600 shadow-2xs hover:shadow-md hover:shadow-rose-500/20 focus-visible:ring-rose-500',
+    more: 'text-purple-600 bg-purple-50/90 hover:bg-purple-600 hover:text-white border-purple-200/90 hover:border-purple-600 shadow-2xs hover:shadow-md hover:shadow-purple-500/20 focus-visible:ring-purple-500',
     primary:
-      'text-white bg-emerald-600 hover:bg-emerald-500 border-emerald-600 shadow-xs focus-visible:ring-emerald-500',
+      'text-white bg-emerald-600 hover:bg-emerald-700 border-emerald-600 hover:border-emerald-700 shadow-2xs hover:shadow-md hover:shadow-emerald-600/30 focus-visible:ring-emerald-500',
     secondary:
-      'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border-slate-200 focus-visible:ring-amber-500',
+      'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-xs focus-visible:ring-amber-500',
   };
 
   const defaultIcons: Record<ActionButtonVariant, React.ReactNode> = {
-    view: <Eye className="w-3.5 h-3.5 shrink-0" />,
-    edit: <Pencil className="w-3.5 h-3.5 shrink-0" />,
-    delete: <Trash2 className="w-3.5 h-3.5 shrink-0" />,
-    more: <MoreVertical className="w-3.5 h-3.5 shrink-0" />,
-    primary: <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />,
-    secondary: <ChevronRight className="w-3.5 h-3.5 shrink-0" />,
+    view: <Eye className="w-4 h-4 shrink-0" />,
+    edit: <Pencil className="w-4 h-4 shrink-0" />,
+    delete: <Trash2 className="w-4 h-4 shrink-0" />,
+    more: <MoreVertical className="w-4 h-4 shrink-0" />,
+    primary: <CheckCircle2 className="w-4 h-4 shrink-0" />,
+    secondary: <ChevronRight className="w-4 h-4 shrink-0" />,
   };
 
   const effectiveIcon = icon || defaultIcons[variant];
@@ -256,7 +259,9 @@ export function AdminActionButton({
       title={tooltip}
       aria-label={tooltip}
       disabled={disabled}
-      className={`inline-flex items-center justify-center gap-1.5 min-w-[30px] min-h-[30px] px-2 py-1 rounded-lg border text-xs font-semibold transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 active:scale-95 ${variantStyles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 ${
+        label ? 'px-2.5 h-8 sm:h-8.5 rounded-lg' : 'w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg'
+      } border text-xs font-semibold transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 ${variantStyles[variant]} ${className}`}
       {...props}
     >
       {effectiveIcon}
@@ -273,7 +278,7 @@ export function AdminActionGroup({
   className?: string;
 }) {
   return (
-    <div className={`flex items-center justify-center gap-1 sm:gap-1.5 ${className}`}>
+    <div className={`flex items-center justify-center gap-1.5 sm:gap-2 ${className}`}>
       {children}
     </div>
   );
@@ -458,7 +463,7 @@ export function AdminTableCard({
         <div className="p-3.5 sm:p-4 border-b border-base flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-surface/30">
           <div>
             <div className="flex items-center gap-2">
-              {title && <h2 className="text-sm sm:text-base font-bold text-primary">{title}</h2>}
+              {title && <h2 className="text-sm sm:text-base font-bold text-primary font-sans">{title}</h2>}
               {displayBadge && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface text-secondary border border-base">
                   {displayBadge}

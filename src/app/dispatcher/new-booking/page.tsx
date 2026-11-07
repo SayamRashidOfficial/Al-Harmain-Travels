@@ -11,6 +11,8 @@ import {
   TerminalCode,
   Profile,
   BookingStatus,
+  RateVehicleType,
+  Vehicle,
 } from '@/types';
 import {
   resolveFixedFare,
@@ -62,6 +64,7 @@ import {
   RotateCcw,
   AlertTriangle,
   Banknote,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -70,12 +73,49 @@ import {
   getSaudiCurrentTimeString,
 } from '@/lib/utils';
 
-const CATEGORY_TO_VEHICLE_TYPE: Record<VehicleCategory, VehicleType> = {
+const DEFAULT_CATEGORY_TO_VEHICLE_TYPE: Record<string, VehicleType> = {
   sedan: 'sedan',
   staria: 'van',
   gmc: 'vip_gmc',
   hiroof: 'bus',
+  suv: 'suv',
+  van: 'van',
+  bus: 'bus',
 };
+
+function resolveVehicleType(
+  cat: string,
+  rateVehiclesList?: RateVehicleType[],
+  vehiclesList?: Vehicle[]
+): VehicleType {
+  const c = (cat || '').toLowerCase().trim();
+  if (DEFAULT_CATEGORY_TO_VEHICLE_TYPE[c]) {
+    return DEFAULT_CATEGORY_TO_VEHICLE_TYPE[c];
+  }
+
+  // Check matching rateVehicle from Rate Master
+  const matchedRate = rateVehiclesList?.find(
+    (v) => v.category?.toLowerCase() === c || v.id?.toLowerCase() === c
+  );
+  if (matchedRate) {
+    const text = `${matchedRate.name} ${matchedRate.description || ''} ${matchedRate.category}`.toLowerCase();
+    if (text.includes('vip') || text.includes('gmc') || text.includes('yukon') || text.includes('denali')) return 'vip_gmc';
+    if (text.includes('bus') || text.includes('coach') || text.includes('tourismo')) return 'bus';
+    if (text.includes('van') || text.includes('hiroof') || text.includes('hiace') || text.includes('staria') || text.includes('mpv')) return 'van';
+    if (text.includes('suv') || text.includes('palisade')) return 'suv';
+    return 'sedan';
+  }
+
+  // Check matching fleet vehicle
+  const matchedVeh = vehiclesList?.find(
+    (v) => v.id === cat || v.vehicle_type === cat || v.make.toLowerCase() === c
+  );
+  if (matchedVeh) {
+    return matchedVeh.vehicle_type;
+  }
+
+  return 'sedan';
+}
 
 const STANDARD_TERMINALS: { code: NonNullable<TerminalCode>; label: string; sub: string }[] = [
   { code: 'terminal_1', label: 'Terminal 1', sub: 'New Main KAIA Terminal' },
@@ -93,6 +133,7 @@ export default function DispatcherNewBookingPage() {
     rateVehicles,
     rateTerminals,
     fixedFareRates,
+    vehicles,
     createBooking,
     uploadPaymentScreenshot,
   } = useApp();
@@ -105,6 +146,7 @@ export default function DispatcherNewBookingPage() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const customerDropdownRef = useRef<HTMLDivElement>(null);
 
   // Customer Contact Fields
   const [customerName, setCustomerName] = useState('');
@@ -124,7 +166,7 @@ export default function DispatcherNewBookingPage() {
   const [customRouteNotes, setCustomRouteNotes] = useState<string>('');
 
   // ─── Vehicle & Passengers State ───────────────────────────────────────────
-  const [selectedCategory, setSelectedCategory] = useState<VehicleCategory>('gmc');
+  const [selectedCategory, setSelectedCategory] = useState<string>('gmc');
   const [passengerCount, setPassengerCount] = useState<number>(1);
 
   // ─── Travel Schedule State ────────────────────────────────────────────────
@@ -191,6 +233,33 @@ export default function DispatcherNewBookingPage() {
     setCustomerPhone('+966 5');
     setCustomerEmail('');
   };
+
+  // Close customer dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!isCustomerDropdownOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        customerDropdownRef.current &&
+        !customerDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsCustomerDropdownOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsCustomerDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isCustomerDropdownOpen]);
 
   // ─── Active Rates and Routes Resolution ───────────────────────────────────
   const activeRates = useMemo(() => {
@@ -296,7 +365,30 @@ export default function DispatcherNewBookingPage() {
   }, [bookingMode, currentRouteObj, isCurrentRouteAirport, selectedRouteId, selectedTerminal, rateRoutes, rateTerminals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Vehicles & Dynamic Fixed Fare Calculation ───────────────────────────
-  const vehicleCategoriesList: VehicleCategory[] = ['sedan', 'staria', 'gmc', 'hiroof'];
+  // ONLY show vehicles added/managed by admin in Rate Master (rateVehicles), exactly like customer booking
+  const vehicleCategoriesList = useMemo<string[]>(() => {
+    if (rateVehicles && rateVehicles.length > 0) {
+      const list: string[] = [];
+      rateVehicles
+        .filter((v) => v.is_active !== false)
+        .sort((a, b) => (a.display_order ?? 99) - (b.display_order ?? 99))
+        .forEach((v) => {
+          const cat = v.category || v.id;
+          if (cat && !list.includes(cat)) {
+            list.push(cat);
+          }
+        });
+      if (list.length > 0) return list;
+    }
+    return ['sedan', 'staria', 'gmc', 'hiroof'];
+  }, [rateVehicles]);
+
+  // Ensure selectedCategory remains valid within available list
+  useEffect(() => {
+    if (vehicleCategoriesList.length > 0 && !vehicleCategoriesList.includes(selectedCategory)) {
+      setSelectedCategory(vehicleCategoriesList[0]);
+    }
+  }, [vehicleCategoriesList, selectedCategory]);
 
   // Resolve fixed fare for selected combination
   const fixedFareResolution = useMemo(() => {
@@ -316,7 +408,7 @@ export default function DispatcherNewBookingPage() {
       };
     });
     return map;
-  }, [bookingMode, selectedRouteId, selectedTerminal, activeRates]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [bookingMode, selectedRouteId, selectedTerminal, activeRates, vehicleCategoriesList]);
 
   // Max passengers for chosen vehicle
   const maxPaxForVehicle = useMemo(() => {
@@ -501,7 +593,7 @@ export default function DispatcherNewBookingPage() {
         destination_address: finalDest,
         destination_latitude: destLat,
         destination_longitude: destLng,
-        vehicle_type: CATEGORY_TO_VEHICLE_TYPE[selectedCategory],
+        vehicle_type: resolveVehicleType(selectedCategory, rateVehicles, vehicles),
         vehicle_category: selectedCategory,
         service_type: bookingMode === 'fixed' ? selectedRouteId : 'custom_transfer',
         terminal: selectedTerminal,
@@ -751,7 +843,7 @@ export default function DispatcherNewBookingPage() {
           {customerMode === 'existing' && (
             <div className="space-y-2">
               <label className="type-label">Search Registered Customers</label>
-              <div className="relative">
+              <div ref={customerDropdownRef} className="relative">
                 <div className="relative flex items-center">
                   <Search className="w-4 h-4 text-muted absolute left-3.5 pointer-events-none" />
                   <input
@@ -763,15 +855,30 @@ export default function DispatcherNewBookingPage() {
                       setIsCustomerDropdownOpen(true);
                     }}
                     onFocus={() => setIsCustomerDropdownOpen(true)}
+                    onClick={() => setIsCustomerDropdownOpen(true)}
                     className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-input border border-base text-primary placeholder:text-muted focus:outline-none focus:border-emerald-500 text-xs"
                   />
-                  {customerSearch && (
+                  {customerSearch ? (
                     <button
                       type="button"
                       onClick={() => setCustomerSearch('')}
-                      className="absolute right-3 text-muted hover:text-primary"
+                      className="absolute right-3 text-muted hover:text-primary p-0.5 rounded"
+                      aria-label="Clear search"
                     >
                       <X className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomerDropdownOpen((prev) => !prev)}
+                      className="absolute right-3 text-muted hover:text-primary p-0.5 rounded transition-transform"
+                      aria-label="Toggle customer list"
+                    >
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                          isCustomerDropdownOpen ? 'rotate-180' : ''
+                        }`}
+                      />
                     </button>
                   )}
                 </div>
@@ -802,8 +909,28 @@ export default function DispatcherNewBookingPage() {
                               }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-500 font-bold flex items-center justify-center shrink-0 text-xs border border-emerald-500/20">
-                                {cust.full_name?.charAt(0).toUpperCase() || 'P'}
+                              <div className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-600 font-bold flex items-center justify-center shrink-0 text-xs border border-emerald-500/20 overflow-hidden relative">
+                                {cust.avatar_url ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={cust.avatar_url}
+                                    alt={cust.full_name || 'Customer'}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      if (e.currentTarget.nextElementSibling) {
+                                        (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                                      }
+                                    }}
+                                  />
+                                ) : null}
+                                <span
+                                  className={`w-full h-full flex items-center justify-center ${
+                                    cust.avatar_url ? 'hidden' : ''
+                                  }`}
+                                >
+                                  {cust.full_name?.charAt(0).toUpperCase() || 'P'}
+                                </span>
                               </div>
                               <div className="min-w-0">
                                 <div className="font-semibold truncate flex items-center gap-1.5">
@@ -831,8 +958,28 @@ export default function DispatcherNewBookingPage() {
               {selectedCustomerObj && (
                 <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500 text-slate-950 font-black flex items-center justify-center text-xs">
-                      {selectedCustomerObj.full_name?.charAt(0).toUpperCase() || 'C'}
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-700 font-black flex items-center justify-center text-xs shrink-0 overflow-hidden border border-emerald-500/30 relative">
+                      {selectedCustomerObj.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={selectedCustomerObj.avatar_url}
+                          alt={selectedCustomerObj.full_name || 'Customer'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            if (e.currentTarget.nextElementSibling) {
+                              (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <span
+                        className={`w-full h-full flex items-center justify-center ${
+                          selectedCustomerObj.avatar_url ? 'hidden' : ''
+                        }`}
+                      >
+                        {selectedCustomerObj.full_name?.charAt(0).toUpperCase() || 'C'}
+                      </span>
                     </div>
                     <div className="min-w-0">
                       <div className="font-bold text-primary truncate flex items-center gap-2">
@@ -1162,7 +1309,7 @@ export default function DispatcherNewBookingPage() {
           </div>
 
           {/* Vehicle Selection Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-xs">
             {vehicleCategoriesList.map((category) => {
               const isSelected = selectedCategory === category;
               const cap = getVehicleCapacity(category, rateVehicles);

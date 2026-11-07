@@ -1,4 +1,4 @@
-import { Booking, BookingStatus } from '@/types';
+import { Booking, BookingStatus, Driver, RateVehicleType, Vehicle, VehicleType } from '@/types';
 import { SAUDI_TIMEZONE } from './utils';
 
 /**
@@ -427,5 +427,304 @@ export function isCashPaid(booking?: Booking | Partial<Booking> | null): boolean
     booking.payment?.status === 'confirmed' ||
     booking.status === 'payment_completed'
   );
+}
+
+/**
+ * Resolves a normalized canonical category string ('sedan' | 'staria' | 'gmc' | 'hiroof' | string)
+ * from any arbitrary vehicle category, type, or make/model name.
+ */
+export function normalizeVehicleCategory(
+  val?: string | null,
+  textHint?: string | null
+): string {
+  const v = (val || '').toLowerCase().trim();
+  const text = ((textHint || '') + ' ' + v).toLowerCase();
+
+  // 1. Direct canonical categories
+  if (v === 'sedan') return 'sedan';
+  if (v === 'staria') return 'staria';
+  if (v === 'gmc' || v === 'vip_gmc') return 'gmc';
+  if (v === 'hiroof') return 'hiroof';
+
+  // 2. Text heuristics matching known fleet makes/models
+  if (
+    text.includes('hiroof') ||
+    text.includes('hiace') ||
+    text.includes('minibus') ||
+    text.includes('bus') ||
+    text.includes('tourismo') ||
+    text.includes('coach')
+  ) {
+    return 'hiroof';
+  }
+  if (text.includes('staria') || text.includes('mpv')) {
+    return 'staria';
+  }
+  if (
+    text.includes('gmc') ||
+    text.includes('yukon') ||
+    text.includes('suburban') ||
+    text.includes('denali') ||
+    text.includes('suv') ||
+    text.includes('palisade') ||
+    text.includes('tahoe') ||
+    text.includes('escalade')
+  ) {
+    return 'gmc';
+  }
+  if (
+    text.includes('sedan') ||
+    text.includes('camry') ||
+    text.includes('sonata') ||
+    text.includes('accord') ||
+    text.includes('lexus es') ||
+    text.includes('crown')
+  ) {
+    return 'sedan';
+  }
+
+  // 3. Fallback vehicle_type mappings
+  if (v === 'van') return 'staria';
+  if (v === 'suv') return 'gmc';
+  if (v === 'bus') return 'hiroof';
+
+  return v || 'sedan';
+}
+
+export interface ResolvedDriverVehicleInfo {
+  id: string;
+  name: string;
+  category: string;
+  vehicle_type: VehicleType;
+  plate_number: string;
+  make: string;
+  model: string;
+}
+
+/**
+ * Resolves the assigned vehicle details for a driver.
+ * Returns null if the driver has NO vehicle assigned.
+ */
+export function getDriverAssignedVehicle(
+  driver: Driver | Partial<Driver> | null | undefined,
+  rateVehicles: RateVehicleType[] = [],
+  vehicles: Vehicle[] = []
+): ResolvedDriverVehicleInfo | null {
+  if (!driver) return null;
+
+  // 1. If driver has an assigned_vehicle object
+  const av = (driver as any).assigned_vehicle;
+  if (av && typeof av === 'object') {
+    // Could be RateVehicleType
+    if (av.category || av.name) {
+      const cat = normalizeVehicleCategory(av.category || av.id, av.name);
+      return {
+        id: av.id || 'veh-assigned',
+        name: av.name || av.category || 'Fleet Vehicle',
+        category: cat,
+        vehicle_type: (av.vehicle_type || (cat === 'gmc' ? 'vip_gmc' : cat === 'hiroof' ? 'bus' : cat === 'staria' ? 'van' : 'sedan')) as VehicleType,
+        plate_number: av.plate_number || av.category?.toUpperCase() || 'VIP',
+        make: av.make || av.name || 'Fleet',
+        model: av.model || `(${av.seating_capacity || 4} Seats)`,
+      };
+    }
+    // Could be physical Vehicle
+    if (av.vehicle_type || av.plate_number || av.make) {
+      const cat = normalizeVehicleCategory(av.vehicle_type, `${av.make || ''} ${av.model || ''}`);
+      return {
+        id: av.id || 'veh-assigned',
+        name: `${av.make || 'Fleet'} ${av.model || ''}`.trim(),
+        category: cat,
+        vehicle_type: av.vehicle_type || 'sedan',
+        plate_number: av.plate_number || 'VIP',
+        make: av.make || 'Fleet',
+        model: av.model || '',
+      };
+    }
+  }
+
+  // 2. If driver has a vehicle object
+  const vObj = (driver as any).vehicle;
+  if (vObj && typeof vObj === 'object' && (vObj.make || vObj.vehicle_type || vObj.plate_number)) {
+    const cat = normalizeVehicleCategory(vObj.vehicle_type, `${vObj.make || ''} ${vObj.model || ''}`);
+    return {
+      id: vObj.id || 'veh-assigned',
+      name: `${vObj.make || 'Fleet'} ${vObj.model || ''}`.trim(),
+      category: cat,
+      vehicle_type: vObj.vehicle_type || 'sedan',
+      plate_number: vObj.plate_number || 'VIP',
+      make: vObj.make || 'Fleet',
+      model: vObj.model || '',
+    };
+  }
+
+  // 3. If driver has assigned_vehicle_id
+  const assignedId = driver.assigned_vehicle_id;
+  if (assignedId && typeof assignedId === 'string' && assignedId.trim() !== '') {
+    // Check in rateVehicles
+    const rateVeh = rateVehicles.find(
+      (rv) => rv.id === assignedId || rv.category === assignedId
+    );
+    if (rateVeh) {
+      const cat = normalizeVehicleCategory(rateVeh.category, rateVeh.name);
+      return {
+        id: rateVeh.id,
+        name: rateVeh.name,
+        category: cat,
+        vehicle_type: (cat === 'gmc' ? 'vip_gmc' : cat === 'hiroof' ? 'bus' : cat === 'staria' ? 'van' : 'sedan') as VehicleType,
+        plate_number: rateVeh.category.toUpperCase(),
+        make: rateVeh.name,
+        model: `(${rateVeh.seating_capacity} Seats)`,
+      };
+    }
+
+    // Check in physical vehicles
+    const physVeh = vehicles.find((v) => v.id === assignedId);
+    if (physVeh) {
+      const cat = normalizeVehicleCategory(physVeh.vehicle_type, `${physVeh.make} ${physVeh.model}`);
+      return {
+        id: physVeh.id,
+        name: `${physVeh.make} ${physVeh.model}`.trim(),
+        category: cat,
+        vehicle_type: physVeh.vehicle_type,
+        plate_number: physVeh.plate_number,
+        make: physVeh.make,
+        model: physVeh.model,
+      };
+    }
+
+    // Direct category identifier string (e.g. 'sedan', 'staria', 'gmc', 'hiroof')
+    const cat = normalizeVehicleCategory(assignedId);
+    return {
+      id: assignedId,
+      name: cat.toUpperCase(),
+      category: cat,
+      vehicle_type: (cat === 'gmc' ? 'vip_gmc' : cat === 'hiroof' ? 'bus' : cat === 'staria' ? 'van' : 'sedan') as VehicleType,
+      plate_number: cat.toUpperCase(),
+      make: 'Fleet',
+      model: cat.toUpperCase(),
+    };
+  }
+
+  // Driver has NO assigned vehicle
+  return null;
+}
+
+/**
+ * Returns true only if a driver has a valid assigned vehicle.
+ */
+export function isDriverAssignedToVehicle(
+  driver: Driver | Partial<Driver> | null | undefined,
+  rateVehicles: RateVehicleType[] = [],
+  vehicles: Vehicle[] = []
+): boolean {
+  return getDriverAssignedVehicle(driver, rateVehicles, vehicles) !== null;
+}
+
+/**
+ * Extracts the demanded vehicle category from a customer booking.
+ */
+export function getBookingDemandedVehicleCategory(
+  booking?: Booking | Partial<Booking> | null
+): string {
+  if (!booking) return 'sedan';
+
+  if (booking.vehicle_category) {
+    return normalizeVehicleCategory(booking.vehicle_category);
+  }
+
+  if (booking.vehicle_type) {
+    const vType = booking.vehicle_type;
+    // For van: check if notes or passenger count indicates hiroof/bus
+    if (vType === 'van') {
+      const notes = `${booking.notes || ''} ${booking.special_instructions || ''}`.toLowerCase();
+      if (
+        notes.includes('hiroof') ||
+        notes.includes('hiace') ||
+        (booking.passenger_count && booking.passenger_count > 7)
+      ) {
+        return 'hiroof';
+      }
+      return 'staria';
+    }
+    return normalizeVehicleCategory(vType);
+  }
+
+  return 'sedan';
+}
+
+/**
+ * Checks whether a driver's assigned vehicle matches the customer's demanded vehicle.
+ * Strictly returns false if the driver has NO vehicle assigned.
+ */
+export function doesDriverVehicleMatchBooking(
+  driver: Driver | Partial<Driver> | null | undefined,
+  booking: Booking | Partial<Booking> | null | undefined,
+  rateVehicles: RateVehicleType[] = [],
+  vehicles: Vehicle[] = []
+): boolean {
+  if (!driver || !booking) return false;
+
+  const driverVeh = getDriverAssignedVehicle(driver, rateVehicles, vehicles);
+  // Driver without vehicle NEVER matches
+  if (!driverVeh) return false;
+
+  const demandedCategory = getBookingDemandedVehicleCategory(booking);
+
+  // 1. Direct canonical category match
+  if (driverVeh.category === demandedCategory) return true;
+
+  // 2. Direct booking category / id match
+  if (booking.vehicle_category) {
+    const rawCat = booking.vehicle_category.toLowerCase();
+    if (driverVeh.id.toLowerCase() === rawCat || driverVeh.category.toLowerCase() === rawCat) {
+      return true;
+    }
+  }
+
+  // 3. Compatible vehicle_type match if booking vehicle_type was requested directly
+  if (booking.vehicle_type) {
+    if (booking.vehicle_type === 'sedan' && driverVeh.category === 'sedan') return true;
+    if (
+      (booking.vehicle_type === 'vip_gmc' || booking.vehicle_type === 'suv') &&
+      driverVeh.category === 'gmc'
+    )
+      return true;
+    if (booking.vehicle_type === 'bus' && driverVeh.category === 'hiroof') return true;
+    if (
+      booking.vehicle_type === 'van' &&
+      (driverVeh.category === 'staria' || driverVeh.category === 'hiroof')
+    )
+      return true;
+  }
+
+  return false;
+}
+
+/**
+ * Filters the drivers list to only include active drivers who:
+ * 1. Are not offline/unavailable and not suspended.
+ * 2. Have a vehicle assigned.
+ * 3. Whose assigned vehicle matches the booking's demanded vehicle category.
+ */
+export function getEligibleDriversForBooking(
+  booking: Booking | Partial<Booking> | null | undefined,
+  drivers: Driver[],
+  rateVehicles: RateVehicleType[] = [],
+  vehicles: Vehicle[] = []
+): Driver[] {
+  if (!booking || !Array.isArray(drivers)) return [];
+
+  return drivers.filter((d) => {
+    // 1. Availability & account status
+    if (d.status === 'offline' || d.status === 'unavailable') return false;
+    if (d.profile?.status === 'deactivated' || d.profile?.status === 'suspended') return false;
+
+    // 2. Driver must have vehicle assigned
+    if (!isDriverAssignedToVehicle(d, rateVehicles, vehicles)) return false;
+
+    // 3. Driver vehicle must match booking vehicle demand
+    return doesDriverVehicleMatchBooking(d, booking, rateVehicles, vehicles);
+  });
 }
 

@@ -42,7 +42,7 @@ import {
   CANONICAL_RATE_ROUTES,
   CANONICAL_RATE_TERMINALS,
 } from '@/lib/fixed-fare';
-import { generateBookingReference, formatCurrency } from '@/lib/utils';
+import { generateBookingReference, formatCurrency, formatDateTime } from '@/lib/utils';
 import { calculateEstimatedFare } from '@/lib/fare-calculator';
 import { calculateDistanceKm, estimateDurationMinutes } from '@/lib/geo';
 import { supabase } from '@/lib/supabase/client';
@@ -55,6 +55,7 @@ import {
   isBookingForCustomer,
   isCashBooking,
   isCashPaid,
+  getEligibleDriversForBooking,
 } from '@/lib/assignment-utils';
 import {
   calculateDriverRating,
@@ -136,7 +137,7 @@ interface AppContextType {
   // Data Collections & Loading State
   isDataLoading: boolean;
   dataError: string | null;
-  refreshData: () => Promise<void>;
+  refreshData: (forceLoading?: boolean) => Promise<void>;
   bookings: Booking[];
   drivers: Driver[];
   vehicles: Vehicle[];
@@ -331,6 +332,12 @@ interface AppContextType {
   startTrip: (bookingId: string) => Promise<void>;
   completeTrip: (bookingId: string) => Promise<void>;
   updateBookingStatus: (bookingId: string, status: BookingStatus, notes?: string) => Promise<void>;
+  updateBookingSchedule: (
+    bookingId: string,
+    scheduledAt: string,
+    returnScheduledAt?: string | null,
+    reason?: string
+  ) => Promise<boolean>;
   cancelBooking: (bookingId: string, reason: string) => Promise<void>;
 
   // Driver Actions
@@ -474,12 +481,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
+  // Track whether initial data fetch has completed so background syncs and tab navigations do not flash loading skeletons
+  const hasInitiallyLoadedRef = React.useRef<boolean>(false);
+
   // Sync data from Supabase without falling back to mock records.
   // Accepts an optional authenticatedUserId so customer-scoped queries
   // (emergency_contacts, saved_places, recent_locations) are always filtered
   // to the currently signed-in user rather than fetching all rows.
-  const fetchRemoteData = useCallback(async (authenticatedUserId?: string) => {
-    setIsDataLoading(true);
+  const fetchRemoteData = useCallback(async (authenticatedUserId?: string, forceLoading: boolean = false) => {
+    if (!hasInitiallyLoadedRef.current || forceLoading) {
+      setIsDataLoading(true);
+    }
     setDataError(null);
     try {
       // Resolve the effective user ID: prefer the explicitly passed value,
@@ -851,6 +863,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error fetching Supabase data:', err);
       setDataError(err?.message || 'Failed to load transportation records.');
     } finally {
+      hasInitiallyLoadedRef.current = true;
       setIsDataLoading(false);
     }
   }, []);
@@ -1100,12 +1113,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, (payload) => {
         if (payload.new && 'booking_id' in payload.new) {
           const p = payload.new as any;
+          const isPaidStatus = p.status === 'paid' || p.status === 'confirmed';
+          const isFailedStatus = p.status === 'failed' || p.status === 'rejected';
+
           setBookings((prev) =>
             prev.map((b) => {
               if (b.id === p.booking_id) {
+                const nextPaymentStatus = isPaidStatus ? 'paid' : (isFailedStatus ? 'failed' : b.payment_status);
+                const nextStatus = isPaidStatus && (b.status === 'pending_verification' || b.status === 'payment_rejected' || b.status === 'payment_pending')
+                  ? 'confirmed'
+                  : isFailedStatus
+                  ? 'payment_rejected'
+                  : b.status;
                 return {
                   ...b,
-                  payment_status: p.status === 'paid' ? 'paid' : (p.status === 'failed' ? 'failed' : b.payment_status),
+                  payment_status: nextPaymentStatus,
+                  status: nextStatus,
+                  assigned_driver_id: isFailedStatus ? null : b.assigned_driver_id,
+                  driver: isFailedStatus ? null : b.driver,
                   payment: {
                     id: p.id,
                     booking_id: p.booking_id,
@@ -4418,7 +4443,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
-  // Staff verifies payment
+  // Staff/Admin/Dispatcher verifies payment
   const verifyPayment = async (bookingId: string) => {
     const booking = bookings.find((b) => b.id === bookingId);
     if (!booking) return;
@@ -4431,6 +4456,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             ...b,
             status: 'confirmed',
             payment_status: 'paid',
+            payment_rejected_reason: null,
+            payment: b.payment ? { ...b.payment, status: 'paid', updated_at: now } : undefined,
             updated_at: now,
           }
           : b
@@ -4445,19 +4472,38 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           .update({
             status: 'confirmed',
             payment_status: 'paid',
+            payment_rejected_reason: null,
             updated_at: now,
           })
           .eq('id', booking.id);
 
-        await supabase
+        const { data: existingPayment } = await supabase
           .from('payments')
-          .update({ status: 'paid', updated_at: now })
-          .eq('booking_id', booking.id);
+          .select('id')
+          .eq('booking_id', booking.id)
+          .maybeSingle();
+
+        if (existingPayment) {
+          await supabase
+            .from('payments')
+            .update({ status: 'paid', updated_at: now })
+            .eq('booking_id', booking.id);
+        } else {
+          await supabase.from('payments').insert({
+            booking_id: booking.id,
+            customer_id: booking.customer_id || null,
+            amount: booking.final_fare || booking.estimated_fare || booking.fixed_fare_amount || 0,
+            method: booking.payment_method || 'online',
+            status: 'paid',
+            transaction_reference: booking.booking_reference,
+            updated_at: now,
+          });
+        }
 
         await supabase.from('booking_status_history').insert({
           booking_id: booking.id,
           status: 'confirmed',
-          notes: 'Payment verified and booking confirmed by Staff/Dispatcher.',
+          notes: 'Payment verified and booking confirmed by Staff/Admin/Dispatcher.',
         });
       }
     } catch (err) {
@@ -4665,6 +4711,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             status: 'payment_rejected',
             payment_status: 'failed',
             payment_rejected_reason: reason,
+            assigned_driver_id: null,
+            driver: null,
+            payment: b.payment ? { ...b.payment, status: 'failed', updated_at: now } : undefined,
             updated_at: now,
           }
           : b
@@ -4680,19 +4729,38 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             status: 'payment_rejected',
             payment_status: 'failed',
             payment_rejected_reason: reason,
+            assigned_driver_id: null,
             updated_at: now,
           })
           .eq('id', booking.id);
 
-        await supabase
+        const { data: existingPayment } = await supabase
           .from('payments')
-          .update({ status: 'failed', updated_at: now })
-          .eq('booking_id', booking.id);
+          .select('id')
+          .eq('booking_id', booking.id)
+          .maybeSingle();
+
+        if (existingPayment) {
+          await supabase
+            .from('payments')
+            .update({ status: 'failed', updated_at: now })
+            .eq('booking_id', booking.id);
+        } else {
+          await supabase.from('payments').insert({
+            booking_id: booking.id,
+            customer_id: booking.customer_id || null,
+            amount: booking.final_fare || booking.estimated_fare || booking.fixed_fare_amount || 0,
+            method: booking.payment_method || 'online',
+            status: 'failed',
+            transaction_reference: booking.booking_reference,
+            updated_at: now,
+          });
+        }
 
         await supabase.from('booking_status_history').insert({
           booking_id: booking.id,
           status: 'payment_rejected',
-          notes: `Payment proof rejected by Staff. Reason: ${reason}`,
+          notes: `Payment proof rejected by Staff/Admin/Dispatcher. Reason: ${reason}`,
         });
       }
     } catch (err) {
@@ -4979,13 +5047,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const booking = bookings.find((b) => b.id === bookingId);
     if (!booking) return false;
 
-    // Filter available drivers without time overlap and ensure account is active
-    const eligibleDrivers = drivers.filter((d) => {
-      if (d.status === 'offline' || d.status === 'unavailable' || d.status === 'on_break') return false;
-      if (d.profile?.status === 'deactivated' || d.profile?.status === 'suspended') return false;
-      if (booking.vehicle_type && d.assigned_vehicle?.vehicle_type && d.assigned_vehicle.vehicle_type !== booking.vehicle_type) {
-        return false;
-      }
+    // Filter available drivers who:
+    // 1. Have an assigned vehicle that matches customer's demanded vehicle category
+    // 2. Are active and without scheduling conflicts
+    const matchingDrivers = getEligibleDriversForBooking(
+      booking,
+      drivers,
+      rateVehiclesRef.current || rateVehicles,
+      vehiclesRef.current || vehicles
+    );
+
+    const eligibleDrivers = matchingDrivers.filter((d) => {
+      if (d.status === 'on_break') return false;
       const existing = bookings.filter((b) => b.assigned_driver_id === d.id);
       const overlap = checkDriverOverlap(existing, booking);
       return !overlap.hasOverlap;
@@ -4994,7 +5067,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const candidate = eligibleDrivers.find((d) => d.status === 'available') || eligibleDrivers[0];
 
     if (!candidate) {
-      toast.warning('No available drivers without scheduling conflict found for auto-dispatch.');
+      toast.warning('No available drivers with matching vehicle and without scheduling conflict found for auto-dispatch.');
       return false;
     }
 
@@ -5616,6 +5689,107 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Staff (Dispatcher/Admin) updates or reschedules booking date & time according to customer wishes
+  const updateBookingSchedule = async (
+    bookingId: string,
+    scheduledAt: string,
+    returnScheduledAt?: string | null,
+    reason?: string
+  ): Promise<boolean> => {
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (!booking) {
+      toast.error('Booking not found.');
+      return false;
+    }
+
+    if (booking.status === 'trip_completed' || booking.status === 'cancelled') {
+      toast.error('Cannot reschedule a completed or cancelled booking.');
+      return false;
+    }
+
+    const now = new Date().toISOString();
+    const updatedBookingType = 'scheduled';
+    const formattedDisplay =
+      typeof formatDateTime === 'function' ? formatDateTime(scheduledAt) : scheduledAt;
+
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.id === bookingId
+          ? {
+              ...b,
+              booking_type: updatedBookingType,
+              scheduled_at: scheduledAt,
+              return_scheduled_at: returnScheduledAt !== undefined ? returnScheduledAt : b.return_scheduled_at,
+              updated_at: now,
+            }
+          : b
+      )
+    );
+
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.id);
+      if (isUuid) {
+        const updatePayload: Record<string, any> = {
+          booking_type: updatedBookingType,
+          scheduled_at: scheduledAt,
+          updated_at: now,
+        };
+        if (returnScheduledAt !== undefined) {
+          updatePayload.return_scheduled_at = returnScheduledAt;
+        }
+
+        await supabase.from('bookings').update(updatePayload).eq('id', booking.id);
+
+        const auditNote = reason
+          ? `Pickup schedule updated to ${formattedDisplay}. Reason: ${reason}`
+          : `Pickup schedule updated to ${formattedDisplay} by Staff`;
+
+        await supabase.from('booking_status_history').insert({
+          booking_id: booking.id,
+          status: booking.status,
+          notes: auditNote,
+        });
+      }
+    } catch (err) {
+      console.warn('Supabase updateBookingSchedule error:', err);
+    }
+
+    // Inform customer
+    addNotification(
+      'Pickup Schedule Updated',
+      `Booking ${booking.booking_reference} schedule updated to ${formattedDisplay}.`,
+      'info',
+      'customer',
+      booking.customer_id || undefined,
+      booking.id
+    );
+
+    // Inform assigned chauffeur if assigned
+    if (booking.assigned_driver_id) {
+      addNotification(
+        'Trip Rescheduled',
+        `Assigned trip ${booking.booking_reference} has been rescheduled to ${formattedDisplay}. Please check your schedule.`,
+        'warning',
+        'driver',
+        booking.assigned_driver_id,
+        booking.id
+      );
+    }
+
+    // Inform dispatcher log
+    addNotification(
+      'Schedule Updated',
+      `Booking ${booking.booking_reference} rescheduled to ${formattedDisplay}${reason ? ` (${reason})` : ''}.`,
+      'info',
+      'dispatcher',
+      undefined,
+      booking.id
+    );
+
+    toast.success(`Booking ${booking.booking_reference} rescheduled to ${formattedDisplay}`);
+    return true;
+  };
+
   const updateDriverStatus = async (driverId: string, status: DriverStatus) => {
     const now = new Date().toISOString();
     setDrivers((prev) => prev.map((d) => (d.id === driverId ? { ...d, status, updated_at: now } : d)));
@@ -6126,7 +6300,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         isDataLoading,
         dataError,
-        refreshData: fetchRemoteData,
+        refreshData: (forceLoading = false) => fetchRemoteData(undefined, forceLoading),
 
         bookings,
         drivers,
@@ -6203,6 +6377,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         startTrip,
         completeTrip,
         updateBookingStatus,
+        updateBookingSchedule,
         cancelBooking,
 
         updateDriverStatus,

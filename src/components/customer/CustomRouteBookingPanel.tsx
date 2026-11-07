@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useApp } from '@/context/AppContext';
 import {
   IntermediateStop,
   LocationPoint,
@@ -193,6 +194,7 @@ export default function CustomRouteBookingPanel({
   confirmedBookingRef,
   onResetCustomBooking,
 }: CustomRouteBookingPanelProps) {
+  const { rateVehicles } = useApp();
   const [step, setStep] = useState<CustomBookingStep>('route');
   const [isCopiedRef, setIsCopiedRef] = useState(false);
 
@@ -284,9 +286,33 @@ export default function CustomRouteBookingPanel({
     }
   };
 
+  const allVehicleOptions = useMemo(() => {
+    const list = [...CUSTOM_VEHICLE_OPTIONS];
+    if (rateVehicles && rateVehicles.length > 0) {
+      rateVehicles
+        .filter((v) => v.is_active !== false)
+        .forEach((v) => {
+          const cat = v.category || v.id;
+          if (!list.some((item) => item.category === cat)) {
+            list.push({
+              category: cat,
+              vehicleType: 'sedan',
+              title: v.name,
+              subtitle: v.description || `${v.seating_capacity} Seater VIP Vehicle`,
+              capacityPax: v.seating_capacity,
+              capacityLuggage: v.luggage_capacity,
+              badge: 'VIP Class',
+              perks: ['VIP Chauffeur Driven', 'Air-conditioned luxury interior', 'Complimentary bottled water'],
+            });
+          }
+        });
+    }
+    return list;
+  }, [rateVehicles]);
+
   const selectedVehicleObj = useMemo(
-    () => CUSTOM_VEHICLE_OPTIONS.find((v) => v.category === selectedVehicle),
-    [selectedVehicle]
+    () => allVehicleOptions.find((v) => v.category === selectedVehicle) || allVehicleOptions[0],
+    [selectedVehicle, allVehicleOptions]
   );
 
   return (
@@ -749,7 +775,7 @@ export default function CustomRouteBookingPanel({
 
               {/* Vehicle Options Grid */}
               <div className="space-y-2.5">
-                {CUSTOM_VEHICLE_OPTIONS.map((item) => {
+                {allVehicleOptions.map((item) => {
                   const isSelected = selectedVehicle === item.category;
                   return (
                     <div

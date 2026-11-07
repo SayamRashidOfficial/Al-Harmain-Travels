@@ -12,6 +12,7 @@ import {
   Car,
   Users,
   PhoneCall,
+  UserCircle,
   Globe,
   LogOut,
   Sparkles,
@@ -156,6 +157,15 @@ export default function DispatcherMobileSidebar({ isOpen, onClose }: DispatcherM
       badge: null,
       isLive: false,
     },
+    {
+      href: '/dispatcher/profile',
+      label: t('nav.dispatcherProfile', 'My Profile'),
+      subtitle: t('nav.dispatcherProfileSub', 'Account & Security'),
+      icon: UserCircle,
+      exact: false,
+      badge: null,
+      isLive: false,
+    },
   ];
 
   return (
@@ -229,7 +239,11 @@ export default function DispatcherMobileSidebar({ isOpen, onClose }: DispatcherM
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {/* Dispatcher Profile Card */}
-          <div className="rounded-xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 p-3 space-y-2.5 shadow-2xs">
+          <Link
+            href="/dispatcher/profile"
+            onClick={onClose}
+            className="block rounded-xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 p-3 space-y-2.5 shadow-2xs hover:border-emerald-500/40 hover:bg-emerald-500/15 transition-all cursor-pointer group/mobile-card"
+          >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="relative shrink-0">
                 {currentUser?.avatar_url ? (
@@ -237,10 +251,10 @@ export default function DispatcherMobileSidebar({ isOpen, onClose }: DispatcherM
                   <img
                     src={currentUser.avatar_url}
                     alt={currentUser.full_name || 'Dispatcher'}
-                    className="w-10 h-10 rounded-xl object-cover border-2 border-emerald-500/50 shadow-sm"
+                    className="w-10 h-10 rounded-xl object-cover border-2 border-emerald-500/50 shadow-sm group-hover/mobile-card:border-emerald-600 transition-colors"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-700 to-teal-950 text-amber-400 font-bold flex items-center justify-center border border-emerald-500/40 shadow-xs text-sm">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-700 to-teal-950 text-amber-400 font-bold flex items-center justify-center border border-emerald-500/40 shadow-xs text-sm group-hover/mobile-card:border-emerald-600 transition-colors">
                     {currentUser?.full_name?.charAt(0)?.toUpperCase() || 'D'}
                   </div>
                 )}
@@ -249,7 +263,7 @@ export default function DispatcherMobileSidebar({ isOpen, onClose }: DispatcherM
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate group-hover/mobile-card:text-emerald-700 transition-colors">
                     {currentUser?.full_name || (isRTL ? 'مشرف العمليات' : 'Fleet Dispatcher')}
                   </h3>
                   <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
@@ -265,7 +279,7 @@ export default function DispatcherMobileSidebar({ isOpen, onClose }: DispatcherM
                 </div>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* Navigation Links */}
           <div className="space-y-1">

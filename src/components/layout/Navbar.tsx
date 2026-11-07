@@ -290,13 +290,14 @@ export default function Navbar() {
   ];
 
 
-  // Dispatcher Portal Navigation (5 modules)
+  // Dispatcher Portal Navigation (6 modules)
   const dispatcherLinks = [
     { label: 'Radar', href: '/dispatcher', icon: Compass },
     { label: 'Queue', href: '/dispatcher/queue', icon: Clock },
     { label: 'Drivers', href: '/dispatcher/drivers', icon: Car },
     { label: 'Customers', href: '/dispatcher/customers', icon: Users },
     { label: 'New Booking', href: '/dispatcher/new-booking', icon: Briefcase },
+    { label: 'Profile', href: '/dispatcher/profile', icon: User },
   ];
 
   // Driver Portal Navigation (3 modules)
@@ -674,7 +675,7 @@ export default function Navbar() {
           ───────────────────────────────────────────────────────────── */}
           <div
             className={`${(isCustomerPortal || isAdminPortal || isDispatcherPortal || isDriverPortal) ? 'hidden lg:flex' : 'flex'
-              } h-14 sm:h-16 items-center justify-between gap-4 transition-all duration-300`}
+              } h-16 items-center justify-between gap-4 transition-all duration-300`}
           >
             {/* Unified Official Brand Logo */}
             <BrandLogo
@@ -734,7 +735,9 @@ export default function Navbar() {
                           ? 'Customer Directory'
                           : pathname.startsWith('/dispatcher/new-booking')
                             ? 'Manual Telephone Booking'
-                            : 'Operations Control'}
+                            : pathname.startsWith('/dispatcher/profile')
+                              ? 'Dispatcher Profile'
+                              : 'Operations Control'}
                 </span>
               </div>
             ) : isDriverPortal ? (
@@ -914,7 +917,7 @@ export default function Navbar() {
         {!isCustomerPortal && !isAdminPortal && !isDispatcherPortal && isMobileMenuOpen && (
           <div
             ref={mobileMenuRef}
-          className="lg:hidden bg-white/98 backdrop-blur-2xl border-t border-slate-200/70 shadow-2xl max-h-[calc(100vh-80px)] overflow-y-auto animate-in slide-in-from-top-2 fade-in-50 duration-200"
+          className="lg:hidden bg-white/98 backdrop-blur-2xl border-t border-slate-200/70 shadow-2xl max-h-[calc(100vh-4rem)] overflow-y-auto animate-in slide-in-from-top-2 fade-in-50 duration-200"
           >
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
               {/* Top Mobile Menu Brand Identity */}

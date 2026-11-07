@@ -54,11 +54,19 @@ import {
   Banknote,
   Receipt,
   Calendar,
+  CalendarClock,
+  Edit3,
   Loader2,
 } from 'lucide-react';
 import { TableSkeletonRows } from '@/components/ui/DataStateSkeletons';
 import { toast } from 'sonner';
-import { checkDriverOverlap } from '@/lib/assignment-utils';
+import {
+  checkDriverOverlap,
+  getEligibleDriversForBooking,
+  getDriverAssignedVehicle,
+} from '@/lib/assignment-utils';
+import dynamic from 'next/dynamic';
+const EditScheduleModal = dynamic(() => import('@/components/shared/EditScheduleModal'), { ssr: false });
 
 type QueueStatusFilter =
   | 'all'
@@ -110,7 +118,12 @@ function isCompletedBooking(b: Booking): boolean {
 }
 
 function isCancelledBooking(b: Booking): boolean {
-  return b.status === 'cancelled' || b.status === 'rejected' || b.status === 'no_show';
+  return (
+    b.status === 'cancelled' ||
+    b.status === 'rejected' ||
+    b.status === 'payment_rejected' ||
+    b.status === 'no_show'
+  );
 }
 
 function getFormattedVehicleName(b: Booking): string {
@@ -140,6 +153,8 @@ export default function DispatcherQueuePage() {
   const {
     bookings,
     drivers,
+    vehicles,
+    rateVehicles,
     usersList,
     createBooking,
     confirmBooking,
@@ -163,11 +178,14 @@ export default function DispatcherQueuePage() {
     refreshData().catch(() => {});
   }, [refreshData]);
 
-  // Live Supabase Realtime subscription for instant queue updates on newly submitted bookings
+  // Live Supabase Realtime subscription for instant queue updates on bookings and payment actions
   useEffect(() => {
     const channel = supabase
       .channel('dispatcher-queue-live-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+        refreshData().catch(() => {});
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => {
         refreshData().catch(() => {});
       })
       .subscribe();
@@ -250,6 +268,9 @@ export default function DispatcherQueuePage() {
 
   // Comprehensive View Details Modal
   const [viewBookingModal, setViewBookingModal] = useState<Booking | null>(null);
+
+  // Edit / Reschedule Schedule Modal State
+  const [rescheduleModalBooking, setRescheduleModalBooking] = useState<Booking | null>(null);
 
   // Phone Call-In Booking Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -415,6 +436,31 @@ export default function DispatcherQueuePage() {
 
   const activeFleetDrivers = drivers.filter((d) => d.status !== 'offline');
 
+  // Compute drivers strictly eligible for the modal booking:
+  // 1. Must have an assigned vehicle.
+  // 2. Assigned vehicle MUST match the customer's demanded vehicle category.
+  const eligibleDriversForModal = useMemo(() => {
+    if (!assignModalBooking) return [];
+    return getEligibleDriversForBooking(assignModalBooking, drivers, rateVehicles, vehicles);
+  }, [assignModalBooking, drivers, rateVehicles, vehicles]);
+
+  const handleOpenAssignModal = (b: Booking, isReassign: boolean = false) => {
+    const eligible = getEligibleDriversForBooking(b, drivers, rateVehicles, vehicles);
+    const currentAssigned = isReassign ? eligible.find((d) => d.id === b.assigned_driver_id) : undefined;
+    const firstNonConflicting = eligible.find(
+      (d) =>
+        d.id !== b.assigned_driver_id &&
+        !checkDriverOverlap(
+          bookings.filter((bk) => bk.assigned_driver_id === d.id),
+          b
+        ).hasOverlap
+    );
+
+    setAssignModalBooking(b);
+    setIsReassignMode(isReassign);
+    setSelectedDriverId(currentAssigned?.id || firstNonConflicting?.id || eligible[0]?.id || '');
+  };
+
   const filtered = useMemo(() => {
     return deduplicatedBookings.filter((b) => {
       // 1. Status Filter matching
@@ -574,10 +620,13 @@ export default function DispatcherQueuePage() {
   const getPaymentBadge = (b: Booking) => {
     const isPaid =
       b.payment_status === 'paid' ||
+      b.payment_status === 'confirmed' ||
       b.status === 'payment_verified' ||
       b.status === 'payment_completed';
-    const isRejected = b.status === 'payment_rejected' || b.payment_status === 'failed';
-    const isPendingProof = b.status === 'pending_verification';
+    const isRejected =
+      b.status === 'payment_rejected' ||
+      b.payment_status === 'failed';
+    const isPendingProof = b.status === 'pending_verification' && !isRejected;
 
     return (
       <div className="space-y-1">
@@ -1087,24 +1136,46 @@ export default function DispatcherQueuePage() {
                       {/* 5. Scheduled Date / Time */}
                       <td className="py-3 px-3.5 whitespace-nowrap align-top">
                         {b.booking_type === 'immediate' ? (
-                          <div>
+                          <div className="space-y-1">
                             <div className="flex items-center gap-1.5 text-amber-800 font-bold">
                               <Zap className="w-3.5 h-3.5 text-amber-600 shrink-0 fill-amber-500/20" />
                               <span>Immediate / ASAP</span>
                             </div>
-                            <span className="text-[10px] text-muted block mt-0.5">
-                              Book Now &bull; Dispatched ASAP
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted block">
+                                Book Now &bull; ASAP
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setRescheduleModalBooking(b)}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded transition-all cursor-pointer shadow-2xs"
+                                title="Set Schedule Date & Time"
+                              >
+                                <CalendarClock className="w-3 h-3 text-amber-600" />
+                                <span>Set Schedule</span>
+                              </button>
+                            </div>
                           </div>
                         ) : (
-                          <div>
+                          <div className="space-y-1">
                             <div className="flex items-center gap-1.5 text-primary font-bold">
                               <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                               <span>{b.scheduled_at ? formatDateTime(b.scheduled_at) : '—'}</span>
                             </div>
-                            <span className="text-[10px] text-emerald-800 font-medium block mt-0.5">
-                              Scheduled Pickup (AST)
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-emerald-800 font-medium block">
+                                Scheduled Pickup (AST)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setRescheduleModalBooking(b)}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded transition-all cursor-pointer shadow-2xs"
+                                title="Edit / Reschedule Date & Time according to customer wish"
+                              >
+                                <Edit3 className="w-3 h-3 text-emerald-600" />
+                                <span>Edit</span>
+                              </button>
+                            </div>
                           </div>
                         )}
                       </td>
@@ -1232,7 +1303,7 @@ export default function DispatcherQueuePage() {
                           )}
 
                           {/* Contextual Action: Payment Verification & Reject */}
-                          {b.status === 'pending_verification' && (
+                          {(b.status === 'pending_verification' || b.status === 'payment_rejected') && (
                             <>
                               <button
                                 type="button"
@@ -1244,20 +1315,22 @@ export default function DispatcherQueuePage() {
                                 title="Review & Verify Payment Proof"
                               >
                                 <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                                <span>Review</span>
+                                <span>{b.status === 'payment_rejected' ? 'Re-audit' : 'Review'}</span>
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setVerifyModalBooking(b);
-                                  setShowRejectForm(true);
-                                }}
-                                className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0"
-                                title="Reject Payment Proof"
-                              >
-                                <XCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
-                                <span>Reject</span>
-                              </button>
+                              {b.status !== 'payment_rejected' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setVerifyModalBooking(b);
+                                    setShowRejectForm(true);
+                                  }}
+                                  className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                                  title="Reject Payment Proof"
+                                >
+                                  <XCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                                  <span>Reject</span>
+                                </button>
+                              )}
                             </>
                           )}
 
@@ -1266,11 +1339,7 @@ export default function DispatcherQueuePage() {
                             <>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setAssignModalBooking(b);
-                                  setIsReassignMode(false);
-                                  setSelectedDriverId(activeFleetDrivers[0]?.id || '');
-                                }}
+                                onClick={() => handleOpenAssignModal(b, false)}
                                 className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0"
                                 title="Assign an available driver"
                               >
@@ -1293,11 +1362,7 @@ export default function DispatcherQueuePage() {
                           {b.status === 'driver_assigned' && (
                             <button
                               type="button"
-                              onClick={() => {
-                                setAssignModalBooking(b);
-                                setIsReassignMode(true);
-                                setSelectedDriverId(activeFleetDrivers[0]?.id || '');
-                              }}
+                              onClick={() => handleOpenAssignModal(b, true)}
                               className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-card hover:bg-surface border border-base text-secondary hover:text-primary transition-all flex items-center gap-1 cursor-pointer shadow-xs shrink-0"
                               title="Reassign to a different chauffeur"
                             >
@@ -1495,15 +1560,28 @@ export default function DispatcherQueuePage() {
                     <h4 className="font-extrabold text-primary flex items-center gap-1.5 text-sm">
                       <Navigation className="w-4 h-4 text-sky-600" /> Route &amp; Departure Schedule
                     </h4>
-                    {b.booking_type === 'immediate' ? (
-                      <span className="text-[11px] font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-300 flex items-center gap-1">
-                        <Zap className="w-3 h-3 text-amber-600 fill-amber-500/20" /> Book Now (Immediate ASAP)
-                      </span>
-                    ) : (
-                      <span className="text-[11px] font-bold text-sky-900 bg-sky-50 px-2 py-0.5 rounded border border-sky-300 flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-sky-600" /> Scheduled Reservation
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRescheduleModalBooking(b);
+                        }}
+                        className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg hover:bg-emerald-100 font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                        title="Edit or Reschedule Date & Time according to customer wish"
+                      >
+                        <CalendarClock className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Edit Schedule</span>
+                      </button>
+                      {b.booking_type === 'immediate' ? (
+                        <span className="text-[11px] font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-300 flex items-center gap-1">
+                          <Zap className="w-3 h-3 text-amber-600 fill-amber-500/20" /> Book Now (Immediate ASAP)
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-bold text-sky-900 bg-sky-50 px-2 py-0.5 rounded border border-sky-300 flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-sky-600" /> Scheduled Reservation
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 border-b border-base/70">
@@ -1824,9 +1902,7 @@ export default function DispatcherQueuePage() {
                         type="button"
                         onClick={() => {
                           setViewBookingModal(null);
-                          setAssignModalBooking(b);
-                          setIsReassignMode(false);
-                          setSelectedDriverId(activeFleetDrivers[0]?.id || '');
+                          handleOpenAssignModal(b, false);
                         }}
                         className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs shadow-xs"
                       >
@@ -1940,9 +2016,7 @@ export default function DispatcherQueuePage() {
                       type="button"
                       onClick={() => {
                         setViewBookingModal(null);
-                        setAssignModalBooking(b);
-                        setIsReassignMode(false);
-                        setSelectedDriverId(activeFleetDrivers[0]?.id || '');
+                        handleOpenAssignModal(b, false);
                       }}
                       className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5"
                     >
@@ -2124,7 +2198,7 @@ export default function DispatcherQueuePage() {
                     onClick={handleVerifySubmit}
                     className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg flex items-center gap-1.5 transition-all cursor-pointer"
                   >
-                    <CheckCircle2 className="w-4 h-4" /> Verify &amp; Confirm Booking
+                    <CheckCircle2 className="w-4 h-4" /> {verifyModalBooking.status === 'payment_rejected' ? 'Re-verify & Confirm Booking' : 'Verify & Confirm Booking'}
                   </button>
                 </div>
               </div>
@@ -2249,21 +2323,36 @@ export default function DispatcherQueuePage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-secondary mb-1">
-                Select Fleet Chauffeur ({activeFleetDrivers.length} on duty)
-              </label>
-              {activeFleetDrivers.length === 0 ? (
-                <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-950 font-medium">
-                  No chauffeurs are currently on duty in the fleet pool.
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-secondary">
+                  Select Fleet Chauffeur ({eligibleDriversForModal.length} available)
+                </label>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  Vehicle Class Matched
+                </span>
+              </div>
+              {eligibleDriversForModal.length === 0 ? (
+                <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-950 font-medium space-y-1.5">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                    <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>No Matching Chauffeurs Found</span>
+                  </div>
+                  <p>
+                    No active chauffeurs currently have an assigned vehicle matching <strong>{getFormattedVehicleName(assignModalBooking)}</strong>.
+                  </p>
+                  <p className="text-[11px] text-amber-800">
+                    Drivers without assigned vehicles or with other vehicle categories are excluded. Please assign a matching vehicle in Fleet Management or wait for an eligible driver to come online.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   <select
                     value={selectedDriverId}
                     onChange={(e) => setSelectedDriverId(e.target.value)}
-                    className="w-full bg-input border border-base rounded-xl px-3 py-2.5 text-xs text-primary focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-input border border-base rounded-xl px-3 py-2.5 text-xs text-primary focus:outline-none focus:border-emerald-500 font-medium"
                   >
-                    {activeFleetDrivers.map((d) => {
+                    {eligibleDriversForModal.map((d) => {
+                      const driverVeh = getDriverAssignedVehicle(d, rateVehicles, vehicles);
                       const conflict = assignModalBooking
                         ? checkDriverOverlap(
                             bookings.filter((bk) => bk.assigned_driver_id === d.id),
@@ -2278,12 +2367,15 @@ export default function DispatcherQueuePage() {
                           bk.status !== 'trip_completed'
                       ).length;
 
+                      const vehName = driverVeh
+                        ? `${driverVeh.make || 'Fleet'} ${driverVeh.model || ''}`.trim()
+                        : 'Fleet Vehicle';
+                      const vehPlate = driverVeh?.plate_number || 'VIP';
+
                       return (
                         <option key={d.id} value={d.id}>
                           {conflict.hasOverlap ? '⚠️ [CONFLICT] ' : ''}
-                          {d.profile?.full_name || d.full_name || 'Captain'} &bull;{' '}
-                          {d.vehicle?.make || d.assigned_vehicle?.make || 'Fleet'} (
-                          {d.vehicle?.plate_number || d.assigned_vehicle?.plate_number || 'VIP'})
+                          {d.profile?.full_name || d.full_name || 'Captain'} &bull; {vehName} ({vehPlate})
                           {activeAssignedCount > 0 ? ` [${activeAssignedCount} trips booked]` : ' [Free schedule]'}
                         </option>
                       );
@@ -2326,7 +2418,7 @@ export default function DispatcherQueuePage() {
                 type="submit"
                 disabled={
                   !selectedDriverId ||
-                  activeFleetDrivers.length === 0 ||
+                  eligibleDriversForModal.length === 0 ||
                   Boolean(
                     assignModalBooking &&
                       selectedDriverId &&
@@ -2997,6 +3089,19 @@ export default function DispatcherQueuePage() {
           </div>
         );
       })()}
+
+      {/* 10. EDIT SCHEDULE / RESCHEDULE MODAL */}
+      <EditScheduleModal
+        isOpen={!!rescheduleModalBooking}
+        onClose={() => setRescheduleModalBooking(null)}
+        booking={rescheduleModalBooking}
+        onSuccess={(updatedBookingId) => {
+          if (viewBookingModal && viewBookingModal.id === updatedBookingId) {
+            const updated = bookings.find((b) => b.id === updatedBookingId);
+            if (updated) setViewBookingModal(updated);
+          }
+        }}
+      />
     </div>
   );
 }

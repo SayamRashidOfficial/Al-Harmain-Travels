@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { Booking } from '@/types';
-import { supabase } from '@/lib/supabase/client';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import {
   DollarSign,
@@ -48,7 +47,6 @@ import {
   AdminActionGroup,
   AdminTableCard,
 } from '@/components/admin/AdminUIComponents';
-import { TableSkeletonRows } from '@/components/ui/DataStateSkeletons';
 import { toast } from 'sonner';
 
 export default function AdminDashboardPage() {
@@ -94,9 +92,6 @@ export default function AdminDashboardPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
-  const [paginatedBookings, setPaginatedBookings] = useState<Booking[]>([]);
-  const [totalFilteredCount, setTotalFilteredCount] = useState<number>(0);
-  const [isTableLoading, setIsTableLoading] = useState<boolean>(false);
 
   // ── Helper: Safe User / Driver Initials ─────────────────────────────────────
   const getInitials = useCallback((name?: string | null): string => {
@@ -320,132 +315,76 @@ export default function AdminDashboardPage() {
     return stats;
   }, [bookings]);
 
-  // ── Server-Side Bookings Pagination with Resilient Fallback ───────────────
-  const fetchBookingsPage = useCallback(async () => {
-    setIsTableLoading(true);
-    try {
-      let query = supabase.from('bookings').select(
-        `
-        *,
-        driver:drivers(*, profile:profiles(*), assigned_vehicle:rate_vehicle_types(*), location:driver_locations(*)),
-        payments(*)
-      `,
-        { count: 'exact' }
-      );
-
-      // Status filter
+  // ── 100% Real-Time Filtering, Sorting & Pagination directly from AppContext ──
+  const { filteredBookings, totalFilteredCount, paginatedBookings, totalPages, startRecord, endRecord } = useMemo(() => {
+    let filtered = bookings.filter((b) => {
       if (statusFilter !== 'all') {
         if (statusFilter === 'active_trips') {
-          query = query.in('status', [
-            'driver_assigned',
-            'driver_accepted',
-            'driver_arriving',
-            'driver_arrived',
-            'trip_started',
-            'ride_started',
-          ]);
+          const isActive =
+            b.status === 'driver_assigned' ||
+            b.status === 'driver_accepted' ||
+            b.status === 'driver_arriving' ||
+            b.status === 'driver_arrived' ||
+            b.status === 'trip_started' ||
+            b.status === 'ride_started';
+          if (!isActive) return false;
         } else if (statusFilter === 'completed') {
-          query = query.in('status', ['trip_completed', 'ride_completed', 'payment_completed']);
-        } else {
-          query = query.eq('status', statusFilter);
+          const isDone =
+            b.status === 'trip_completed' ||
+            b.status === 'ride_completed' ||
+            b.status === 'payment_completed';
+          if (!isDone) return false;
+        } else if (b.status !== statusFilter) {
+          return false;
         }
       }
 
-      // Search query
       if (searchQuery.trim()) {
-        const term = `%${searchQuery.trim()}%`;
-        query = query.or(
-          `booking_reference.ilike.${term},passenger_name.ilike.${term},passenger_phone.ilike.${term},pickup_address.ilike.${term},destination_address.ilike.${term},vehicle_type.ilike.${term}`
+        const q = searchQuery.trim().toLowerCase();
+        return (
+          b.booking_reference?.toLowerCase().includes(q) ||
+          b.passenger_name?.toLowerCase().includes(q) ||
+          b.passenger_phone?.includes(q) ||
+          b.pickup_address?.toLowerCase().includes(q) ||
+          b.destination_address?.toLowerCase().includes(q) ||
+          b.vehicle_type?.toLowerCase().includes(q)
         );
       }
 
-      // Sort
+      return true;
+    });
+
+    // Sort
+    filtered = [...filtered].sort((a, b) => {
       if (sortBy === 'oldest') {
-        query = query.order('created_at', { ascending: true });
-      } else if (sortBy === 'fare_high') {
-        query = query.order('final_fare', { ascending: false });
-      } else if (sortBy === 'fare_low') {
-        query = query.order('final_fare', { ascending: true });
-      } else {
-        query = query.order('created_at', { ascending: false });
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       }
+      if (sortBy === 'fare_high') {
+        return (b.final_fare || b.estimated_fare || 0) - (a.final_fare || a.estimated_fare || 0);
+      }
+      if (sortBy === 'fare_low') {
+        return (a.final_fare || a.estimated_fare || 0) - (b.final_fare || b.estimated_fare || 0);
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
-      query = query.range(from, to);
+    const totalCount = filtered.length;
+    const computedTotalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    const safeCurrentPage = Math.min(currentPage, computedTotalPages);
+    const from = (safeCurrentPage - 1) * pageSize;
+    const paginated = filtered.slice(from, from + pageSize);
+    const start = totalCount === 0 ? 0 : from + 1;
+    const end = Math.min(safeCurrentPage * pageSize, totalCount);
 
-      const { data, count, error } = await query;
-      if (error) throw error;
-
-      setPaginatedBookings((data as Booking[]) || []);
-      setTotalFilteredCount(count ?? 0);
-    } catch (err) {
-      console.warn('Server-side query notice, falling back to cached local state:', err);
-
-      // Resilient local fallback from AppContext
-      const filtered = bookings.filter((b) => {
-        if (statusFilter !== 'all') {
-          if (statusFilter === 'active_trips') {
-            const isActive =
-              b.status === 'driver_assigned' ||
-              b.status === 'driver_accepted' ||
-              b.status === 'driver_arriving' ||
-              b.status === 'driver_arrived' ||
-              b.status === 'trip_started' ||
-              b.status === 'ride_started';
-            if (!isActive) return false;
-          } else if (statusFilter === 'completed') {
-            const isDone =
-              b.status === 'trip_completed' ||
-              b.status === 'ride_completed' ||
-              b.status === 'payment_completed';
-            if (!isDone) return false;
-          } else if (b.status !== statusFilter) {
-            return false;
-          }
-        }
-
-        if (searchQuery.trim()) {
-          const q = searchQuery.trim().toLowerCase();
-          return (
-            b.booking_reference?.toLowerCase().includes(q) ||
-            b.passenger_name?.toLowerCase().includes(q) ||
-            b.passenger_phone?.includes(q) ||
-            b.pickup_address?.toLowerCase().includes(q) ||
-            b.destination_address?.toLowerCase().includes(q) ||
-            b.vehicle_type?.toLowerCase().includes(q)
-          );
-        }
-
-        return true;
-      });
-
-      // Sort locally
-      filtered.sort((a, b) => {
-        if (sortBy === 'oldest') {
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        }
-        if (sortBy === 'fare_high') {
-          return (b.final_fare || b.estimated_fare || 0) - (a.final_fare || a.estimated_fare || 0);
-        }
-        if (sortBy === 'fare_low') {
-          return (a.final_fare || a.estimated_fare || 0) - (b.final_fare || b.estimated_fare || 0);
-        }
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-
-      setTotalFilteredCount(filtered.length);
-      const from = (currentPage - 1) * pageSize;
-      setPaginatedBookings(filtered.slice(from, from + pageSize));
-    } finally {
-      setIsTableLoading(false);
-    }
-  }, [currentPage, pageSize, statusFilter, searchQuery, sortBy, bookings]);
-
-  // Trigger fetch whenever page, page size, filter, or search changes
-  useEffect(() => {
-    fetchBookingsPage();
-  }, [fetchBookingsPage]);
+    return {
+      filteredBookings: filtered,
+      totalFilteredCount: totalCount,
+      paginatedBookings: paginated,
+      totalPages: computedTotalPages,
+      startRecord: start,
+      endRecord: end,
+    };
+  }, [bookings, statusFilter, searchQuery, sortBy, currentPage, pageSize]);
 
   // Reset page to 1 when filters or search change
   const handleFilterChange = (newStatus: string) => {
@@ -463,11 +402,11 @@ export default function AdminDashboardPage() {
     setCurrentPage(1);
   };
 
-  // ── Sync Live Data ────────────────────────────────────────────────────────
+  // ── Sync Live Data (Silent background refresh: only rotates the circle arrow) ──
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([refreshData(), fetchBookingsPage()]);
+      await refreshData();
       const now = new Date();
       const datePart = now.toLocaleDateString('en-GB', {
         day: '2-digit',
@@ -487,11 +426,6 @@ export default function AdminDashboardPage() {
       setIsRefreshing(false);
     }
   };
-
-  // ── Pagination Math ───────────────────────────────────────────────────────
-  const totalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
-  const startRecord = totalFilteredCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endRecord = Math.min(currentPage * pageSize, totalFilteredCount);
 
   // Dynamic visible page numbers (sliding window of up to 5 pages)
   const visiblePageNumbers = useMemo(() => {
@@ -1239,9 +1173,7 @@ export default function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {isTableLoading ? (
-                <TableSkeletonRows cols={7} rows={pageSize > 10 ? 10 : pageSize} />
-              ) : paginatedBookings.length === 0 ? (
+              {paginatedBookings.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center space-y-2">
@@ -1350,7 +1282,7 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1 || isTableLoading}
+                  disabled={currentPage === 1}
                   className={`flex items-center justify-center text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 shadow-2xs font-semibold rounded-l-xl text-xs px-3 h-8.5 focus:outline-none cursor-pointer transition-colors ${
                     currentPage === 1 ? 'opacity-40 cursor-not-allowed' : ''
                   }`}
@@ -1367,7 +1299,6 @@ export default function AdminDashboardPage() {
                     <button
                       type="button"
                       onClick={() => setCurrentPage(num)}
-                      disabled={isTableLoading}
                       aria-current={isActive ? 'page' : undefined}
                       className={
                         isActive
@@ -1386,7 +1317,7 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages || totalPages === 0 || isTableLoading}
+                  disabled={currentPage === totalPages || totalPages === 0}
                   className={`flex items-center justify-center text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 shadow-2xs font-semibold rounded-r-xl text-xs px-3 h-8.5 focus:outline-none cursor-pointer transition-colors ${
                     currentPage === totalPages || totalPages === 0 ? 'opacity-40 cursor-not-allowed' : ''
                   }`}

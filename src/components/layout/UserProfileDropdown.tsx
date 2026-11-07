@@ -261,7 +261,7 @@ export default function UserProfileDropdown({
       case 'driver':
         return '/driver/profile';
       case 'dispatcher':
-        return '/dispatcher';
+        return '/dispatcher/profile';
       case 'customer':
       default:
         return '/customer/profile';

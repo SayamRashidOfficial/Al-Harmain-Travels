@@ -22,7 +22,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { checkDriverOverlap } from '@/lib/assignment-utils';
+import { checkDriverOverlap, getEligibleDriversForBooking, getDriverAssignedVehicle } from '@/lib/assignment-utils';
 
 const FleetRadar = dynamic(() => import('@/components/dispatcher/FleetRadar'), {
   ssr: false,
@@ -37,6 +37,8 @@ export default function DispatcherRadarPage() {
   const {
     bookings,
     drivers,
+    vehicles,
+    rateVehicles,
     assignDriver,
     reassignDriver,
     autoAssignDriver,
@@ -80,6 +82,23 @@ export default function DispatcherRadarPage() {
   const activeFleetDrivers = drivers.filter(
     (d) => d.status !== 'offline' && d.status !== 'unavailable' && isDriverAccountActive(d)
   );
+
+  const eligibleDriversForModal = manualAssignModalBooking
+    ? getEligibleDriversForBooking(manualAssignModalBooking, drivers, rateVehicles, vehicles)
+    : [];
+
+  const handleOpenManualAssign = (b: Booking, isReassign: boolean = false) => {
+    const eligible = getEligibleDriversForBooking(b, drivers, rateVehicles, vehicles);
+    const currentAssigned = isReassign ? eligible.find((d) => d.id === b.assigned_driver_id) : undefined;
+    const firstFree = eligible.find(
+      (d) =>
+        d.id !== b.assigned_driver_id &&
+        !checkDriverOverlap(bookings.filter((bk) => bk.assigned_driver_id === d.id), b).hasOverlap
+    );
+    setManualAssignModalBooking(b);
+    setIsReassignMode(isReassign);
+    setSelectedDriverId(currentAssigned?.id || firstFree?.id || eligible[0]?.id || '');
+  };
 
   const handleManualAssign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,11 +255,7 @@ export default function DispatcherRadarPage() {
                       <Zap className="w-3.5 h-3.5 text-amber-300" /> Auto-Dispatch
                     </button>
                     <button
-                      onClick={() => {
-                        setManualAssignModalBooking(b);
-                        setIsReassignMode(false);
-                        setSelectedDriverId(activeFleetDrivers[0]?.id || '');
-                      }}
+                      onClick={() => handleOpenManualAssign(b, false)}
                       className="py-2 px-3 rounded-xl bg-card hover:bg-elevated text-secondary text-xs font-semibold border border-base transition-colors"
                     >
                       Manual Assign
@@ -304,11 +319,7 @@ export default function DispatcherRadarPage() {
                     {/* Reassign option */}
                     <div className="pt-2 flex items-center justify-end gap-2 border-t border-base">
                       <button
-                        onClick={() => {
-                          setManualAssignModalBooking(r);
-                          setIsReassignMode(true);
-                          setSelectedDriverId(activeFleetDrivers[0]?.id || '');
-                        }}
+                        onClick={() => handleOpenManualAssign(r, true)}
                         className="text-[11px] text-amber-900 font-bold hover:underline flex items-center gap-1"
                       >
                         <RefreshCw className="w-3 h-3" /> Reassign Chauffeur
@@ -338,15 +349,15 @@ export default function DispatcherRadarPage() {
 
             <div className="space-y-2">
               <label className="text-xs text-secondary font-semibold">
-                Select Fleet Chauffeur ({activeFleetDrivers.length} on duty)
+                Select Fleet Chauffeur ({eligibleDriversForModal.length} matching vehicle)
               </label>
-              {activeFleetDrivers.length === 0 ? (
+              {eligibleDriversForModal.length === 0 ? (
                 <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-950 font-medium">
-                  No drivers currently on duty in the fleet pool.
+                  No available chauffeurs currently have an assigned vehicle matching this trip demand.
                 </div>
               ) : (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {activeFleetDrivers.map((d) => {
+                  {eligibleDriversForModal.map((d) => {
                     const conflict = manualAssignModalBooking
                       ? checkDriverOverlap(
                           bookings.filter((bk) => bk.assigned_driver_id === d.id),
@@ -425,7 +436,7 @@ export default function DispatcherRadarPage() {
                 type="submit"
                 disabled={
                   !selectedDriverId ||
-                  activeFleetDrivers.length === 0 ||
+                  eligibleDriversForModal.length === 0 ||
                   Boolean(
                     manualAssignModalBooking &&
                       selectedDriverId &&

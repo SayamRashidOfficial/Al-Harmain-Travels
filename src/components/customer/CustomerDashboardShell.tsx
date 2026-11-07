@@ -91,7 +91,7 @@ export default function CustomerDashboardShell({ children }: CustomerDashboardSh
   return (
     <div
       dir={dir}
-      className="customer-portal relative min-h-[calc(100vh-5rem)] w-full bg-page text-primary antialiased overflow-x-hidden"
+      className="customer-portal relative min-h-[calc(100vh-4rem)] w-full bg-page text-primary antialiased overflow-x-hidden"
     >
       {/* ─────────────────────────────────────────────────────────────
           1. DESKTOP SIDEBAR (lg+ screen size)
@@ -103,7 +103,7 @@ export default function CustomerDashboardShell({ children }: CustomerDashboardSh
         onMouseLeave={() => setIsHovered(false)}
         aria-label="Customer Sidebar Navigation"
         aria-expanded={isHovered}
-        className={`hidden lg:flex flex-col shrink-0 fixed top-16 sm:top-20 bottom-0 z-40 ${
+        className={`hidden lg:flex flex-col shrink-0 fixed top-16 bottom-0 z-40 ${
           isRTL ? 'right-0 border-l' : 'left-0 border-r'
         } border-base bg-white dark:bg-card transition-all duration-300 ease-in-out select-none overflow-hidden group/sidebar ${
           isHovered

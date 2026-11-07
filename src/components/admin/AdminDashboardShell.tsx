@@ -10,10 +10,7 @@ import {
   LayoutDashboard,
   CalendarCheck,
   CreditCard,
-  UserCheck,
-  Truck,
   Users,
-  UserCog,
   Receipt,
   Route,
   Wallet,
@@ -80,34 +77,10 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         icon: CreditCard,
       },
       {
-        href: '/admin/drivers',
-        label: 'Drivers',
-        subtitle: 'Chauffeur Management',
-        icon: UserCheck,
-      },
-      {
-        href: '/admin/fleet',
-        label: 'Fleet & Vehicles',
-        subtitle: 'Vehicle Registry',
-        icon: Truck,
-      },
-      {
         href: '/admin/users',
         label: 'Users & Roles',
         subtitle: 'Global Accounts & RBAC',
         icon: Users,
-      },
-      {
-        href: '/admin/customers',
-        label: 'Customers',
-        subtitle: 'Pilgrim Profiles',
-        icon: Users,
-      },
-      {
-        href: '/admin/staff',
-        label: 'Dispatchers & Staff',
-        subtitle: 'Role & Access Control',
-        icon: UserCog,
       },
     ],
   },
@@ -200,7 +173,7 @@ interface AdminDashboardShellProps {
 
 export default function AdminDashboardShell({ children }: AdminDashboardShellProps) {
   const pathname = usePathname() || '';
-  const { currentUser, signOut, bookings, drivers, notifications } = useApp();
+  const { currentUser, signOut, bookings, notifications } = useApp();
   const { dir, isRTL, t } = useLanguage();
 
   const [isHovered, setIsHovered] = useState(false);
@@ -278,9 +251,9 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
       badge: null,
     },
     {
-      href: '/admin/drivers',
-      label: isRTL ? 'السائقون' : 'Drivers',
-      icon: UserCheck,
+      href: '/admin/users',
+      label: isRTL ? 'المستخدمون' : 'Users',
+      icon: Users,
       exact: false,
       badge: null,
     },
@@ -324,7 +297,7 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
   return (
     <div
       dir={dir}
-      className="admin-portal customer-portal relative min-h-[calc(100vh-5rem)] w-full bg-page text-primary antialiased overflow-x-hidden"
+      className="admin-portal customer-portal relative min-h-[calc(100vh-4rem)] w-full bg-page text-primary antialiased overflow-x-hidden"
     >
       {/* ─────────────────────────────────────────────────────────────
           1. DESKTOP SIDEBAR (lg+ screen size)
@@ -339,7 +312,7 @@ export default function AdminDashboardShell({ children }: AdminDashboardShellPro
         onWheel={handleSidebarWheel}
         aria-label="Executive Admin Sidebar Navigation"
         aria-expanded={isHovered}
-        className={`hidden lg:flex flex-col shrink-0 fixed top-16 sm:top-20 bottom-0 z-40 ${
+        className={`hidden lg:flex flex-col shrink-0 fixed top-16 bottom-0 z-40 ${
           isRTL ? 'right-0 border-l' : 'left-0 border-r'
         } border-slate-200 bg-white transition-all duration-300 ease-in-out select-none overflow-hidden group/sidebar ${
           isHovered

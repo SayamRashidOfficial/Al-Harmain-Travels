@@ -43,10 +43,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/logo.png', type: 'image/png' },
+      { url: '/favicon.ico?v=2' },
+      { url: '/logo.png?v=2', type: 'image/png' },
     ],
-    shortcut: '/logo.png',
-    apple: '/logo.png',
+    shortcut: '/favicon.ico?v=2',
+    apple: '/logo.png?v=2',
   },
   openGraph: {
     type: 'website',

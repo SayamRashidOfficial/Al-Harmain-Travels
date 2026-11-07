@@ -52,6 +52,38 @@ export function getSaudiCurrentTimeString(offsetMinutes: number = 60, now: Date 
   return formatter.format(target);
 }
 
+/**
+ * Extract YYYY-MM-DD in Saudi Arabia timezone (Asia/Riyadh) from an ISO timestamp string.
+ * Falls back to current Saudi date if missing or invalid.
+ */
+export function getSaudiDateFromISO(isoString?: string | null): string {
+  if (!isoString) return getSaudiCurrentDateString();
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return getSaudiCurrentDateString();
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: SAUDI_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+/**
+ * Extract HH:mm in Saudi Arabia timezone (Asia/Riyadh) from an ISO timestamp string.
+ * Falls back to current Saudi time (+60m) if missing or invalid.
+ */
+export function getSaudiTimeFromISO(isoString?: string | null): string {
+  if (!isoString) return getSaudiCurrentTimeString(60);
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return getSaudiCurrentTimeString(60);
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: SAUDI_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
 export function formatDateTime(
   isoString?: string | null,
   options?: Intl.DateTimeFormatOptions & { timeZone?: string }

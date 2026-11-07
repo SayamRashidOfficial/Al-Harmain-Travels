@@ -50,6 +50,7 @@ interface PaymentRecord {
   booking_status: string;
   payment_account_id?: string | null;
   payment_account_details?: PaymentAccountSnapshot | null;
+  payment_rejected_reason?: string | null;
 }
 
 function PaymentDetailModal({
@@ -69,10 +70,10 @@ function PaymentDetailModal({
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const canVerify =
-    payment.status === 'pending' &&
-    payment.method !== 'cash';
-  const canReject = payment.status === 'pending' && payment.method !== 'cash';
+  const isPaid = payment.status === 'confirmed' || payment.status === 'paid' || payment.booking_status === 'confirmed';
+  const isFailed = payment.status === 'failed' || payment.status === 'rejected' || payment.booking_status === 'payment_rejected';
+  const canVerify = payment.method !== 'cash' && !isPaid;
+  const canReject = payment.method !== 'cash' && !isPaid && !isFailed;
 
   const handleVerify = async () => {
     setIsProcessing(true);
@@ -107,7 +108,7 @@ function PaymentDetailModal({
               <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 font-mono">
                 {payment.booking_reference}
               </span>
-              <AdminStatusBadge status={payment.status} />
+              <AdminStatusBadge status={payment.status} label={isPaid ? 'Paid / Verified' : isFailed ? 'Failed / Rejected' : payment.status} />
             </div>
             <h2 className="text-lg font-bold text-slate-900 mt-1">Payment Details</h2>
           </div>
@@ -148,7 +149,7 @@ function PaymentDetailModal({
             )}
             <div>
               <span className="text-[10px] text-slate-400 font-medium">Booking Status</span>
-              <AdminStatusBadge status={payment.booking_status} size="sm" />
+              <AdminStatusBadge status={payment.booking_status} label={payment.booking_status === 'payment_rejected' ? 'Payment Rejected' : payment.booking_status.replace(/_/g, ' ')} size="sm" />
             </div>
             <div>
               <span className="text-[10px] text-slate-400 font-medium">Submitted</span>
@@ -280,17 +281,34 @@ function PaymentDetailModal({
             </div>
           )}
 
-          {payment.status === 'confirmed' && (
+          {isPaid && (
             <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 px-4 py-3 rounded-xl border border-emerald-200">
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-              Payment has been verified and confirmed.
+              Payment has been verified and confirmed across all portals.
             </div>
           )}
 
-          {payment.status === 'failed' && (
-            <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 px-4 py-3 rounded-xl border border-rose-200">
-              <XCircle className="w-3.5 h-3.5 shrink-0" />
-              Payment was rejected.
+          {isFailed && (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2.5 text-xs text-rose-800 bg-rose-50 px-4 py-3 rounded-xl border border-rose-200">
+                <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-bold">Payment proof was rejected.</p>
+                  {payment.payment_rejected_reason && (
+                    <p className="text-rose-700 text-[11px] font-medium bg-white/80 px-2.5 py-1.5 rounded-lg border border-rose-200">
+                      <strong>Rejection Reason:</strong> {payment.payment_rejected_reason}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={handleVerify}
+                disabled={isProcessing}
+                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                {isProcessing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                Re-verify &amp; Confirm Booking
+              </button>
             </div>
           )}
         </div>
@@ -300,7 +318,7 @@ function PaymentDetailModal({
 }
 
 export default function AdminPaymentsPage() {
-  const { bookings, settings, refreshData } = useApp();
+  const { bookings, settings, refreshData, verifyPayment, rejectPayment } = useApp();
 
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -329,7 +347,8 @@ export default function AdminPaymentsPage() {
             payment_method,
             payment_status,
             payment_account_id,
-            payment_account_details
+            payment_account_details,
+            payment_rejected_reason
           )
         `)
         .order('created_at', { ascending: false });
@@ -350,6 +369,7 @@ export default function AdminPaymentsPage() {
           booking_status: p.booking?.status || 'pending',
           payment_account_id: p.payment_account_id || p.booking?.payment_account_id || null,
           payment_account_details: p.payment_account_details || p.booking?.payment_account_details || null,
+          payment_rejected_reason: p.booking?.payment_rejected_reason || null,
         }));
         setPayments(records);
       } else {
@@ -371,6 +391,7 @@ export default function AdminPaymentsPage() {
             booking_status: b.status,
             payment_account_id: b.payment_account_id || null,
             payment_account_details: b.payment_account_details || null,
+            payment_rejected_reason: b.payment_rejected_reason || null,
           }));
         setPayments(derived);
       }
@@ -404,6 +425,23 @@ export default function AdminPaymentsPage() {
     fetchPayments();
   }, [fetchPayments]);
 
+  // Real-time synchronization across Admin and Dispatcher actions
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-payments-live-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => {
+        fetchPayments();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+        fetchPayments();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchPayments]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -416,21 +454,7 @@ export default function AdminPaymentsPage() {
 
   const handleVerifyPayment = async (bookingId: string) => {
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({
-          payment_status: 'confirmed',
-          status: 'confirmed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', bookingId);
-      if (error) throw error;
-
-      await supabase
-        .from('payments')
-        .update({ status: 'confirmed', updated_at: new Date().toISOString() })
-        .eq('booking_id', bookingId);
-
+      await verifyPayment(bookingId);
       toast.success('Payment verified and booking confirmed.');
       await fetchPayments();
     } catch (err) {
@@ -441,22 +465,7 @@ export default function AdminPaymentsPage() {
 
   const handleRejectPayment = async (bookingId: string, reason: string) => {
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({
-          payment_status: 'failed',
-          payment_rejected_reason: reason,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', bookingId);
-      if (error) throw error;
-
-      await supabase
-        .from('payments')
-        .update({ status: 'failed', updated_at: new Date().toISOString() })
-        .eq('booking_id', bookingId);
-
-      toast.success('Payment rejected.');
+      await rejectPayment(bookingId, reason);
       await fetchPayments();
     } catch (err) {
       toast.error('Failed to reject payment.');
@@ -467,7 +476,15 @@ export default function AdminPaymentsPage() {
   // Filtered payments
   const filteredPayments = payments.filter((p) => {
     if (methodFilter !== 'all' && p.method !== methodFilter) return false;
-    if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'confirmed' || statusFilter === 'paid') {
+        if (p.status !== 'confirmed' && p.status !== 'paid') return false;
+      } else if (statusFilter === 'failed' || statusFilter === 'rejected') {
+        if (p.status !== 'failed' && p.status !== 'rejected') return false;
+      } else if (p.status !== statusFilter) {
+        return false;
+      }
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
@@ -485,7 +502,7 @@ export default function AdminPaymentsPage() {
 
   const totalPayments = payments.length;
   const pendingVerification = payments.filter((p) => p.status === 'pending' && p.screenshot_url).length;
-  const confirmedPayments = payments.filter((p) => p.status === 'confirmed').length;
+  const confirmedPayments = payments.filter((p) => p.status === 'confirmed' || p.status === 'paid').length;
   const cashPayments = payments.filter((p) => p.method === 'cash').length;
   const totalRevenue = payments
     .filter((p) => p.status === 'confirmed' || p.status === 'paid')

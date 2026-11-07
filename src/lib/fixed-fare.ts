@@ -528,11 +528,20 @@ export function getAvailableVehicles(
   customRates?: FixedFareRate[],
   rateVehicles?: RateVehicleType[],
 ): VehicleCategory[] {
-  const candidateVehicles: VehicleCategory[] = (rateVehicles && rateVehicles.length > 0)
-    ? rateVehicles.filter((v) => v.is_active).map((v) => v.category as VehicleCategory)
-    : ['sedan', 'staria', 'gmc', 'hiroof'];
+  const candidateSet = new Set<string>();
 
-  return candidateVehicles.filter((v) => {
+  if (rateVehicles && rateVehicles.length > 0) {
+    rateVehicles
+      .filter((v) => v.is_active !== false)
+      .forEach((v) => {
+        const cat = v.category || v.id;
+        if (cat) candidateSet.add(cat);
+      });
+  } else {
+    ['sedan', 'staria', 'gmc', 'hiroof'].forEach((c) => candidateSet.add(c));
+  }
+
+  return Array.from(candidateSet).filter((v) => {
     const result = resolveFixedFare(v, serviceType, terminal, customRates);
     return result.found;
   });

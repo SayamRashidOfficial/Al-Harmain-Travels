@@ -11,6 +11,7 @@ import {
   Car,
   Users,
   PhoneCall,
+  UserCircle,
   Sparkles,
   LogOut,
 } from 'lucide-react';
@@ -116,6 +117,15 @@ export default function DispatcherDashboardShell({ children }: DispatcherDashboa
       badge: null,
       isLive: false,
     },
+    {
+      href: '/dispatcher/profile',
+      label: t('nav.dispatcherProfile', 'My Profile'),
+      subtitle: t('nav.dispatcherProfileSub', 'Account & Security'),
+      icon: UserCircle,
+      exact: false,
+      badge: null,
+      isLive: false,
+    },
   ];
 
   const slideHiddenClass = isRTL ? 'translate-x-3' : '-translate-x-3';
@@ -123,7 +133,7 @@ export default function DispatcherDashboardShell({ children }: DispatcherDashboa
   return (
     <div
       dir={dir}
-      className="dispatcher-portal customer-portal relative min-h-[calc(100vh-5rem)] w-full bg-page text-primary antialiased overflow-x-hidden"
+      className="dispatcher-portal customer-portal relative min-h-[calc(100vh-4rem)] w-full bg-page text-primary antialiased overflow-x-hidden"
     >
       {/* ─────────────────────────────────────────────────────────────
           1. DESKTOP SIDEBAR (lg+ screen size)
@@ -135,7 +145,7 @@ export default function DispatcherDashboardShell({ children }: DispatcherDashboa
         onMouseLeave={() => setIsHovered(false)}
         aria-label="Dispatcher Sidebar Navigation"
         aria-expanded={isHovered}
-        className={`hidden lg:flex flex-col shrink-0 fixed top-16 sm:top-20 bottom-0 z-40 ${
+        className={`hidden lg:flex flex-col shrink-0 fixed top-16 bottom-0 z-40 ${
           isRTL ? 'right-0 border-l' : 'left-0 border-r'
         } border-base bg-white dark:bg-card transition-all duration-300 ease-in-out select-none overflow-hidden group/sidebar ${
           isHovered
@@ -144,7 +154,11 @@ export default function DispatcherDashboardShell({ children }: DispatcherDashboa
         }`}
       >
         {/* Top Header / Profile Banner */}
-        <div className="p-2 border-b border-base bg-white dark:bg-card flex items-center gap-1.5 shrink-0 h-16">
+        <Link
+          href="/dispatcher/profile"
+          className="p-2 border-b border-base bg-white dark:bg-card flex items-center gap-1.5 shrink-0 h-16 hover:bg-slate-50 transition-colors group/header"
+          title={t('nav.dispatcherProfile', 'My Profile')}
+        >
           <div className="w-12 h-10 flex items-center justify-center shrink-0 relative">
             <div className="relative">
               {currentUser.avatar_url ? (
@@ -152,10 +166,10 @@ export default function DispatcherDashboardShell({ children }: DispatcherDashboa
                 <img
                   src={currentUser.avatar_url}
                   alt={currentUser.full_name}
-                  className="w-8 h-8 rounded-xl object-cover border-2 border-emerald-500/50 shadow-xs"
+                  className="w-8 h-8 rounded-xl object-cover border-2 border-emerald-500/50 shadow-xs group-hover/header:border-emerald-600 transition-colors"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-900 text-amber-400 font-bold flex items-center justify-center border border-emerald-500/40 shadow-xs text-xs">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-900 text-amber-400 font-bold flex items-center justify-center border border-emerald-500/40 shadow-xs text-xs group-hover/header:border-emerald-600 transition-colors">
                   {currentUser.full_name?.charAt(0)?.toUpperCase() || 'D'}
                 </div>
               )}
@@ -177,7 +191,7 @@ export default function DispatcherDashboardShell({ children }: DispatcherDashboa
             }`}
           >
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-primary truncate block">
+              <span className="text-xs font-bold text-primary truncate block group-hover/header:text-emerald-700 transition-colors">
                 {currentUser.full_name?.split(' ')[0] || (isRTL ? 'مشرف العمليات' : 'Dispatcher')}
               </span>
               <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
@@ -186,7 +200,7 @@ export default function DispatcherDashboardShell({ children }: DispatcherDashboa
               {isRTL ? 'تحكم الأسطول' : 'Fleet Dispatcher'}
             </span>
           </div>
-        </div>
+        </Link>
 
         {/* Navigation Links */}
         <nav
@@ -322,7 +336,7 @@ export default function DispatcherDashboardShell({ children }: DispatcherDashboa
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-base shadow-2xl px-2 py-1 pb-[max(0.4rem,env(safe-area-inset-bottom))]"
         aria-label="Mobile Dispatcher Navigation"
       >
-        <div className="grid grid-cols-5 gap-1 items-center max-w-md mx-auto">
+        <div className="grid grid-cols-6 gap-1 items-center max-w-lg mx-auto">
           {navLinks.map((item) => {
             const Icon = item.icon;
             const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);

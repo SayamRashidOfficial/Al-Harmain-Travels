@@ -1019,7 +1019,7 @@ export default function AdminUsersPage() {
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300">
             <Users className="w-3 h-3 text-emerald-700" />
-            Customer / Pilgrim
+            Customer
           </span>
         );
     }
@@ -1153,10 +1153,10 @@ export default function AdminUsersPage() {
               ? 'ring-2 ring-emerald-600 shadow-xs'
               : 'hover:-translate-y-0.5'
           }`}
-          title="Click to filter by Pilgrims & Customers"
+          title="Click to filter by Customers"
         >
           <AdminStatCard
-            title="Pilgrims / Customers"
+            title="Customers"
             value={metrics.customers}
             subtitle="Registered bookers"
             icon={<Users className="w-4.5 h-4.5" />}
@@ -1619,23 +1619,6 @@ export default function AdminUsersPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <span className="text-[10px] text-slate-400 font-mono truncate max-w-[120px]" title={u.id}>
-                                ID: {u.id.slice(0, 8)}...
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => copyToClipboard(u.id, 'User ID')}
-                                title="Copy full User UUID"
-                                className="text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer"
-                              >
-                                {copiedField === `User ID-${u.id}` ? (
-                                  <Check className="w-2.5 h-2.5 text-emerald-600" />
-                                ) : (
-                                  <Copy className="w-2.5 h-2.5" />
-                                )}
-                              </button>
-                            </div>
                           </div>
                         </div>
                       </td>
@@ -1789,7 +1772,7 @@ export default function AdminUsersPage() {
                               <span>{customerBookingsCount} Bookings</span>
                             </span>
                             <div className="text-[10px] text-slate-400">
-                              {customerBookingsCount > 0 ? 'Active Pilgrim' : 'No trips yet'}
+                              {customerBookingsCount > 0 ? 'Active Customer' : 'No trips yet'}
                             </div>
                           </div>
                         ) : (
@@ -1848,7 +1831,7 @@ export default function AdminUsersPage() {
                           {u.role === 'driver' && (
                             <AdminActionButton
                               variant="more"
-                              icon={<Car className="w-3.5 h-3.5" />}
+                              icon={<Car className="w-4 h-4" />}
                               tooltip="Assign or change fleet vehicle"
                               onClick={() => openVehicleModal(u)}
                             />
@@ -2241,7 +2224,7 @@ export default function AdminUsersPage() {
                     onChange={(e) => setEditRole(e.target.value as UserRole)}
                     className="w-full px-3 py-2.5 rounded-xl bg-input border border-base text-primary focus:outline-none focus:border-emerald-500 text-xs capitalize"
                   >
-                    <option value="customer">Customer / Pilgrim</option>
+                    <option value="customer">Customer</option>
                     <option value="dispatcher">Dispatcher / Staff</option>
                     <option value="driver">Fleet Driver</option>
                   </select>
@@ -2699,7 +2682,7 @@ export default function AdminUsersPage() {
                   <div className="flex items-center justify-between text-xs font-bold text-amber-900">
                     <span className="flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-amber-600" />
-                      <span>Pilgrim Travel History</span>
+                      <span>Customer Travel History</span>
                     </span>
                     <span className="text-[10px] bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200 font-mono font-bold">
                       {getCustomerBookings(selectedUser.id, selectedUser.email, selectedUser.phone).length} Journeys

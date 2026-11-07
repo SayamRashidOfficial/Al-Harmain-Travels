@@ -30,7 +30,8 @@ interface BrandLogoProps {
 /**
  * Official Al Harmain Travels Luxury Architectural Emblem
  * Displays the official Kaaba sanctuary, golden arch, airline flight trail,
- * and luxury chauffeur coach with transparent alpha styling and responsive scaling.
+ * and luxury chauffeur fleet (GMC Yukon XL SUV, Toyota Camry Sedan, and Toyota HiAce Van)
+ * with transparent alpha styling and responsive scaling.
  */
 export function BrandEmblem({
   size = 'md',
@@ -42,19 +43,19 @@ export function BrandEmblem({
   priority?: boolean;
 }) {
   const sizeMap: Record<string, string> = {
-    xs: 'h-7 w-auto',
-    sm: 'h-8 sm:h-9 w-auto',
+    xs: 'h-7 sm:h-8 w-auto',
+    sm: 'h-9 sm:h-10 w-auto',
     md: 'h-10 sm:h-11 w-auto',
-    lg: 'h-13 sm:h-15 w-auto',
-    xl: 'h-20 sm:h-24 w-auto',
+    lg: 'h-16 sm:h-18 w-auto',
+    xl: 'h-22 sm:h-26 w-auto',
   };
 
   const dimensions: Record<string, { width: number; height: number }> = {
-    xs: { width: 35, height: 28 },
-    sm: { width: 44, height: 36 },
-    md: { width: 54, height: 44 },
-    lg: { width: 74, height: 60 },
-    xl: { width: 118, height: 96 },
+    xs: { width: 56, height: 32 },
+    sm: { width: 70, height: 40 },
+    md: { width: 78, height: 44 },
+    lg: { width: 125, height: 72 },
+    xl: { width: 182, height: 104 },
   };
 
   const dim = dimensions[size] || dimensions.md;
@@ -109,17 +110,17 @@ export default function BrandLogo({
   const titleSizeMap: Record<string, string> = {
     xs: 'text-sm sm:text-base',
     sm: 'text-base sm:text-lg',
-    md: 'text-lg sm:text-[1.35rem]',
-    lg: 'text-xl sm:text-2xl',
-    xl: 'text-2xl sm:text-3xl',
+    md: 'text-lg sm:text-[1.3rem]',
+    lg: 'text-2xl sm:text-[1.85rem]',
+    xl: 'text-3xl sm:text-4xl',
   };
 
   const subtitleSizeMap: Record<string, string> = {
     xs: 'text-[7.5px] sm:text-[8px]',
-    sm: 'text-[8px] sm:text-[8.5px]',
-    md: 'text-[8.5px] sm:text-[9.5px]',
-    lg: 'text-[9.5px] sm:text-[10.5px]',
-    xl: 'text-[11px] sm:text-[12px]',
+    sm: 'text-[8.5px] sm:text-[9px]',
+    md: 'text-[9px] sm:text-[10px]',
+    lg: 'text-[11px] sm:text-[12px]',
+    xl: 'text-[12.5px] sm:text-[14px]',
   };
 
   if (emblemOnly) {
