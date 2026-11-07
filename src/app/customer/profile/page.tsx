@@ -996,7 +996,7 @@ export default function CustomerProfilePage() {
             <div className="p-3.5 sm:p-4 rounded-xl bg-surface border border-base space-y-1">
               <span className="text-[10px] font-bold text-muted uppercase tracking-wider">{isRTL ? 'فئة العضوية' : 'Membership Tier'}</span>
               <div className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400">{isRTL ? 'حاج ومعتمر ذهبي VIP' : 'VIP Pilgrim Gold'}</div>
-              <p className="text-[10px] text-secondary pt-0.5">{isRTL ? 'تشمل أولوية التوصيل المباشر لأبواب الحرم.' : 'Direct Haram drop-off priority included.'}</p>
+              <p className="text-[10px] text-secondary pt-0.5">{isRTL ? 'تشمل أولوية التوصيل لأنفاق الحرم وفنادق المركزية.' : 'Central Markaziyah & Haram tunnel drop-off priority included.'}</p>
             </div>
 
             <div className="p-3.5 sm:p-4 rounded-xl bg-surface border border-base space-y-1">

@@ -1,13 +1,14 @@
 import { Vehicle, Driver, Booking, SystemSettings, Profile, ServiceItem, EmergencyContact, SavedPlace, RecentLocation } from '@/types';
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 export const INITIAL_SETTINGS: SystemSettings = {
   id: 'current',
-  company_name: 'Al Harmain Travels',
+  company_name: SITE_CONFIG.brandName,
   company_tagline: 'VIP Umrah & City Taxi Services',
-  support_phone: '+966 54 888 1234',
-  support_whatsapp: '+966 54 888 1234',
-  support_email: 'bookings@alharmaintravels.com',
-  address: 'Ibrahim Al Khalil Street, Central Area, Makkah, Saudi Arabia',
+  support_phone: SITE_CONFIG.contact.phoneDisplay,
+  support_whatsapp: SITE_CONFIG.contact.phoneDisplay,
+  support_email: SITE_CONFIG.contact.email,
+  address: `${SITE_CONFIG.contact.address}, Saudi Arabia`,
   currency: 'SAR',
   tax_percentage: 15.0,
   updated_at: new Date().toISOString(),
@@ -200,7 +201,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     base_price: 450.0,
     vehicle_type: 'vip_gmc',
     features: [
-      'Direct Haram access pass',
+      'Central Markaziyah & Haram tunnel drop-off permit',
       'Complimentary Zamzam & Arabic dates',
       'English & Arabic fluent captain',
       'Luggage handling & luggage van option',

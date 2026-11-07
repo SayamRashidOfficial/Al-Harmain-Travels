@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import CinematicTexture from '@/components/cinematic/CinematicTexture';
+import { SITE_CONFIG } from '@/config/siteConfig';
 
 export default function ContactPage() {
   const { settings, addNotification } = useApp();
@@ -55,7 +56,7 @@ export default function ContactPage() {
             <span>24/7 Dispatch &amp; Support Desk</span>
           </div>
           <h1 className="type-page-hero">
-            Contact <span className="text-amber-500 dark:text-amber-400">Al Harmain Travel</span>
+            Contact <span className="text-amber-500 dark:text-amber-400">{SITE_CONFIG.brandName}</span>
           </h1>
           <p className="type-lead">
             Reach out to our operations team for custom pilgrimage itineraries, corporate contracts, or immediate roadside assistance.
@@ -223,7 +224,7 @@ export default function ContactPage() {
                         required
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="+966 54 888 1234"
+                        placeholder={SITE_CONFIG.contact.phoneDisplay}
                         className="w-full px-4 py-3 rounded-xl bg-input border border-base text-primary placeholder-muted focus:outline-none focus:border-emerald-500 dark:placeholder-slate-600"
                       />
                     </div>

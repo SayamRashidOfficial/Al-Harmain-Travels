@@ -76,7 +76,7 @@ const DESTINATIONS = [
     title: 'Makkah Al-Mukarramah',
     subtitle: 'The Sacred Sanctuary',
     tag: 'Holy Sanctuary',
-    caption: 'Direct transfers from Jeddah Airport to your hotel suite with authorized Haram Gate permits.',
+    caption: `${SITE_CONFIG.operational.haramDropoffShort}. Note: Drop-offs adjust around Salah traffic checkpoints.`,
     image: '/images/dest_makkah.jpg',
     pickup: 'King Abdulaziz Airport (JED)',
     destination: 'Makkah Clock Royal Tower',
@@ -85,10 +85,8 @@ const DESTINATIONS = [
     title: 'Madinah Al-Munawwarah',
     subtitle: 'The City of Peace',
     tag: "The Prophet's City",
-    caption: 'Peaceful, air-conditioned intercity journeys to the marble courtyards of the Prophet’s Mosque.',
     image: '/images/dest_madinah.jpg',
-    pickup: 'Makkah Clock Royal Tower',
-    destination: "Madinah Prophet's Mosque Gate 1",
+
   },
   {
     title: 'Jeddah International Gateway',
@@ -113,7 +111,7 @@ const TRUST_ITEMS = [
   {
     icon: UserCheck,
     title: 'Licensed Chauffeurs',
-    subtitle: 'Ministry of Transport Approved',
+    subtitle: `${SITE_CONFIG.regulatory.authorityShort} Approved & Licensed`,
     iconHoverClass: 'group-hover/item:rotate-[-5deg] group-hover/item:scale-110',
   },
   {
