@@ -23,6 +23,7 @@ import CinematicDestinations from '@/components/cinematic/CinematicDestinations'
 import CinematicTexture from '@/components/cinematic/CinematicTexture';
 import IntroAnimation from '@/components/intro/IntroAnimation';
 import AlHarmainStandard from '@/components/home/AlHarmainStandard';
+import { SITE_CONFIG } from '@/config/siteConfig';
 import { trackBookNowClick, trackBookingStarted } from '@/lib/analytics';
 
 /* ── Vehicle Fleet Data ── */
